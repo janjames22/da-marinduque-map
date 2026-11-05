@@ -1,6 +1,17 @@
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
 import Papa from 'papaparse';
+import { toMapData, type LocalSeed } from '../src/modules/intervention-map/data/local-store';
+import {
+  buildShading,
+  countByBarangay,
+  liveRecords,
+  recordsInView,
+  unassignedRecords,
+  type ViewFilters,
+} from '../src/modules/intervention-map/lib/choropleth';
+import { isOnMap, statusDateLabel } from '../src/modules/intervention-map/lib/display';
 import { buildVerificationRows, verificationCsv, type VerificationRow } from '../scripts/build-field-verification';
 import { buildLocalSeed } from '../scripts/build-local-seed';
 import {
@@ -772,6 +783,58 @@ describe('field verification sheet', () => {
     const without = await buildVerificationRows(db, rejected);
     const row = without.find((r) => r.ID === id('051'))!;
     expect(row['Suggested value']).toBe('Point is in Pinggan, Gasan');
+  });
+});
+
+describe('local dataset through the map logic', () => {
+  async function mapData() {
+    return toMapData(JSON.parse(JSON.stringify(await buildLocalSeed(db))) as LocalSeed);
+  }
+  const defaultView: ViewFilters = {
+    mode: 'gap',
+    pickedProgramId: null,
+    pickedTypeId: null,
+    hiddenTypeIds: [],
+    programId: null,
+    yearFrom: null,
+    yearTo: null,
+  };
+
+  it('finds the same coverage as the database', async () => {
+    const data = await mapData();
+    const records = recordsInView(liveRecords(data.interventions, data.types), defaultView);
+    expect(records).toHaveLength(199);
+
+    const shading = buildShading('gap', 'Gap', countByBarangay(records, data.links), data.barangays);
+    expect(shading.barangaysWithRecords).toBe(93);
+    expect(shading.barangaysWithout).toBe(125);
+    expect(unassignedRecords(records, data.links)).toHaveLength(9);
+  });
+
+  it('leaves 26 unlocated and 1 out-of-province record off the map', async () => {
+    const data = await mapData();
+    expect(data.interventions.filter(isOnMap)).toHaveLength(199 - 26 - 1);
+  });
+
+  it('keeps the RAED status date exact, as an as-of date', async () => {
+    const data = await mapData();
+    expect(data.statusHistory).toHaveLength(199);
+    expect(new Set(data.statusHistory.map(statusDateLabel))).toEqual(new Set(['as of 2026-10-21 (RAED report)']));
+  });
+
+  it('has only Farm Machinery and SSIP as active types', async () => {
+    const data = await mapData();
+    expect(data.types.filter((t) => t.is_active).map((t) => t.name).sort()).toEqual(['Farm Machinery', 'SSIP']);
+  });
+
+  it('links every barangay to its polygon by PSGC code', async () => {
+    const data = await mapData();
+    const geojson = JSON.parse(readFileSync('public/boundaries/barangays.geojson', 'utf8')) as {
+      features: { properties: { adm4_pcode: string } }[];
+    };
+    expect(geojson.features.map((f) => f.properties.adm4_pcode).sort()).toEqual(
+      data.barangays.map((b) => b.psgc_code).sort(),
+    );
   });
 });
 

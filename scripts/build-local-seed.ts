@@ -3,6 +3,7 @@
 // Barangay polygons aren't included; the map reads them from public/boundaries.
 //
 // This file holds beneficiary names, so it must not be placed in public/ or deployed publicly.
+// The Vite dev server is the only thing that serves it.
 //
 // Usage: npx tsx scripts/build-local-seed.ts
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -27,6 +28,8 @@ const LOOKUP_TABLES = [
 
 export async function buildLocalSeed(db: Queryable) {
   const all = async (sql: string) => (await db.query<Record<string, unknown>>(sql)).rows;
+  // to_jsonb keeps dates exactly as stored. Reading them as JavaScript dates would add a time zone.
+  const records = async (sql: string) => (await all(sql)).map((row) => row.record);
 
   const lookups: Record<string, unknown[]> = {};
   for (const table of LOOKUP_TABLES) lookups[table] = await all(`select * from public.${table}`);
@@ -36,13 +39,11 @@ export async function buildLocalSeed(db: Queryable) {
     municipalities: await all('select id, name, psgc_code from public.municipalities order by name'),
     barangays: await all('select id, municipality_id, name, psgc_code, attributes from public.barangays order by name'),
     // geojson replaces the raw geometry value, which the browser can't read.
-    interventions: await all(
-      `select to_jsonb(v) - 'geom' as record from public.interventions_v v order by v.source_id`,
-    ).then((rows) => rows.map((row) => row.record)),
+    interventions: await records(`select to_jsonb(v) - 'geom' as record from public.interventions_v v order by v.source_id`),
     intervention_barangays: await all('select * from public.intervention_barangays'),
-    status_history: await all('select * from public.status_history order by status_date, created_at'),
-    import_batches: await all('select * from public.import_batches'),
-    audit_log: await all('select * from public.audit_log order by id'),
+    status_history: await records('select to_jsonb(h) as record from public.status_history h order by h.status_date, h.created_at'),
+    import_batches: await records('select to_jsonb(b) as record from public.import_batches b'),
+    audit_log: await records('select to_jsonb(a) as record from public.audit_log a order by a.id'),
   };
 }
 
