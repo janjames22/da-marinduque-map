@@ -165,10 +165,18 @@ describe('RAED tagging', () => {
     expect(n).toBe(199);
   });
 
-  it('moves the CSV stage to the SSIP stage field', async () => {
+  it('carries the CSV stage as status alone, keeping the raw value only in source_raw', async () => {
+    expect(await count(`attributes ? 'stage'`)).toBe(0);
     expect(
-      await tally(`select attributes ->> 'stage' key, count(*)::int n from interventions where attributes ? 'stage' group by 1`),
-    ).toEqual({ inventory: 2, completed: 2 });
+      await tally(
+        `select s.name key, count(*)::int n
+         from interventions i
+         join intervention_types t on t.id = i.intervention_type_id
+         join statuses s on s.id = i.status_id
+         where t.code = 'ssip' group by 1`,
+      ),
+    ).toEqual({ Inventory: 2, Completed: 2 });
+    expect(await count(`source_raw ->> 'stage' <> ''`)).toBe(4);
   });
 
   it('moves the CSV variant to a custom field', async () => {

@@ -155,7 +155,6 @@ describe('starting lookups', () => {
       'farmer_beneficiaries',
       'pump_capacity',
       'solar_capacity_kwp',
-      'stage',
     ]);
   });
 

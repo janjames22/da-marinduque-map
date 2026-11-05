@@ -915,13 +915,7 @@ insert into public.intervention_types (code, name, geometry_kind, icon_id, color
      {"key": "service_area_ha", "label": "Service area", "input": "number", "unit": "ha"},
      {"key": "farmer_beneficiaries", "label": "Farmer-beneficiaries", "input": "number", "unit": "no."},
      {"key": "pump_capacity", "label": "Pump capacity", "input": "text"},
-     {"key": "solar_capacity_kwp", "label": "Solar capacity", "input": "number", "unit": "kWp"},
-     {"key": "stage", "label": "Stage", "input": "dropdown", "options": [
-       {"value": "proposed", "label": "Proposed"},
-       {"value": "inventory", "label": "Inventory"},
-       {"value": "on_going", "label": "On-going"},
-       {"value": "completed", "label": "Completed"}
-     ]}
+     {"key": "solar_capacity_kwp", "label": "Solar capacity", "input": "number", "unit": "kWp"}
    ]}'),
   ('fmr', 'Farm-to-Market Road', 'line', (select id from public.icons where name = 'Road'), '#6d4c41', 3,
    '{"title": "required"}',

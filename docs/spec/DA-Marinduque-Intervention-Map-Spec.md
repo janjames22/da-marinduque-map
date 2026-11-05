@@ -149,7 +149,7 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 - Removing a field archives it. Existing values are kept.
 - Values are checked in the form and again in the database.
 - Variant, engine number, serial number and date turned over are Farm Machinery custom fields, not fixed columns, because they don't apply to every type.
-- SSIP starts with water source, service area (ha), farmer-beneficiaries (no.), pump capacity, solar capacity (kWp) and stage.
+- SSIP starts with water source, service area (ha), farmer-beneficiaries (no.), pump capacity and solar capacity (kWp). Progress is tracked by status alone.
 
 ### 4.4 Barangays
 

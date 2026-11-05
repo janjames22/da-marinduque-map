@@ -398,7 +398,6 @@ async function seedInTransaction(db: Queryable, rows: SeedRow[], corrections: Co
 
     const attributes = {
       ...(emptyToNull(row.category_variant) ? { variant: row.category_variant.trim() } : {}),
-      ...(emptyToNull(row.stage) ? { stage: slug(row.stage).replaceAll('-', '_') } : {}),
     };
 
     const { rows: inserted } = await db.query<{ id: string }>(
