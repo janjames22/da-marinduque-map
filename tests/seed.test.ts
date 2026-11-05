@@ -73,7 +73,7 @@ afterAll(async () => {
 });
 
 describe('record counts match the source report', () => {
-  it('loads all 199 records: 195 Farm Machinery and 4 SPIS', async () => {
+  it('loads all 199 records: 195 Farm Machinery and 4 SSIP', async () => {
     expect(report.inserted).toBe(199);
     expect(await count('true')).toBe(199);
     expect(
@@ -81,7 +81,17 @@ describe('record counts match the source report', () => {
         `select t.name key, count(*)::int n
          from interventions i join intervention_types t on t.id = i.intervention_type_id group by 1`,
       ),
-    ).toEqual({ 'Farm Machinery': 195, SPIS: 4 });
+    ).toEqual({ 'Farm Machinery': 195, SSIP: 4 });
+  });
+
+  it('files the 4 SPIS records under SSIP, category SPIS', async () => {
+    const [{ n }] = await rows<{ n: number }>(
+      `select count(*)::int n from interventions i
+       join intervention_types t on t.id = i.intervention_type_id
+       join categories c on c.id = i.category_id
+       where t.code = 'ssip' and c.name = 'Solar-Powered Irrigation System (SPIS)'`,
+    );
+    expect(n).toBe(4);
   });
 
   it('matches the per-municipality counts', async () => {
@@ -93,7 +103,7 @@ describe('record counts match the source report', () => {
     ).toEqual({ 'Santa Cruz': 48, Boac: 38, Torrijos: 36, Gasan: 33, Mogpog: 25, Buenavista: 19 });
   });
 
-  it('matches the status counts, with SPIS taking its status from Stage', async () => {
+  it('matches the status counts, with the SPIS records taking their status from Stage', async () => {
     expect(
       await tally(
         `select s.name key, count(*)::int n
@@ -132,7 +142,7 @@ describe('RAED tagging', () => {
     );
     expect(batches).toEqual([
       { code: 'farm-machinery', data_source: RAED_DATA_SOURCE, records: 195, linked: 195 },
-      { code: 'spis', data_source: RAED_DATA_SOURCE, records: 4, linked: 4 },
+      { code: 'ssip', data_source: RAED_DATA_SOURCE, records: 4, linked: 4 },
     ]);
   });
 
@@ -142,6 +152,12 @@ describe('RAED tagging', () => {
        where l.name = 'Unknown'`,
     );
     expect(n).toBe(199);
+  });
+
+  it('moves the CSV stage to the SSIP stage field', async () => {
+    expect(
+      await tally(`select attributes ->> 'stage' key, count(*)::int n from interventions where attributes ? 'stage' group by 1`),
+    ).toEqual({ inventory: 2, completed: 2 });
   });
 
   it('moves the CSV variant to a custom field', async () => {
@@ -155,14 +171,32 @@ describe('RAED tagging', () => {
 });
 
 describe('status history', () => {
-  it('has one dated entry per record, and that entry is the current status', async () => {
-    const [{ entries, matching, dated }] = await rows<{ entries: number; matching: number; dated: number }>(
-      `select count(*)::int entries,
-              count(*) filter (where h.status_id = i.status_id)::int matching,
-              count(*) filter (where h.status_date = '2026-10-21')::int dated
+  it('has one entry per record, and that entry is the current status', async () => {
+    const [{ entries, matching }] = await rows<{ entries: number; matching: number }>(
+      `select count(*)::int entries, count(*) filter (where h.status_id = i.status_id)::int matching
        from status_history h join interventions i on i.id = h.intervention_id`,
     );
-    expect({ entries, matching, dated }).toEqual({ entries: 199, matching: 199, dated: 199 });
+    expect({ entries, matching }).toEqual({ entries: 199, matching: 199 });
+  });
+
+  it('records the RAED date as an as-of date, not a change date', async () => {
+    const [{ as_of }] = await rows<{ as_of: number }>(
+      `select count(*)::int as_of from status_history
+       where status_date = '2026-10-21' and date_basis = 'as_of' and source_note = 'RAED report'`,
+    );
+    expect(as_of).toBe(199);
+  });
+
+  it('counts no RAED SSIP as operational, since Completed and Inventory do not count', async () => {
+    expect(
+      await tally(
+        `select t.code key, count(*) filter (where ts.counts_as_operational)::int n
+         from interventions i
+         join intervention_types t on t.id = i.intervention_type_id
+         join intervention_type_statuses ts on ts.intervention_type_id = t.id and ts.status_id = i.status_id
+         group by 1`,
+      ),
+    ).toEqual({ 'farm-machinery': 195, ssip: 0 });
   });
 });
 
@@ -181,7 +215,7 @@ describe('lookups', () => {
        join intervention_types t on t.id = c.intervention_type_id`,
     );
     const byName = new Map(seeded.map((c) => [c.name, c]));
-    const typeCodes: Record<string, string> = { machinery: 'farm-machinery', spis: 'spis' };
+    const typeCodes: Record<string, string> = { machinery: 'farm-machinery', spis: 'ssip' };
 
     const distinct = new Set(csv.map((r) => r.category));
     expect(distinct.size).toBe(28);
@@ -194,7 +228,7 @@ describe('lookups', () => {
     }
   });
 
-  it('keeps the six extra categories and the SSIP categories alongside them', async () => {
+  it('keeps the extra categories alongside the CSV ones', async () => {
     const names = (await rows<{ name: string }>('select name from categories')).map((c) => c.name);
     expect(names).toHaveLength(28 + 6 + 3);
     expect(names).toEqual(
@@ -202,12 +236,12 @@ describe('lookups', () => {
         'Disc Plow / Harrow',
         'Seeder',
         'Rice Reaper',
-        'Small Water Impounding Project',
+        'Small Water Impounding Project (SWIP)',
         'Diversion Dam',
         'Other',
-        'SFR',
-        'STW',
-        'PISOS',
+        'Small Farm Reservoir (SFR)',
+        'Shallow Tube Well (STW)',
+        'Pump Irrigation from Open Source (PISOS)',
       ]),
     );
   });
@@ -652,12 +686,21 @@ describe('field verification sheet', () => {
     sheet = await buildVerificationRows(db, correctionsFile);
   });
 
-  it('lists every record with a flag, or with a duplicate warning in the CSV', async () => {
+  it('lists flagged records, leaving out those flagged only for shared coordinates', async () => {
     const [{ n }] = await rows<{ n: number }>(
       `select count(*)::int n from interventions
-       where cardinality(qa_flags) > 0 or source_raw ->> 'qa_flags' like '%possible_duplicate%'`,
+       where cardinality(array_remove(qa_flags, 'duplicate_point')) > 0
+          or source_raw ->> 'qa_flags' like '%possible_duplicate%'`,
     );
     expect(sheet).toHaveLength(n);
+
+    const onlyShared = await rows<{ source_id: string }>(
+      `select source_id from interventions
+       where qa_flags = array['duplicate_point'] and source_raw ->> 'qa_flags' not like '%possible_duplicate%'`,
+    );
+    expect(onlyShared.length).toBeGreaterThan(0);
+    const listed = new Set(sheet.map((r) => r.ID));
+    expect(onlyShared.filter((r) => listed.has(r.source_id))).toEqual([]);
     expect(new Set(sheet.map((r) => r.ID)).size).toBe(n);
     console.log(`field verification sheet: ${sheet.length} records`);
   });
@@ -739,7 +782,7 @@ describe('local dataset', () => {
     expect(seed.barangays).toHaveLength(218);
     expect(seed.status_history).toHaveLength(199);
     expect(seed.municipalities).toHaveLength(6);
-    expect(seed.lookups.intervention_types).toHaveLength(8);
+    expect(seed.lookups.intervention_types).toHaveLength(7);
     expect(seed.lookups.location_bases).toHaveLength(4);
 
     expect(seed.barangays[0]).not.toHaveProperty('boundary');

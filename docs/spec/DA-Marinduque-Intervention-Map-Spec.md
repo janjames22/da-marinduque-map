@@ -38,14 +38,14 @@ The map module should be designed so it can later be added to the **ABE Project 
 
 ## 3. Starting Dataset: RAED Report
 
-The RAED report is the first import, not the system's scope. It lists machinery already turned over, plus SPIS. It is tagged `data_source = "RAED 2026-10-21"`. Machinery records go under the type **Farm Machinery** and SPIS records under the type **SPIS**.
+The RAED report is the first import, not the system's scope. It lists machinery already turned over, plus SPIS. It is tagged `data_source = "RAED 2026-10-21"`. Machinery records go under the type **Farm Machinery**. The 4 SPIS records go under the type **SSIP**, category SPIS.
 
 **Seed file:** `data/source/seed_interventions.csv`, 199 records (195 machinery, 4 SPIS), already cleaned. The original PDF is used only for spot checks. Each row's `source_page` gives its page.
 
 | Count | Values |
 |---|---|
 | Municipality | Santa Cruz 48, Boac 38, Torrijos 36, Gasan 33, Mogpog 25, Buenavista 19 |
-| Status | Turned-over 163, Serviceable 32; the 4 SPIS records take their status from the Stage column (Inventory 2, Completed 2) |
+| Status | Turned-over 163, Serviceable 32; the 4 SPIS records take their status from the Stage column (Inventory 2, Completed 2). The report gives no status dates, so these show as "as of 2026-10-21 (RAED report)" |
 | Banner program | Rice 62, HVCDP 59, Corn 38, Organic 30, Livestock 9, Urban and Peri-Urban 1 |
 | Year funded | 2014–2026, peaking in 2025 (44) and 2022 (36) |
 
@@ -64,7 +64,7 @@ Importing must keep these records and flag them. It must never drop or silently 
 | Beneficiary names a place outside Marinduque | 7 (Guiuan, Tanauan, Taal) | Manual review flag carried over from the seed file |
 | Shared coordinates | 24 records | Normal when one FCA has several machines. Use clustering and spiderfy so none are hidden |
 
-Corrections to these records go through a reviewed file (§5.6). For a printed field check, the MAOs get `data/corrections/for-field-verification.csv`.
+Corrections to these records go through a reviewed file (§5.6). For a printed field check, the MAOs get `data/corrections/for-field-verification.csv`, which leaves out records flagged only for shared coordinates.
 
 RAED records have `location_basis` = "Unknown": the report doesn't say whether a coordinate marks the unit, the FCA's office or the barangay center.
 
@@ -91,7 +91,11 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 | field_schema | jsonb: the custom fields (§4.3) |
 | sort_order, is_active | |
 
-**Starting types:** Farm Machinery (point), SPIS (point), SSIP (point; SFR, STW and PISOS as its categories), Farm-to-Market Road (line), Postharvest Facility (point), Irrigation Canal (line), Service Area (polygon), Other (point).
+**Active types:** Farm Machinery (point) and SSIP (point, marking the pump or intake location).
+
+**Inactive types:** Farm-to-Market Road (line), Postharvest Facility (point), Irrigation Canal (line), Service Area (polygon) and Other (point). These have `is_active = false` and are hidden in the UI. The framework stays in place, so an admin can activate them from `/admin`.
+
+`geom` stays generic so SSIP service-area polygons can be added later. SSIP is a point type for now, and a type's geometry kind can't change once it has records, so that change will need its own design: a separate polygon on the record, or a linked Service Area record.
 
 ### 4.2 `interventions`
 
@@ -145,6 +149,7 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 - Removing a field archives it. Existing values are kept.
 - Values are checked in the form and again in the database.
 - Variant, engine number, serial number and date turned over are Farm Machinery custom fields, not fixed columns, because they don't apply to every type.
+- SSIP starts with water source, service area (ha), farmer-beneficiaries (no.), pump capacity, solar capacity (kWp) and stage.
 
 ### 4.4 Barangays
 
@@ -159,7 +164,7 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 
 | Table | Key columns |
 |---|---|
-| `status_history` | id, intervention_id, status_id, status_date, remarks, photo_id, created_by, created_at. Entries are added, never overwritten. A backdated entry doesn't replace a later one as current |
+| `status_history` | id, intervention_id, status_id, status_date, date_basis, source_note, remarks, photo_id, created_by, created_at. Entries are added, never overwritten. A backdated entry doesn't replace a later one as current. `date_basis` says whether the date is when the status changed (`changed`) or when it was reported (`as_of`), so RAED entries show as "as of 2026-10-21 (RAED report)" |
 | `statuses` | id, name, color, sort_order, is_active |
 | `intervention_type_statuses` | intervention_type_id, status_id, sort_order, is_default, counts_as_operational: the status list for each type, and which of its statuses count as operational for that type |
 | `programs` | id, code, name, color, sort_order, is_active |
@@ -184,7 +189,7 @@ Flags are recalculated by the database on every save. Values sent by a client ar
 | `no_coords` | No geometry |
 | `out_of_province` | Any part lies outside the bounding box (§12) |
 | `muni_mismatch` | Geometry doesn't touch the encoded municipality (250 m tolerance) |
-| `barangay_mismatch` | New. Geometry doesn't touch the encoded barangay (250 m tolerance). Clears when the barangay is corrected or the point moved so they agree |
+| `barangay_mismatch` | New. Geometry doesn't touch the encoded barangay (250 m tolerance). Depends only on location: it clears when the barangay is corrected or the point moved so they agree. Location basis doesn't affect it |
 | `no_barangay` | No barangay encoded |
 | `barangay_unmatched` | A barangay name was given but isn't on the official list |
 | `duplicate_point` | Another point shares the exact coordinates. Informational, excluded from the "needs QA" count |
@@ -195,14 +200,18 @@ Flags are recalculated by the database on every save. Values sent by a client ar
 | Type | Statuses | Counts as operational |
 |---|---|---|
 | Farm Machinery | Turned-over, Serviceable, Needs Repair, Unserviceable, For Condemnation, Undelivered/For Distribution, Unknown | Turned-over, Serviceable |
-| SPIS | Inventory, On-going, Completed, Operational, Needs Repair, Non-operational | Operational |
-| All other starting types | Proposed, On-going, Completed, Operational, Needs Repair, Non-operational, Unknown | Operational |
+| SSIP | Inventory, On-going, Completed, Operational, Needs Repair, Non-operational | Operational (Completed doesn't count) |
+| All inactive types | Proposed, On-going, Completed, Operational, Needs Repair, Non-operational, Unknown | Operational |
 
 Admins can edit these lists per type.
 
 ### 4.8 Starting categories
 
-The 28 categories in the RAED seed, plus Disc Plow / Harrow, Seeder and Rice Reaper (Farm Machinery); Small Water Impounding Project, Diversion Dam, SFR, STW and PISOS (SSIP); and Other (any type).
+**Farm Machinery:** the machinery categories in the RAED seed, plus Disc Plow / Harrow, Seeder and Rice Reaper.
+
+**SSIP:** Solar-Powered Irrigation System (SPIS), Small Farm Reservoir (SFR), Shallow Tube Well (STW), Pump Irrigation from Open Source (PISOS), Small Water Impounding Project (SWIP) and Diversion Dam.
+
+**Any type:** Other.
 
 ---
 
@@ -228,7 +237,7 @@ The 28 categories in the RAED seed, plus Disc Plow / Harrow, Seeder and Rice Rea
 
 ### 5.2 Layers and customizable map view
 
-- **Layer panel:** each intervention type is its own toggleable layer, plus boundaries (province, municipal, barangay) and basemaps. New types appear automatically.
+- **Layer panel:** each active intervention type is its own toggleable layer, plus boundaries (province, municipal, barangay) and basemaps. Activating a type adds its layer automatically.
 - **Basemaps:** OpenStreetMap, Esri World Imagery, topographic, and hybrid (Esri imagery + labels).
 - **Color by:** program, status, year, type, location basis, or any dropdown field, including custom fields.
 - **Filter by:** any field, including custom fields. Also municipality, barangay, year range and data source.
@@ -240,7 +249,7 @@ The 28 categories in the RAED seed, plus Disc Plow / Harrow, Seeder and Rice Rea
 
 ### 5.3 Real-time editing on the map
 
-This is the main use of the system.
+This is the main use of the system. Phase 3 builds point editing only, since both active types are points. Line and polygon drawing and vertex editing follow when those types are activated.
 
 - **Add:** click the map (point) or draw (line/polygon). Starting from a barangay profile preselects that barangay.
 - **Edit:** drag to move, edit vertices, and delete (soft), all directly on the map.
@@ -253,12 +262,12 @@ This is the main use of the system.
   - Required fields and field formats. These block saving.
 - **Realtime:** every change appears on every open map and in the dashboard without a reload.
 - **Simultaneous edits:** if two users edit the same record, the second is told it changed and sees the latest version. Neither edit is silently lost.
-- **Status history:** changing a status adds an entry (status, date, remarks, photo, user). The popup shows the timeline, e.g. Turned-over → Serviceable → Needs Repair.
+- **Status history:** changing a status adds an entry (status, date, remarks, photo, user). The popup shows the timeline, e.g. Turned-over → Serviceable → Needs Repair. An imported status with no known change date shows as "as of [date] ([source])", not as the date it changed.
 - **Audit log:** every create, edit and delete is recorded. Deleted records can be restored by an Admin.
 
 ### 5.4 Admin customization
 
-- **Intervention types:** create and edit a type's name, geometry, icon, color and status list without code changes.
+- **Intervention types:** create, activate and edit a type's name, geometry, icon, color and status list without code changes.
 - **Form builder:** add, reorder and archive fields (text, number, date, dropdown, yes/no, photo).
 - **Lookups:** programs, categories, category groups, statuses, beneficiary types, icons and colors.
 - **Barangay baseline fields:** the same form builder.
@@ -436,9 +445,9 @@ Layout: left panel for layers and filters, center map, right or bottom panel for
 | Phase | Scope | Done when |
 |---|---|---|
 | **1. Data prep** (done) | RAED seed, 218 barangay boundaries, QA checks | Seed counts match the report |
-| **1b. Schema revision** | New data model (§4); RAED reloaded under Farm Machinery and SPIS; status history seeded; local dataset generated from it | Existing count and flag tests still pass on the new model |
+| **1b. Schema revision** (done) | New data model (§4); RAED reloaded under Farm Machinery and SSIP; status history seeded; local dataset generated from it | Existing count and flag tests still pass on the new model |
 | **2. Barangay base layer** (local data) | All 218 barangays, profiles, layer panel, choropleth modes including the gap view | Every barangay is clickable; the gap view shows the barangays with no records |
-| **3. On-map editing** (local data) | `DataStore` interface; add, draw, drag, vertex edit and soft delete; generated form; status history; audit log | Create, edit and delete work for point, line and polygon types, and show in a second tab at once |
+| **3. On-map editing** (local data) | `DataStore` interface; add by clicking, drag to move, soft delete, for points only; generated form; status history; audit log | Create, edit and delete work for Farm Machinery and SSIP, and show in a second tab at once |
 | **4. Supabase switch** | Auth, roles, row-level security, Realtime, Storage, server-side audit | An edit in one browser appears on another device within about 2 s |
 | **5. Admin customization** | Type manager, form builder, lookups, baseline fields | A new type with custom fields can be created and used with no code change |
 | **6. Custom views and dashboard** | Color by and filter by any field; saved views; KPIs, charts and table | A saved view restores layers, filters, style and extent; totals match the data |
@@ -469,7 +478,8 @@ Layout: left panel for layers and filters, center map, right or bottom panel for
 - [ ] A saved view restores layers, filters, style and extent, and can be shared.
 
 **Editing**
-- [ ] Points can be added and dragged; lines and polygons can be drawn and reshaped on the map; records can be soft-deleted and restored.
+- [ ] Points can be added and dragged, and records can be soft-deleted and restored.
+- [ ] When a line or polygon type is activated, its shapes can be drawn and reshaped on the map.
 - [ ] A change appears on every open map and in the dashboard without a reload, within about 2 s on another device.
 - [ ] Simultaneous edits to one record don't silently overwrite each other.
 - [ ] A status change adds a history entry, and the popup shows the timeline.

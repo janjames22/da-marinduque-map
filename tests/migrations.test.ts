@@ -109,7 +109,6 @@ describe('starting lookups', () => {
     ).rows;
     expect(types).toEqual([
       { name: 'Farm Machinery', geometry_kind: 'point' },
-      { name: 'SPIS', geometry_kind: 'point' },
       { name: 'SSIP', geometry_kind: 'point' },
       { name: 'Farm-to-Market Road', geometry_kind: 'line' },
       { name: 'Postharvest Facility', geometry_kind: 'point' },
@@ -117,6 +116,54 @@ describe('starting lookups', () => {
       { name: 'Service Area', geometry_kind: 'polygon' },
       { name: 'Other', geometry_kind: 'point' },
     ]);
+  });
+
+  it('activates only Farm Machinery and SSIP, keeping the rest for later', async () => {
+    expect(await names('select name from intervention_types where is_active order by sort_order')).toEqual([
+      'Farm Machinery',
+      'SSIP',
+    ]);
+    expect(await names('select name from intervention_types where not is_active')).toHaveLength(5);
+  });
+
+  it('lists the SSIP categories, including Other through any-type', async () => {
+    expect(
+      await names(
+        `select c.name from categories c
+         where c.intervention_type_id = (select id from intervention_types where code = 'ssip')
+            or c.intervention_type_id is null
+         order by c.sort_order`,
+      ),
+    ).toEqual([
+      'Solar-Powered Irrigation System (SPIS)',
+      'Small Farm Reservoir (SFR)',
+      'Shallow Tube Well (STW)',
+      'Pump Irrigation from Open Source (PISOS)',
+      'Small Water Impounding Project (SWIP)',
+      'Diversion Dam',
+      'Other',
+    ]);
+  });
+
+  it('gives SSIP its starter fields', async () => {
+    const { field_schema } = await one<{ field_schema: { fields: { key: string }[] } }>(
+      `select field_schema from intervention_types where code = 'ssip'`,
+    );
+    expect(field_schema.fields.map((f) => f.key)).toEqual([
+      'water_source',
+      'service_area_ha',
+      'farmer_beneficiaries',
+      'pump_capacity',
+      'solar_capacity_kwp',
+      'stage',
+    ]);
+  });
+
+  it('keeps SSIP as a point type', async () => {
+    const { geometry_kind } = await one<{ geometry_kind: string }>(
+      `select geometry_kind::text from intervention_types where code = 'ssip'`,
+    );
+    expect(geometry_kind).toBe('point');
   });
 
   it('seeds the location basis lookup', async () => {
@@ -138,8 +185,8 @@ describe('starting lookups', () => {
       [code],
     );
 
-  it('gives SPIS its own status list', async () => {
-    expect(await statusesFor('spis')).toEqual([
+  it('gives SSIP its own status list', async () => {
+    expect(await statusesFor('ssip')).toEqual([
       'Inventory',
       'On-going',
       'Completed',
@@ -151,7 +198,7 @@ describe('starting lookups', () => {
 
   it('sets which statuses count as operational per type', async () => {
     const operational = 'and ts.counts_as_operational';
-    expect(await statusesFor('spis', operational)).toEqual(['Operational']);
+    expect(await statusesFor('ssip', operational)).toEqual(['Operational']);
     expect(await statusesFor('farm-machinery', operational)).toEqual(['Turned-over', 'Serviceable']);
   });
 
@@ -161,21 +208,21 @@ describe('starting lookups', () => {
        from intervention_types t join intervention_type_statuses ts on ts.intervention_type_id = t.id
        group by 1`,
     );
-    expect(rows).toHaveLength(8);
+    expect(rows).toHaveLength(7);
     expect(rows.every((r) => r.defaults === 1)).toBe(true);
   });
 
   it('includes the six extra categories under sensible types', async () => {
     const { rows } = await db.query<{ name: string; type: string | null }>(
       `select c.name, t.code as type from categories c left join intervention_types t on t.id = c.intervention_type_id
-       where c.name in ('Disc Plow / Harrow', 'Seeder', 'Rice Reaper', 'Small Water Impounding Project', 'Diversion Dam', 'Other')
+       where c.name in ('Disc Plow / Harrow', 'Seeder', 'Rice Reaper', 'Small Water Impounding Project (SWIP)', 'Diversion Dam', 'Other')
        order by c.sort_order`,
     );
     expect(rows).toEqual([
       { name: 'Disc Plow / Harrow', type: 'farm-machinery' },
       { name: 'Seeder', type: 'farm-machinery' },
       { name: 'Rice Reaper', type: 'farm-machinery' },
-      { name: 'Small Water Impounding Project', type: 'ssip' },
+      { name: 'Small Water Impounding Project (SWIP)', type: 'ssip' },
       { name: 'Diversion Dam', type: 'ssip' },
       { name: 'Other', type: null },
     ]);
@@ -672,6 +719,23 @@ describe('status history', () => {
     expect(await currentStatus(row.id)).toBe('Operational');
   });
 
+  it('treats a date as a change date unless told it is an as-of date', async () => {
+    const row = await insertRecord({});
+    await addStatus(row.id, 'Operational', '2025-06-01');
+    const { date_basis } = await one<{ date_basis: string }>(
+      'select date_basis from status_history where intervention_id = $1',
+      [row.id],
+    );
+    expect(date_basis).toBe('changed');
+    await expect(
+      db.query(
+        `insert into status_history (intervention_id, status_id, date_basis)
+         values ($1, (select id from statuses where name = 'Operational'), 'maybe')`,
+        [row.id],
+      ),
+    ).rejects.toThrow(/check constraint/i);
+  });
+
   it('ignores a direct edit of status_id', async () => {
     const row = await insertRecord({});
     await addStatus(row.id, 'Operational', '2025-06-01');
@@ -692,8 +756,8 @@ describe('status history', () => {
     const machinery = await insertRecord({ type: 'farm-machinery', category: 'seeder', title: null });
     await expect(addStatus(machinery.id, 'Operational', '2024-01-01')).rejects.toThrow(/not in the status list/);
 
-    const spis = await insertRecord({ type: 'spis', category: 'other' });
-    await expect(addStatus(spis.id, 'Turned-over', '2024-01-01')).rejects.toThrow(/not in the status list/);
+    const ssip = await insertRecord({ type: 'ssip', category: 'spis' });
+    await expect(addStatus(ssip.id, 'Turned-over', '2024-01-01')).rejects.toThrow(/not in the status list/);
   });
 });
 

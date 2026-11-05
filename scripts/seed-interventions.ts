@@ -20,10 +20,11 @@ export const CORRECTIONS_CSV_PATH = resolve(DATA_DIR, 'corrections', 'correction
 export const RAED_DATA_SOURCE = 'RAED 2026-10-21';
 const RAED_FILE_NAME = 'seed_interventions.csv';
 const RAED_STATUS_DATE = '2026-10-21'; // the report date; the report gives no status dates
-const RAED_STATUS_REMARKS = 'As reported in the RAED Consolidated Inventory Report';
+const RAED_STATUS_SOURCE_NOTE = 'RAED report';
 const RAED_LOCATION_BASIS = 'Unknown';
 
-const TYPE_CODES: Record<string, string> = { machinery: 'farm-machinery', spis: 'spis' };
+// SPIS is a category under the SSIP type, not a type of its own.
+const TYPE_CODES: Record<string, string> = { machinery: 'farm-machinery', spis: 'ssip' };
 
 const CARRIED_OVER_FLAGS = ['beneficiary_name_check'];
 
@@ -395,7 +396,10 @@ async function seedInTransaction(db: Queryable, rows: SeedRow[], corrections: Co
       });
     }
 
-    const attributes = emptyToNull(row.category_variant) ? { variant: row.category_variant.trim() } : {};
+    const attributes = {
+      ...(emptyToNull(row.category_variant) ? { variant: row.category_variant.trim() } : {}),
+      ...(emptyToNull(row.stage) ? { stage: slug(row.stage).replaceAll('-', '_') } : {}),
+    };
 
     const { rows: inserted } = await db.query<{ id: string }>(
       `insert into public.interventions (
@@ -432,13 +436,13 @@ async function seedInTransaction(db: Queryable, rows: SeedRow[], corrections: Co
       ],
     );
 
-    // The SPIS table has no status column; its Stage values are the SPIS status list.
+    // The source's SPIS table has no status column; its Stage values are on the SSIP status list.
     const statusName = emptyToNull(row.status) ?? emptyToNull(row.stage);
     if (!statusName) throw new Error(`${row.source_id}: no status or stage`);
     await db.query(
-      `insert into public.status_history (intervention_id, status_id, status_date, remarks)
-       values ($1, $2, $3, $4)`,
-      [inserted[0].id, required(statusIds, statusName, 'status', row.source_id), RAED_STATUS_DATE, RAED_STATUS_REMARKS],
+      `insert into public.status_history (intervention_id, status_id, status_date, date_basis, source_note)
+       values ($1, $2, $3, 'as_of', $4)`,
+      [inserted[0].id, required(statusIds, statusName, 'status', row.source_id), RAED_STATUS_DATE, RAED_STATUS_SOURCE_NOTE],
     );
   }
 

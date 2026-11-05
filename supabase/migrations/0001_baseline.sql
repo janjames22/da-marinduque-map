@@ -395,6 +395,10 @@ create table public.status_history (
   intervention_id uuid not null references public.interventions (id) on delete cascade,
   status_id       smallint not null references public.statuses (id),
   status_date     date not null default current_date,
+  -- 'changed': the status changed on this date. 'as_of': it was reported this way on this date,
+  -- and may have changed earlier. The UI shows the second as "as of <date> (<source_note>)".
+  date_basis      text not null default 'changed' check (date_basis in ('changed', 'as_of')),
+  source_note     text,
   remarks         text,
   photo_id        uuid references public.intervention_photos (id),
   created_by      uuid default auth.uid() references public.profiles (id),
@@ -904,37 +908,42 @@ insert into public.intervention_types (code, name, geometry_kind, icon_id, color
      {"key": "engine_no", "label": "Engine No.", "input": "text"},
      {"key": "date_turned_over", "label": "Date turned over", "input": "date"}
    ]}'),
-  ('spis', 'SPIS', 'point', (select id from public.icons where name = 'Sun'), '#1976d2', 2,
-   '{"category_id": "required", "title": "required", "banner_program_id": "required", "year_funded": "required", "beneficiary": "required"}',
-   '{"fields": [
-     {"key": "solar_capacity_kw", "label": "Solar capacity", "input": "number", "unit": "kW"},
-     {"key": "service_area_ha", "label": "Service area", "input": "number", "unit": "ha"},
-     {"key": "date_completed", "label": "Date completed", "input": "date"}
-   ]}'),
-  ('ssip', 'SSIP', 'point', (select id from public.icons where name = 'Water'), '#0288d1', 3,
+  ('ssip', 'SSIP', 'point', (select id from public.icons where name = 'Water'), '#1976d2', 2,
    '{"category_id": "required", "year_funded": "required"}',
    '{"fields": [
+     {"key": "water_source", "label": "Water source", "input": "text"},
      {"key": "service_area_ha", "label": "Service area", "input": "number", "unit": "ha"},
-     {"key": "date_completed", "label": "Date completed", "input": "date"}
+     {"key": "farmer_beneficiaries", "label": "Farmer-beneficiaries", "input": "number", "unit": "no."},
+     {"key": "pump_capacity", "label": "Pump capacity", "input": "text"},
+     {"key": "solar_capacity_kwp", "label": "Solar capacity", "input": "number", "unit": "kWp"},
+     {"key": "stage", "label": "Stage", "input": "dropdown", "options": [
+       {"value": "proposed", "label": "Proposed"},
+       {"value": "inventory", "label": "Inventory"},
+       {"value": "on_going", "label": "On-going"},
+       {"value": "completed", "label": "Completed"}
+     ]}
    ]}'),
-  ('fmr', 'Farm-to-Market Road', 'line', (select id from public.icons where name = 'Road'), '#6d4c41', 4,
+  ('fmr', 'Farm-to-Market Road', 'line', (select id from public.icons where name = 'Road'), '#6d4c41', 3,
    '{"title": "required"}',
    '{"fields": [
      {"key": "length_km", "label": "Length", "input": "number", "unit": "km"},
      {"key": "width_m", "label": "Width", "input": "number", "unit": "m"}
    ]}'),
-  ('postharvest-facility', 'Postharvest Facility', 'point', (select id from public.icons where name = 'Building'), '#ef6c00', 5,
+  ('postharvest-facility', 'Postharvest Facility', 'point', (select id from public.icons where name = 'Building'), '#ef6c00', 4,
    '{"title": "required"}',
    '{"fields": [{"key": "floor_area_sqm", "label": "Floor area", "input": "number", "unit": "sq m"}]}'),
-  ('irrigation-canal', 'Irrigation Canal', 'line', (select id from public.icons where name = 'Canal'), '#00acc1', 6,
+  ('irrigation-canal', 'Irrigation Canal', 'line', (select id from public.icons where name = 'Canal'), '#00acc1', 5,
    '{"title": "required"}',
    '{"fields": [{"key": "length_km", "label": "Length", "input": "number", "unit": "km"}]}'),
-  ('service-area', 'Service Area', 'polygon', (select id from public.icons where name = 'Area'), '#7cb342', 7,
+  ('service-area', 'Service Area', 'polygon', (select id from public.icons where name = 'Area'), '#7cb342', 6,
    '{"title": "required"}',
    '{"fields": [{"key": "area_ha", "label": "Area", "input": "number", "unit": "ha"}]}'),
-  ('other', 'Other', 'point', (select id from public.icons where name = 'Pin'), '#757575', 8,
+  ('other', 'Other', 'point', (select id from public.icons where name = 'Pin'), '#757575', 7,
    '{"title": "required"}',
    '{"fields": []}');
+
+-- Only these are in use for now. The rest stay hidden until an admin activates them.
+update public.intervention_types set is_active = false where code not in ('farm-machinery', 'ssip');
 
 -- Status lists per type. Which statuses count as operational is set per type.
 insert into public.intervention_type_statuses (intervention_type_id, status_id, sort_order, is_default, counts_as_operational)
@@ -962,7 +971,7 @@ from (values
   ('Non-operational', 6, false, false)
 ) as list (status_name, sort_order, is_default, counts_as_operational)
 join public.statuses s on s.name = list.status_name
-join public.intervention_types t on t.code = 'spis';
+join public.intervention_types t on t.code = 'ssip';
 
 insert into public.intervention_type_statuses (intervention_type_id, status_id, sort_order, is_default, counts_as_operational)
 select t.id, s.id, list.sort_order, list.is_default, list.counts_as_operational
@@ -976,20 +985,22 @@ from (values
   ('Unknown',         7, false, false)
 ) as list (status_name, sort_order, is_default, counts_as_operational)
 join public.statuses s on s.name = list.status_name
-join public.intervention_types t on t.code in ('ssip', 'fmr', 'postharvest-facility', 'irrigation-canal', 'service-area', 'other');
+join public.intervention_types t on t.code in ('fmr', 'postharvest-facility', 'irrigation-canal', 'service-area', 'other');
 
 insert into public.categories (code, name, intervention_type_id, category_group_id, sort_order)
 select list.code, list.name, t.id, g.id, list.sort_order
 from (values
-  ('disc-plow-harrow', 'Disc Plow / Harrow',             'farm-machinery', 'land_preparation', 1),
-  ('seeder',           'Seeder',                         'farm-machinery', 'planting',         2),
-  ('rice-reaper',      'Rice Reaper',                    'farm-machinery', 'harvesting',       3),
-  ('swip',             'Small Water Impounding Project', 'ssip',           'irrigation',       4),
-  ('diversion-dam',    'Diversion Dam',                  'ssip',           'irrigation',       5),
-  ('sfr',              'SFR',                            'ssip',           'irrigation',       6),
-  ('stw',              'STW',                            'ssip',           'irrigation',       7),
-  ('pisos',            'PISOS',                          'ssip',           'irrigation',       8),
-  ('other',            'Other',                          null,             'other',            9)
+  ('disc-plow-harrow', 'Disc Plow / Harrow',                     'farm-machinery', 'land_preparation', 1),
+  ('seeder',           'Seeder',                                 'farm-machinery', 'planting',         2),
+  ('rice-reaper',      'Rice Reaper',                            'farm-machinery', 'harvesting',       3),
+  ('spis',             'Solar-Powered Irrigation System (SPIS)', 'ssip',           'irrigation',       4),
+  ('sfr',              'Small Farm Reservoir (SFR)',             'ssip',           'irrigation',       5),
+  ('stw',              'Shallow Tube Well (STW)',                'ssip',           'irrigation',       6),
+  ('pisos',            'Pump Irrigation from Open Source (PISOS)', 'ssip',         'irrigation',       7),
+  ('swip',             'Small Water Impounding Project (SWIP)',  'ssip',           'irrigation',       8),
+  ('diversion-dam',    'Diversion Dam',                          'ssip',           'irrigation',       9),
+  -- Applies to any type, including SSIP.
+  ('other',            'Other',                                  null,             'other',            10)
 ) as list (code, name, type_code, group_code, sort_order)
 join public.category_groups g on g.code = list.group_code
 left join public.intervention_types t on t.code = list.type_code;

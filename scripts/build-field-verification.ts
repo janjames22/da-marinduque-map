@@ -1,5 +1,6 @@
-// Builds data/corrections/for-field-verification.csv: every flagged record, for the MAOs to
-// check in the field. The file opens correctly in Excel, including n-tilde.
+// Builds data/corrections/for-field-verification.csv: the flagged records for the MAOs to check
+// in the field. Records flagged only for shared coordinates are left out, because that's normal
+// when one FCA has several machines. The file opens correctly in Excel, including n-tilde.
 //
 // Usage: npx tsx scripts/build-field-verification.ts
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -104,7 +105,10 @@ export async function buildVerificationRows(db: Queryable, corrections: Correcti
      left join public.categories c on c.id = v.category_id
      left join public.barangays b on b.id = v.barangay_id
      where v.source_id is not null
-       and (cardinality(v.qa_flags) > 0 or v.source_raw ->> 'qa_flags' like '%possible_duplicate%')
+       and (
+         cardinality(array_remove(v.qa_flags, 'duplicate_point')) > 0
+         or v.source_raw ->> 'qa_flags' like '%possible_duplicate%'
+       )
      order by m.name, v.barangay_raw nulls first, v.source_id`,
   );
 
