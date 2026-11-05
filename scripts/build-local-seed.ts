@@ -37,7 +37,7 @@ export async function buildLocalSeed(db: Queryable) {
   return {
     lookups,
     municipalities: await all('select id, name, psgc_code from public.municipalities order by name'),
-    barangays: await all('select id, municipality_id, name, psgc_code, attributes from public.barangays order by name'),
+    barangays: await all('select id, municipality_id, name, psgc_code, attributes, version from public.barangays order by name'),
     // geojson replaces the raw geometry value, which the browser can't read.
     interventions: await records(`select to_jsonb(v) - 'geom' as record from public.interventions_v v order by v.source_id`),
     intervention_barangays: await all('select * from public.intervention_barangays'),

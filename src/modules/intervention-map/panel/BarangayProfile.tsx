@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import type { Barangay, Intervention, MapData } from '../data/types';
-import { fieldValue } from '../lib/display';
+import { useEditUi } from '../state/edit-ui';
+import { useMapUi } from '../state/map-ui';
+import { BaselineSection } from './BaselineSection';
 import { RecordList } from './RecordList';
 
 interface BarangayProfileProps {
@@ -65,7 +67,12 @@ export function BarangayProfile({ barangay, data, allRecords, onClose }: Baranga
     return { key: record.banner_program_id ?? 'none', label: program?.name ?? 'No program', color: program?.color ?? null };
   });
 
-  const baselineFields = data.barangayFields.fields.filter((field) => !field.archived);
+  const addHere = () => {
+    useMapUi.getState().zoomToBarangay(barangay.id);
+    useEditUi
+      .getState()
+      .openPanel({ kind: 'add', prefill: { municipality_id: barangay.municipality_id, barangay_id: barangay.id } }, { picking: true });
+  };
 
   return (
     <aside className="panel panel-right" aria-label={`Profile of barangay ${barangay.name}`}>
@@ -81,12 +88,7 @@ export function BarangayProfile({ barangay, data, allRecords, onClose }: Baranga
         </button>
       </header>
 
-      <button
-        type="button"
-        className="primary-button"
-        disabled
-        title="Encoding on the map arrives in the next phase"
-      >
+      <button type="button" className="primary-button" onClick={addHere}>
         Add intervention here
       </button>
 
@@ -105,17 +107,7 @@ export function BarangayProfile({ barangay, data, allRecords, onClose }: Baranga
         )}
       </section>
 
-      <section>
-        <h3 className="section-title">Baseline</h3>
-        <dl className="baseline">
-          {baselineFields.map((field) => (
-            <div key={field.key}>
-              <dt>{field.label}</dt>
-              <dd>{fieldValue(field, barangay.attributes[field.key]) ?? 'Not set'}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      <BaselineSection key={barangay.id} barangay={barangay} data={data} />
     </aside>
   );
 }

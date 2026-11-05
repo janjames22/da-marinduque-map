@@ -7,6 +7,7 @@ import type { Shading } from '../lib/choropleth';
 import type { Intervention, MapData } from '../data/types';
 import { BarangayLayer } from './BarangayLayer';
 import { BoundaryLines } from './BoundaryLines';
+import { DraftLayer } from './DraftLayer';
 import { InterventionLayer } from './InterventionLayer';
 
 const DEFAULT_CENTER: [number, number] = [13.4, 121.97];
@@ -79,6 +80,7 @@ export function MapView({ data, boundaries, shading, counts, markers, selectedBa
       />
       <BoundaryLines province={boundaries.province} municipalities={boundaries.municipalities} />
       <InterventionLayer data={data} records={markers} />
+      <DraftLayer />
     </MapContainer>
   );
 }

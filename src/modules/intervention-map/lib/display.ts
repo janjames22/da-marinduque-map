@@ -1,4 +1,5 @@
 import type { FieldDefinition, Intervention, MapData, StatusEntry } from '../data/types';
+import { formatPoint, googleMapsUrl } from './coordinates';
 
 const byId = <T extends { id: number }>(items: T[], id: number | null): T | undefined =>
   id === null ? undefined : items.find((item) => item.id === id);
@@ -38,6 +39,22 @@ export function locationWarning(record: Intervention, data: Pick<MapData, 'baran
   return null;
 }
 
+export const FLAG_LABELS: Record<string, string> = {
+  no_coords: 'No coordinates',
+  out_of_province: 'Outside Marinduque',
+  muni_mismatch: 'Point is outside the encoded municipality',
+  barangay_mismatch: 'Point is outside the encoded barangay',
+  duplicate_point: 'Another record has the same coordinates',
+  no_barangay: 'No barangay',
+  barangay_unmatched: 'Barangay name isn\'t on the official list',
+  beneficiary_name_check: 'Beneficiary name needs checking',
+};
+
+// Shared coordinates are informational, and aren't counted as needing review.
+export function needsReview(record: Pick<Intervention, 'qa_flags'>): boolean {
+  return record.qa_flags.some((flag) => flag !== 'duplicate_point');
+}
+
 export function fieldValue(field: FieldDefinition, value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
   if (field.input === 'yes_no') return value ? 'Yes' : 'No';
@@ -59,6 +76,11 @@ export function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (character) => ESCAPES[character]);
 }
 
+export type PopupAction = 'copy-coordinates' | 'photo' | 'edit' | 'status' | 'resolve' | 'history' | 'delete';
+
+const actionButton = (action: PopupAction, label: string, extra = '') =>
+  `<button type="button" class="popup-action" data-action="${action}"${extra}>${escapeHtml(label)}</button>`;
+
 // The popup is plain HTML handed to Leaflet, so every value from the data must be escaped.
 export function popupHtml(record: Intervention, data: MapData): string {
   const type = byId(data.types, record.intervention_type_id);
@@ -79,18 +101,33 @@ export function popupHtml(record: Intervention, data: MapData): string {
   const timeline = statusTimeline(record.id, data.statusHistory)
     .map((entry) => {
       const status = byId(data.statuses, entry.status_id)?.name ?? 'Unknown';
-      return `<li><strong>${escapeHtml(status)}</strong> ${escapeHtml(statusDateLabel(entry))}</li>`;
+      const remarks = entry.remarks ? `<div class="status-remarks">${escapeHtml(entry.remarks)}</div>` : '';
+      const photo = data.photos.find((p) => p.id === entry.photo_id);
+      const photoButton = photo ? actionButton('photo', 'View photo', ` data-photo-id="${escapeHtml(photo.id)}"`) : '';
+      return `<li><strong>${escapeHtml(status)}</strong> ${escapeHtml(statusDateLabel(entry))}${remarks}${photoButton}</li>`;
     })
     .join('');
 
   let coordinates = '';
-  let mapLink = '';
+  let locationActions = '';
   if (record.geojson?.type === 'Point') {
-    const [longitude, latitude] = record.geojson.coordinates;
-    coordinates = row('Coordinates', `${latitude}, ${longitude}`);
-    const url = `https://www.google.com/maps?q=${encodeURIComponent(`${latitude},${longitude}`)}`;
-    mapLink = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>`;
+    const [lng, lat] = record.geojson.coordinates;
+    const text = formatPoint({ lat, lng });
+    coordinates = row('Coordinates', text);
+    locationActions =
+      `<div class="popup-actions">` +
+      actionButton('copy-coordinates', 'Copy coordinates', ` data-coordinates="${escapeHtml(text)}"`) +
+      `<a class="popup-action" href="${escapeHtml(googleMapsUrl({ lat, lng }))}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>` +
+      `</div>`;
   }
+
+  const editActions = [
+    actionButton('edit', 'Edit'),
+    actionButton('status', 'Update status'),
+    needsReview(record) ? actionButton('resolve', 'Resolve flag') : '',
+    actionButton('history', 'History'),
+    actionButton('delete', 'Delete'),
+  ].join('');
 
   return [
     `<div class="record-popup">`,
@@ -108,7 +145,8 @@ export function popupHtml(record: Intervention, data: MapData): string {
     row('Remarks', record.remarks),
     `</table>`,
     timeline ? `<h4>Status</h4><ol class="status-timeline">${timeline}</ol>` : '',
-    mapLink,
+    locationActions,
+    `<div class="popup-actions">${editActions}</div>`,
     `</div>`,
   ].join('');
 }

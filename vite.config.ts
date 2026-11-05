@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
@@ -25,9 +26,11 @@ function localSeed(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), localSeed()],
+// Phones only share GPS, and allow copying, over https. "npm run dev:phone" gives the dev server a
+// self-signed certificate and opens it to the local network, so it's for testing on a trusted network.
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), localSeed(), ...(mode === 'phone' ? [basicSsl()] : [])],
   test: {
     include: ['tests/**/*.test.ts'],
   },
-});
+}));

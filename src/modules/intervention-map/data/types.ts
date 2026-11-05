@@ -39,6 +39,8 @@ export interface Category {
   id: number;
   name: string;
   intervention_type_id: number | null;
+  sort_order: number;
+  is_active: boolean;
 }
 
 export interface Status {
@@ -50,7 +52,18 @@ export interface Status {
 export interface LocationBasis {
   id: number;
   name: string;
+  sort_order: number;
+  is_active: boolean;
 }
+
+export interface BeneficiaryType {
+  id: number;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export type CoreFieldRule = 'required' | 'optional' | 'hidden';
 
 export interface InterventionType {
   id: number;
@@ -59,9 +72,18 @@ export interface InterventionType {
   geometry_kind: 'point' | 'line' | 'polygon';
   icon_id: number | null;
   color: string;
+  core_field_rules: Record<string, CoreFieldRule>;
   field_schema: FieldSchema;
   sort_order: number;
   is_active: boolean;
+}
+
+export interface TypeStatus {
+  intervention_type_id: number;
+  status_id: number;
+  sort_order: number;
+  is_default: boolean;
+  counts_as_operational: boolean;
 }
 
 export interface Municipality {
@@ -76,6 +98,7 @@ export interface Barangay {
   name: string;
   psgc_code: string;
   attributes: Record<string, unknown>;
+  version: number;
 }
 
 export interface Intervention {
@@ -86,7 +109,10 @@ export interface Intervention {
   banner_program_id: number | null;
   year_funded: number | null;
   quantity: number;
+  unit_cost: number | null;
+  fund_source: string | null;
   beneficiary: string | null;
+  beneficiary_type_id: number | null;
   municipality_id: number;
   barangay_id: number | null;
   barangay_raw: string | null;
@@ -97,8 +123,12 @@ export interface Intervention {
   data_source: string | null;
   qa_flags: string[];
   geojson: GeoJSON.Geometry | null;
+  plotted_barangay_id: number | null;
   plotted_barangay: string | null;
   plotted_municipality: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string;
   deleted_at: string | null;
 }
 
@@ -116,7 +146,32 @@ export interface StatusEntry {
   date_basis: 'changed' | 'as_of';
   source_note: string | null;
   remarks: string | null;
+  photo_id: string | null;
   created_at: string;
+}
+
+export interface InterventionPhoto {
+  id: string;
+  intervention_id: string;
+  storage_path: string;
+  caption: string | null;
+  taken_at: string | null;
+  exif_location: GeoJSON.Point | null;
+  created_at: string;
+}
+
+export type AuditAction = 'insert' | 'update' | 'delete' | 'soft_delete' | 'restore';
+
+export interface AuditEntry {
+  id: number;
+  table_name: string;
+  record_id: string | null;
+  action: AuditAction;
+  old_row: Record<string, unknown> | null;
+  new_row: Record<string, unknown> | null;
+  actor_id: string | null;
+  context: Record<string, unknown> | null;
+  at: string;
 }
 
 export interface MapData {
@@ -125,12 +180,15 @@ export interface MapData {
   categories: Category[];
   statuses: Status[];
   locationBases: LocationBasis[];
+  beneficiaryTypes: BeneficiaryType[];
   types: InterventionType[];
+  typeStatuses: TypeStatus[];
   municipalities: Municipality[];
   barangays: Barangay[];
   barangayFields: FieldSchema;
   interventions: Intervention[];
   links: InterventionBarangay[];
   statusHistory: StatusEntry[];
+  photos: InterventionPhoto[];
   dataSources: string[];
 }

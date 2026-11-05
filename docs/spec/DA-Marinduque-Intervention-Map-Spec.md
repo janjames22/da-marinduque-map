@@ -153,7 +153,7 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 
 ### 4.4 Barangays
 
-`barangays` holds the official name, PSGC code, polygon and `attributes` (jsonb) for baseline values. `barangay_field_schema` is a single admin-editable schema in the §4.3 format, starting with agricultural area, number of farmers, main crops, irrigated area and remarks. All are optional.
+`barangays` holds the official name, PSGC code, polygon, `attributes` (jsonb) for baseline values, and `version`, which stops two users overwriting each other's baseline edits. `barangay_field_schema` is a single admin-editable schema in the §4.3 format, starting with agricultural area, number of farmers, main crops, irrigated area and remarks. All are optional.
 
 `intervention_barangays` (intervention_id, barangay_id, link_source) lists every barangay a record belongs to, so a road crossing three barangays appears in all three profiles. It is maintained automatically:
 
@@ -252,18 +252,19 @@ Admins can edit these lists per type.
 This is the main use of the system. Phase 3 builds point editing only, since both active types are points. Line and polygon drawing and vertex editing follow when those types are activated.
 
 - **Add:** click the map (point) or draw (line/polygon). Starting from a barangay profile preselects that barangay.
-- **Edit:** drag to move, edit vertices, and delete (soft), all directly on the map.
+- **Edit:** drag to move, edit vertices, and delete (soft), all directly on the map. A dragged marker doesn't move until the move is confirmed, so a slip of the finger changes nothing.
 - **Location fill:** municipality and barangay are suggested from where the shape was placed, and can be changed.
 - **Generated form:** the form comes from the type's `core_field_rules` and `field_schema`.
-- **Other ways to set a location:** type DD or DMS, paste from Google Maps ("13.4671, 122.0686"), use device GPS, or use EXIF GPS from a geotagged photo.
+- **Other ways to set a location:** type DD or DMS, paste from Google Maps ("13.4671, 122.0686", or a full link), use device GPS (needs https), or use EXIF GPS from a geotagged photo.
 - **Validation before saving:**
   - Inside the Marinduque bounding box, and inside the selected municipality and barangay. These show warnings that can be overridden; the flag stays on the record.
-  - Possible duplicate (same type, category, beneficiary, year and barangay). A warning only, because an FCA can receive two identical units.
+  - Possible duplicate (same category, beneficiary, year and barangay, ignoring case and spacing in the name). A warning only, because an FCA can receive two identical units.
   - Required fields and field formats. These block saving.
 - **Realtime:** every change appears on every open map and in the dashboard without a reload.
 - **Simultaneous edits:** if two users edit the same record, the second is told it changed and sees the latest version. Neither edit is silently lost.
 - **Status history:** changing a status adds an entry (status, date, remarks, photo, user). The popup shows the timeline, e.g. Turned-over → Serviceable → Needs Repair. An imported status with no known change date shows as "as of [date] ([source])", not as the date it changed.
-- **Audit log:** every create, edit and delete is recorded. Deleted records can be restored by an Admin.
+- **Resolving a flag:** from the popup or the record's row, correct the barangay or coordinates, set the location basis, or clear a name check. A reason is required and goes in the audit log. Flags still clear only when the data agrees. The corrections file (§5.6) still handles bulk fixes.
+- **Audit log:** every create, edit and delete is recorded, and each record shows its own change history. Deleted records can be restored by an Admin.
 
 ### 5.4 Admin customization
 
@@ -387,8 +388,9 @@ Chosen so a solo developer can build and host it cheaply.
 |---|---|---|
 | Frontend | **React + Vite + TypeScript** | Component-based, easy to merge into ABE PDCS later |
 | Map | **Leaflet** + `react-leaflet`, `leaflet.markercluster`, `leaflet.heat` | Lightweight, free, well documented |
-| On-map drawing and editing | **Leaflet-Geoman** (free version) | Handles draw, drag, vertex editing and delete for all three geometry kinds |
-| Forms | react-hook-form + zod, generated from `field_schema` | One form engine for every type |
+| On-map drawing and editing | Leaflet's own marker dragging for points. **Leaflet-Geoman** (free version) when line and polygon types are activated | Geoman handles draw, drag, vertex editing and delete for all three geometry kinds, but nothing active needs it yet |
+| Forms | Plain React forms, generated from `core_field_rules` and `field_schema`, with the validation rules in one module shared with local mode | The rules are needed outside the form too, so a form library would add little |
+| Photo location | `exifr` (lite build) | Reads GPS and date from JPEG and HEIC in the browser |
 | Charts | Recharts | |
 | Table | TanStack Table | |
 | Backend / DB | **Supabase** (PostgreSQL + **PostGIS** + Auth + Storage + **Realtime**) | Realtime gives live map updates; PostGIS handles spatial checks |

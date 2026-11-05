@@ -4,10 +4,15 @@ import L from './leaflet-setup';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import type { Intervention, MapData } from '../data/types';
-import { isOnMap, popupHtml } from '../lib/display';
+import { roundPoint } from '../lib/coordinates';
+import { copyText } from '../lib/copy-text';
+import { isOnMap, popupHtml, type PopupAction } from '../lib/display';
+import { openRecordPanel } from '../edit/open-panel';
+import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
 
 const FALLBACK_COLOR = '#757575';
+const FOCUS_WAIT_MS = 3000;
 
 // Icons load through <img>, so scripts inside an icon's SVG can't run. Phase 5 adds uploads.
 function iconDataUrl(svg: string): string {
@@ -71,6 +76,11 @@ function whenSettled(map: L.Map, cluster: L.MarkerClusterGroup, run: () => void)
   return () => clearTimeout(timer);
 }
 
+interface ShownMarker {
+  marker: L.Marker;
+  key: string; // what the marker looks like and where it is
+}
+
 interface InterventionLayerProps {
   data: MapData;
   records: Intervention[];
@@ -79,8 +89,17 @@ interface InterventionLayerProps {
 export function InterventionLayer({ data, records }: InterventionLayerProps) {
   const map = useMap();
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
-  const markerById = useRef(new Map<string, L.Marker>());
+  const shown = useRef(new Map<string, ShownMarker>());
+  const pendingFocus = useRef<{ id: string; until: number } | null>(null);
+  const cancelFocus = useRef<() => void>(() => {});
   const focusRecord = useMapUi((state) => state.focusRecord);
+  const moveNonce = useEditUi((state) => state.moveNonce);
+  const pendingMove = useEditUi((state) => state.pendingMove);
+  const lastMoveNonce = useRef(moveNonce);
+
+  // Popups are built when they open, and read the newest data from here.
+  const latest = useRef(data);
+  latest.current = data;
 
   const iconFor = useMemo(() => {
     const cache = new Map<string, L.DivIcon>();
@@ -101,7 +120,7 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
         });
         cache.set(key, divIcon);
       }
-      return divIcon;
+      return { divIcon, key };
     };
   }, [data.types, data.programs, data.icons]);
 
@@ -113,39 +132,139 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
       spiderfyOnMaxZoom: true,
     }).addTo(map);
     clusterRef.current = cluster;
+    const markers = shown.current;
+
+    const container = map.getContainer();
+    const markOpen = () => container.classList.add('popup-open');
+    const markClosed = () => container.classList.remove('popup-open');
+    map.on('popupopen', markOpen);
+    map.on('popupclose', markClosed);
+
     return () => {
+      map.off('popupopen', markOpen);
+      map.off('popupclose', markClosed);
       cluster.remove();
       clusterRef.current = null;
+      markers.clear();
     };
   }, [map]);
 
+  // Only markers that changed are replaced, so an edit elsewhere doesn't close the popup being read.
   useEffect(() => {
     const cluster = clusterRef.current;
     if (!cluster) return;
+    const markers = shown.current;
 
-    cluster.clearLayers();
-    markerById.current.clear();
+    // A finished drag can leave the cluster library's own records wrong if the marker was
+    // spiderfied, so everything is laid out afresh.
+    if (moveNonce !== lastMoveNonce.current) {
+      lastMoveNonce.current = moveNonce;
+      cluster.clearLayers();
+      markers.clear();
+    }
 
-    const markers: L.Marker[] = [];
+    const wanted = new Map<string, { record: Intervention; position: [number, number]; key: string }>();
     for (const record of records) {
       if (!isOnMap(record) || record.geojson?.type !== 'Point') continue;
       const [longitude, latitude] = record.geojson.coordinates;
-      const marker = L.marker([latitude, longitude], { icon: iconFor(record), title: record.beneficiary ?? '' });
-      // The top padding keeps a popup clear of the zoom buttons and the phone's layers button.
-      marker.bindPopup(() => popupHtml(record, data), { maxWidth: 320, autoPanPaddingTopLeft: [10, 64] });
-      markerById.current.set(record.id, marker);
-      markers.push(marker);
+      // A dragged marker stays where it was dropped until the move is confirmed or cancelled.
+      const moving = pendingMove?.recordId === record.id ? pendingMove.to : null;
+      const position: [number, number] = moving ? [moving.lat, moving.lng] : [latitude, longitude];
+      wanted.set(record.id, { record, position, key: `${position.join()}|${iconFor(record).key}|${record.beneficiary ?? ''}` });
     }
-    cluster.addLayers(markers);
-  }, [records, data, iconFor]);
+
+    const stale: L.Marker[] = [];
+    for (const [id, { marker, key }] of markers) {
+      if (wanted.get(id)?.key !== key) {
+        stale.push(marker);
+        markers.delete(id);
+      }
+    }
+    cluster.removeLayers(stale);
+
+    const added: L.Marker[] = [];
+    for (const [id, { record, position, key }] of wanted) {
+      if (markers.has(id)) continue;
+      const marker = L.marker(position, {
+        icon: iconFor(record).divIcon,
+        title: record.beneficiary ?? '',
+        draggable: true,
+        autoPan: true,
+      });
+
+      marker.bindPopup(
+        () => {
+          const current = latest.current.interventions.find((r) => r.id === id) ?? record;
+          const element = document.createElement('div');
+          element.innerHTML = popupHtml(current, latest.current);
+          element.addEventListener('click', (event) => void onPopupClick(event, current));
+          return element;
+        },
+        // The top padding keeps a popup clear of the zoom buttons and the phone's layers button.
+        { maxWidth: 320, autoPanPaddingTopLeft: [10, 64] },
+      );
+      marker.on('dragstart', () => marker.closePopup());
+      marker.on('dragend', () => {
+        const current = latest.current.interventions.find((r) => r.id === id) ?? record;
+        useEditUi.getState().startMove({ recordId: id, version: current.version, to: roundPoint(marker.getLatLng()) });
+      });
+
+      markers.set(id, { marker, key });
+      added.push(marker);
+    }
+    cluster.addLayers(added);
+
+    // An open popup follows the data, such as a status added in another tab.
+    for (const { marker } of markers.values()) {
+      if (marker.isPopupOpen()) marker.getPopup()?.update();
+    }
+
+    tryFocus();
+  }, [records, data, iconFor, moveNonce, pendingMove]);
+
+  function tryFocus() {
+    const pending = pendingFocus.current;
+    const cluster = clusterRef.current;
+    if (!pending || !cluster) return;
+    if (Date.now() > pending.until) {
+      pendingFocus.current = null;
+      return;
+    }
+    const marker = shown.current.get(pending.id)?.marker;
+    if (!marker) return; // the save hasn't reached the map yet
+    pendingFocus.current = null;
+    cancelFocus.current();
+    cancelFocus.current = whenSettled(map, cluster, () => revealMarker(map, cluster, marker));
+  }
 
   useEffect(() => {
     if (!focusRecord) return;
-    const marker = markerById.current.get(focusRecord.id);
-    const cluster = clusterRef.current;
-    if (!marker || !cluster) return;
-    return whenSettled(map, cluster, () => revealMarker(map, cluster, marker));
+    pendingFocus.current = { id: focusRecord.id, until: Date.now() + FOCUS_WAIT_MS };
+    tryFocus();
+    return () => cancelFocus.current();
   }, [focusRecord, map]);
 
   return null;
+}
+
+async function onPopupClick(event: MouseEvent, record: Intervention) {
+  const button = (event.target as HTMLElement).closest<HTMLElement>('[data-action]');
+  if (!button) return;
+  const action = button.dataset.action as PopupAction;
+
+  switch (action) {
+    case 'copy-coordinates': {
+      const copied = await copyText(button.dataset.coordinates ?? '');
+      button.textContent = copied ? 'Copied' : 'Could not copy';
+      setTimeout(() => {
+        button.textContent = 'Copy coordinates';
+      }, 2000);
+      break;
+    }
+    case 'photo':
+      useEditUi.getState().showPhoto(button.dataset.photoId ?? null);
+      break;
+    default:
+      openRecordPanel(action, record);
+  }
 }

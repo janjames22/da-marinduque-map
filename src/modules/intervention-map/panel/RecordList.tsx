@@ -1,5 +1,6 @@
 import type { Intervention, MapData } from '../data/types';
-import { encodedPlace, isOnMap, locationWarning, recordName, statusDateLabel, statusTimeline } from '../lib/display';
+import { openRecordPanel } from '../edit/open-panel';
+import { encodedPlace, isOnMap, locationWarning, needsReview, recordName, statusDateLabel, statusTimeline } from '../lib/display';
 import { useMapUi } from '../state/map-ui';
 
 interface RecordListProps {
@@ -51,6 +52,25 @@ export function RecordList({ records, data, showEncodedPlace = false }: RecordLi
               </div>
             )}
             {warning && <div className="record-warning">{warning}</div>}
+            <div className="record-actions">
+              <button type="button" className="link-button" onClick={() => openRecordPanel('edit', record)}>
+                Edit
+              </button>
+              <button type="button" className="link-button" onClick={() => openRecordPanel('status', record)}>
+                Update status
+              </button>
+              {needsReview(record) && (
+                <button type="button" className="link-button" onClick={() => openRecordPanel('resolve', record)}>
+                  Resolve flag
+                </button>
+              )}
+              <button type="button" className="link-button" onClick={() => openRecordPanel('history', record)}>
+                History
+              </button>
+              <button type="button" className="link-button" onClick={() => openRecordPanel('delete', record)}>
+                Delete
+              </button>
+            </div>
           </li>
         );
       })}

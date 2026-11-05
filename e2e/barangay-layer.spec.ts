@@ -142,7 +142,7 @@ test.describe('barangay profile', () => {
 test.describe('markers', () => {
   test('a record in a profile zooms to its marker and opens the popup with its status', async ({ page }) => {
     await page.goto(`/barangays/${barangayNamed('Tumapon').id}`);
-    await profile(page).locator('.record-row button').first().click();
+    await profile(page).locator('.record-row button.record-name').first().click();
 
     const popup = page.locator('.leaflet-popup');
     await expect(popup).toBeVisible({ timeout: 15_000 });
@@ -156,7 +156,7 @@ test.describe('markers', () => {
     const target = shared.find((r) => shared.filter((other) => other.barangay_id === r.barangay_id).length > 1)!;
     await page.goto(`/barangays/${target.barangay_id}`);
 
-    const rows = profile(page).locator('.record-row button');
+    const rows = profile(page).locator('.record-row button.record-name');
     await expect(rows.first()).toBeVisible();
     const count = await rows.count();
     expect(count).toBeGreaterThan(1);

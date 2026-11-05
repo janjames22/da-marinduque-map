@@ -271,6 +271,7 @@ create table public.barangays (
   psgc_code       text unique,
   boundary        extensions.geometry(MultiPolygon, 4326),
   attributes      jsonb not null default '{}',  -- baseline values, per barangay_field_schema
+  version         integer not null default 1,   -- stops two users overwriting each other's edits
   unique (municipality_id, name),
   unique (municipality_id, id)  -- target of the composite foreign key below
 );
@@ -495,6 +496,7 @@ begin
       (select field_schema from public.barangay_field_schema where id),
       new.attributes
     );
+    new.version := old.version + 1;
   end if;
   return new;
 end;
@@ -508,7 +510,8 @@ for each row execute function public.barangays_before_update();
 -- Triggers: interventions
 -- ---------------------------------------------------------------------------
 
--- Thresholds are mirrored by the browser validator in Phase 3.
+-- src/modules/intervention-map/lib/qa.ts and validation.ts mirror these rules for live warnings
+-- and local mode. tests/qa-parity.test.ts runs both on the same cases, so change them together.
 create function public.interventions_before_write()
 returns trigger
 language plpgsql
@@ -617,7 +620,8 @@ begin
 
     if GeometryType(new.geom) = 'POINT' and new.deleted_at is null and exists (
       select 1 from public.interventions other
-      where other.geom ~= new.geom and other.deleted_at is null and other.id <> new.id
+      where other.geom ~= new.geom and ST_Equals(other.geom, new.geom)
+        and other.deleted_at is null and other.id <> new.id
     ) then
       flags := array_append(flags, 'duplicate_point');
     end if;
@@ -718,6 +722,9 @@ begin
     where i.id = new.intervention_id and s.status_id = new.status_id
   ) then
     raise exception 'status is not in the status list for this type' using errcode = 'check_violation';
+  end if;
+  if new.status_date > (now() at time zone 'Asia/Manila')::date then
+    raise exception 'status date % is in the future', new.status_date using errcode = 'check_violation';
   end if;
   return new;
 end;
