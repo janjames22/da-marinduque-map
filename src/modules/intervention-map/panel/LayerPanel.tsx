@@ -3,6 +3,7 @@ import type { Intervention, MapData } from '../data/types';
 import type { ChoroplethMode } from '../lib/choropleth';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi, type BasemapId } from '../state/map-ui';
+import { usePermissions } from '../state/store-context';
 import { LocalDataSection } from './LocalDataSection';
 
 const BASEMAP_OPTIONS: { id: BasemapId; label: string }[] = [
@@ -28,6 +29,7 @@ interface LayerPanelProps {
 
 export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
   const ui = useMapUi();
+  const { canRestore } = usePermissions();
 
   const activeTypes = useMemo(
     () => data.types.filter((t) => t.is_active).sort((a, b) => a.sort_order - b.sort_order),
@@ -222,19 +224,21 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
         ))}
       </section>
 
-      <section>
-        <h2 className="section-title">Records</h2>
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => {
-            ui.setPanelOpen(false);
-            useEditUi.getState().openPanel({ kind: 'deleted' });
-          }}
-        >
-          Deleted records ({deletedCount})
-        </button>
-      </section>
+      {canRestore && (
+        <section>
+          <h2 className="section-title">Records</h2>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => {
+              ui.setPanelOpen(false);
+              useEditUi.getState().openPanel({ kind: 'deleted' });
+            }}
+          >
+            Deleted records ({deletedCount})
+          </button>
+        </section>
+      )}
 
       <LocalDataSection data={data} />
     </aside>

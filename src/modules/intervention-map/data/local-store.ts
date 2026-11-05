@@ -1,8 +1,9 @@
 import { buildPlaceIndex, type PlaceIndex } from '../lib/qa';
 import * as engine from './local-engine';
 import type { EngineContext, LocalRows } from './local-engine';
-import type { DataStore, NewStatus, PhotoMeta } from './store';
+import { LocalSeedMissingError, type DataStore, type NewStatus, type PhotoMeta } from './store';
 import type {
+  AppUser,
   AuditEntry,
   Barangay,
   BeneficiaryType,
@@ -22,6 +23,7 @@ import type {
   TypeStatus,
 } from './types';
 import { readPhotoMeta } from '../lib/photo-meta';
+import { newUuid } from '../lib/uuid';
 
 // Served only by the Vite dev server (see vite.config.ts), so it can't end up in a deployed build.
 const LOCAL_SEED_URL = '/__local/seed.json';
@@ -50,13 +52,6 @@ export interface LocalSeed {
   audit_log?: unknown[];
 }
 
-export class LocalSeedMissingError extends Error {
-  constructor() {
-    super('Local dataset not found');
-    this.name = 'LocalSeedMissingError';
-  }
-}
-
 const bySortOrder = <T extends { sort_order: number }>(items: T[]) => [...items].sort((a, b) => a.sort_order - b.sort_order);
 
 export function toMapData(seed: LocalSeed): MapData {
@@ -80,11 +75,12 @@ export function toMapData(seed: LocalSeed): MapData {
     statusHistory: seed.status_history as StatusEntry[],
     photos: [],
     dataSources: [...new Set(batches.map((b) => b.data_source))],
+    members: [],
   };
 }
 
 // The parts of a saved state that never change while the app runs, and the rows that do.
-type FixedData = Omit<MapData, 'interventions' | 'links' | 'statusHistory' | 'barangays' | 'photos'>;
+type FixedData = Omit<MapData, 'interventions' | 'links' | 'statusHistory' | 'barangays' | 'photos' | 'members'>;
 
 export interface LocalState {
   fingerprint: string;
@@ -93,7 +89,7 @@ export interface LocalState {
 }
 
 export function stateFromSeed(seed: LocalSeed, fingerprint: string): LocalState {
-  const { interventions, links, statusHistory, barangays, photos, ...fixed } = toMapData(seed);
+  const { interventions, links, statusHistory, barangays, photos, members: _members, ...fixed } = toMapData(seed);
   return {
     fingerprint,
     fixed,
@@ -118,15 +114,6 @@ function fingerprintOf(text: string): string {
   return `${text.length}-${(hash >>> 0).toString(16)}`;
 }
 
-// crypto.randomUUID only exists on https and localhost, and phones reach the dev server over plain http.
-export function newUuid(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
-
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
@@ -146,9 +133,10 @@ interface StoredPhoto {
 
 export interface LocalStoreOptions {
   boundaries: { barangays: GeoJSON.FeatureCollection; municipalities: GeoJSON.FeatureCollection };
+  user: AppUser;
 }
 
-export async function createLocalStore({ boundaries }: LocalStoreOptions): Promise<DataStore> {
+export async function createLocalStore({ boundaries, user }: LocalStoreOptions): Promise<DataStore> {
   const response = await fetch(LOCAL_SEED_URL);
   if (response.status === 404) throw new LocalSeedMissingError();
   if (!response.ok) throw new Error(`Could not load local data (${response.status})`);
@@ -237,11 +225,13 @@ export async function createLocalStore({ boundaries }: LocalStoreOptions): Promi
     });
 
   return {
+    user,
+
     async load() {
       const state = await readState();
       if (!state) throw new LocalSeedMissingError();
       const { interventions, links, statusHistory, barangays, photos } = state.rows;
-      return { ...state.fixed, interventions, links, statusHistory, barangays, photos };
+      return { ...state.fixed, interventions, links, statusHistory, barangays, photos, members: [] };
     },
 
     createIntervention(values, status, note) {

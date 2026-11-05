@@ -906,12 +906,12 @@ describe('row-level security', () => {
     expect(await as('authenticated', MEMBER, countOf('interventions_v'))).toBe(visible);
   });
 
-  it('blocks a member from writing until Phase 4 policies exist', async () => {
-    // With no update policy, row-level security filters out every row rather than raising an error.
+  it('blocks a viewer from writing', async () => {
+    // Row-level security filters out every row of an update rather than raising an error.
     const update = await as('authenticated', MEMBER, () => db.query('update interventions set remarks = $1', ['changed']));
     expect(update.affectedRows ?? 0).toBe(0);
 
-    await expect(as('authenticated', MEMBER, () => insertRecord({}))).rejects.toThrow(/row-level security/i);
+    await expect(as('authenticated', MEMBER, () => insertRecord({}))).rejects.toThrow(/permission denied|row-level security/i);
   });
 
   it('limits the audit log to admins', async () => {

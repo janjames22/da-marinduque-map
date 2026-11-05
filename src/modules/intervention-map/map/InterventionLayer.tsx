@@ -10,6 +10,7 @@ import { isOnMap, popupHtml, type PopupAction } from '../lib/display';
 import { openRecordPanel } from '../edit/open-panel';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
+import { usePermissions } from '../state/store-context';
 
 const FALLBACK_COLOR = '#757575';
 const FOCUS_WAIT_MS = 3000;
@@ -96,10 +97,13 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
   const moveNonce = useEditUi((state) => state.moveNonce);
   const pendingMove = useEditUi((state) => state.pendingMove);
   const lastMoveNonce = useRef(moveNonce);
+  const permissions = usePermissions();
 
   // Popups are built when they open, and read the newest data from here.
   const latest = useRef(data);
   latest.current = data;
+  const latestPermissions = useRef(permissions);
+  latestPermissions.current = permissions;
 
   const iconFor = useMemo(() => {
     const cache = new Map<string, L.DivIcon>();
@@ -188,7 +192,7 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
       const marker = L.marker(position, {
         icon: iconFor(record).divIcon,
         title: record.beneficiary ?? '',
-        draggable: true,
+        draggable: permissions.canEdit,
         autoPan: true,
       });
 
@@ -196,7 +200,7 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
         () => {
           const current = latest.current.interventions.find((r) => r.id === id) ?? record;
           const element = document.createElement('div');
-          element.innerHTML = popupHtml(current, latest.current);
+          element.innerHTML = popupHtml(current, latest.current, latestPermissions.current);
           element.addEventListener('click', (event) => void onPopupClick(event, current));
           return element;
         },

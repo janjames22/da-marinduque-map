@@ -1,5 +1,18 @@
 // Shapes of the data the map works with, matching the database tables and interventions_v.
 
+export type UserRole = 'admin' | 'encoder' | 'viewer';
+
+export interface AppUser {
+  id: string;
+  full_name: string | null;
+  role: UserRole;
+}
+
+export interface Member {
+  id: string;
+  full_name: string | null;
+}
+
 export interface FieldOption {
   value: string;
   label: string;
@@ -147,6 +160,7 @@ export interface StatusEntry {
   source_note: string | null;
   remarks: string | null;
   photo_id: string | null;
+  created_by?: string | null;
   created_at: string;
 }
 
@@ -170,6 +184,7 @@ export interface AuditEntry {
   old_row: Record<string, unknown> | null;
   new_row: Record<string, unknown> | null;
   actor_id: string | null;
+  actor_name?: string | null;
   context: Record<string, unknown> | null;
   at: string;
 }
@@ -191,4 +206,5 @@ export interface MapData {
   statusHistory: StatusEntry[];
   photos: InterventionPhoto[];
   dataSources: string[];
+  members: Member[];
 }

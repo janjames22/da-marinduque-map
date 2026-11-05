@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { permissionsFor } from '../src/modules/intervention-map/lib/permissions';
 import type { Intervention, InterventionBarangay, InterventionType, MapData, StatusEntry } from '../src/modules/intervention-map/data/types';
 import {
   binFor,
@@ -385,10 +386,11 @@ describe('popupHtml', () => {
       },
     ],
     dataSources: [],
+    members: [{ id: 'u1', full_name: 'Enzo <Encoder>' }],
   } as MapData;
 
   it('shows the details, location basis and the as-of status', () => {
-    const html = popupHtml(record({ id: 'a', attributes: { engine_no: 'E-1', old: 'hidden' } }), data);
+    const html = popupHtml(record({ id: 'a', attributes: { engine_no: 'E-1', old: 'hidden' } }), data, permissionsFor('admin'));
     expect(html).toContain('Hand Tractor');
     expect(html).toContain('Rice Program');
     expect(html).toContain('Unknown');
@@ -404,6 +406,7 @@ describe('popupHtml', () => {
     const html = popupHtml(
       record({ id: 'a', qa_flags: ['barangay_mismatch'], plotted_barangay: 'Beta', plotted_municipality: 'Gasan' }),
       data,
+      permissionsFor('viewer'),
     );
     expect(html).toContain('Plotted in Beta, Gasan; encoded as Alpha, Boac');
   });
@@ -413,9 +416,37 @@ describe('popupHtml', () => {
     const html = popupHtml(
       record({ id: 'a', title: attack, beneficiary: attack, remarks: attack, attributes: { engine_no: attack } }),
       data,
+      permissionsFor('admin'),
     );
     expect(html).not.toContain('<img');
     expect(html).toContain('&lt;img');
+  });
+
+  const actionsIn = (html: string) => [...html.matchAll(/data-action="([a-z-]+)"/g)].map((match) => match[1]);
+
+  it('offers each role only what it can do', () => {
+    const flagged = record({ id: 'a', qa_flags: ['barangay_mismatch'] });
+    const editing = ['edit', 'status', 'resolve', 'history', 'delete'];
+    expect(actionsIn(popupHtml(flagged, data, permissionsFor('admin')))).toEqual(expect.arrayContaining(editing));
+    expect(actionsIn(popupHtml(flagged, data, permissionsFor('encoder')))).toEqual(expect.arrayContaining(editing));
+
+    const forViewer = actionsIn(popupHtml(flagged, data, permissionsFor('viewer')));
+    for (const action of editing) expect(forViewer).not.toContain(action);
+    expect(forViewer).toContain('copy-coordinates');
+  });
+
+  it('shows a Viewer the status timeline', () => {
+    expect(popupHtml(record({ id: 'a' }), data, permissionsFor('viewer'))).toContain('as of 2026-10-21 (RAED report)');
+  });
+
+  it('says who added a status, escaped, when that person is known', () => {
+    const withPerson = {
+      ...data,
+      statusHistory: data.statusHistory.map((entry) => ({ ...entry, created_by: 'u1' })),
+    };
+    const html = popupHtml(record({ id: 'a' }), withPerson, permissionsFor('viewer'));
+    expect(html).toContain('By Enzo &lt;Encoder&gt;');
+    expect(popupHtml(record({ id: 'a' }), data, permissionsFor('viewer'))).not.toContain('By ');
   });
 
   it('escapes all five special characters', () => {

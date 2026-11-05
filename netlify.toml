@@ -1,0 +1,21 @@
+# The site is built on the Admin's computer and uploaded by npm run deploy, so Netlify never sees
+# .env.local and doesn't need to build anything.
+[build]
+  publish = "dist"
+
+# The address of a barangay's profile only exists inside the app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# connect-src is what stops the page sending anything anywhere but Supabase. Map tiles are images
+# from several hosts, and Leaflet positions everything with inline styles.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(self), camera=(self), microphone=()"
+    X-Robots-Tag = "noindex"
