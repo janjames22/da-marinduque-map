@@ -12,6 +12,9 @@ test-results/
 
 *.tsbuildinfo
 
+# Original source report (5 MB). Keep it locally; the seed CSV is what the app uses.
+data/source/*.pdf
+
 # Editor / OS
 .vscode/*
 !.vscode/extensions.json

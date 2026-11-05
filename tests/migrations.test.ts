@@ -27,7 +27,7 @@ interface NewRecord {
   lat: number | null;
   lon: number | null;
   municipality?: number;
-  barangay?: number;
+  barangay?: number | null;
   year?: number;
 }
 
@@ -36,7 +36,7 @@ async function insertRecord({ lat, lon, municipality = boac, barangay = boacBara
     `insert into interventions
        (intervention_type, category_id, name_raw, banner_program_id, year_funded, beneficiary,
         municipality_id, barangay_id, latitude, longitude, status)
-     values ('machinery', (select id from categories where code = 'hand-tractor'), 'Hand Tractor',
+     values ('machinery', (select id from categories where code = 'test-category'), 'Hand Tractor',
         (select id from programs where code = 'rice'), $1, 'Test FA', $2, $3, $4, $5, 'Turned-over')
      returning id, qa_flags, latitude, longitude, geom`,
     [year, municipality, barangay, lat, lon],
@@ -49,6 +49,7 @@ async function flagsOf(id: string): Promise<string[]> {
 
 beforeAll(async () => {
   db = await createTestDb();
+  await db.query(`insert into categories (code, name, group_code) values ('test-category', 'Test Category', 'other')`);
 
   const muni = async (name: string) =>
     (await one<{ id: number }>('select id from municipalities where name = $1', [name])).id;
@@ -74,11 +75,10 @@ afterAll(async () => {
 });
 
 describe('reference data', () => {
-  it('loads the programs, municipalities and categories in the spec', async () => {
+  it('loads the programs and municipalities', async () => {
     const count = async (table: string) => (await one<{ n: number }>(`select count(*)::int n from ${table}`)).n;
-    expect(await count('programs')).toBe(5);
+    expect(await count('programs')).toBe(6);
     expect(await count('municipalities')).toBe(6);
-    expect(await count('categories')).toBe(34);
   });
 });
 
@@ -177,6 +177,36 @@ describe('shared coordinates', () => {
     await insertRecord(point);
     const after = await one<{ updated_at: string }>('select updated_at::text from interventions where id = $1', [first.id]);
     expect(after.updated_at).toBe(before.updated_at);
+  });
+});
+
+describe('barangay flags', () => {
+  const unlocated = { lat: null, lon: null, barangay: null };
+
+  it('flags a record with no barangay name as no_barangay', async () => {
+    const row = await insertRecord(unlocated);
+    expect(row.qa_flags).toEqual(['no_coords', 'no_barangay']);
+  });
+
+  it('treats a blank barangay name as no_barangay', async () => {
+    const row = await insertRecord(unlocated);
+    await db.query(`update interventions set barangay_raw = '   ' where id = $1`, [row.id]);
+    expect(await flagsOf(row.id)).toEqual(['no_coords', 'no_barangay']);
+  });
+
+  it('flags a named barangay that has no match as barangay_unmatched', async () => {
+    const row = await insertRecord(unlocated);
+    await db.query(`update interventions set barangay_raw = 'Barangay 367' where id = $1`, [row.id]);
+    expect(await flagsOf(row.id)).toEqual(['no_coords', 'barangay_unmatched']);
+  });
+
+  it('clears the flag once the barangay is linked', async () => {
+    const row = await insertRecord(unlocated);
+    await db.query(`update interventions set barangay_raw = 'Ihatub', barangay_id = $1 where id = $2`, [
+      boacBarangay,
+      row.id,
+    ]);
+    expect(await flagsOf(row.id)).toEqual(['no_coords']);
   });
 });
 

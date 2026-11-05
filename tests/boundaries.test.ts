@@ -6,6 +6,7 @@ let db: PGlite;
 
 beforeAll(async () => {
   db = await createTestDb();
+  await db.query(`insert into categories (code, name, group_code) values ('test-category', 'Test Category', 'other')`);
 }, 60_000);
 
 afterAll(async () => {
@@ -22,7 +23,7 @@ async function flagsFor(municipality: string, barangay: string, lat: number, lon
     `insert into interventions
        (intervention_type, category_id, name_raw, banner_program_id, year_funded, beneficiary,
         municipality_id, barangay_id, latitude, longitude, status)
-     select 'machinery', (select id from categories where code = 'other'), 'Test',
+     select 'machinery', (select id from categories where code = 'test-category'), 'Test',
         (select id from programs where code = 'rice'), 2022, 'Test FA', m.id, b.id, $3, $4, 'Turned-over'
      from municipalities m join barangays b on b.municipality_id = m.id
      where m.name = $1 and b.name = $2
