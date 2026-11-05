@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from './leaflet-setup';
 import type { MapData } from '../data/types';
@@ -23,16 +23,18 @@ export function BarangayLayer({ data, geojson, shading, counts, selectedId, onSe
   const layerByBarangay = useRef(new Map<number, L.Path>());
   const focusBarangay = useMapUi((state) => state.focusBarangay);
 
-  const barangayByPsgc = useMemo(() => new Map(data.barangays.map((b) => [b.psgc_code, b])), [data.barangays]);
-  const municipalityName = useMemo(() => new Map(data.municipalities.map((m) => [m.id, m.name])), [data.municipalities]);
-
-  // The tooltip and click handler are created once, so they read the latest values from here.
-  const latest = useRef({ counts, onSelect });
-  latest.current = { counts, onSelect };
+  // The shapes are created once, so their tooltips and click handlers read the latest values from
+  // here. Rebuilding them when data changes would move the map.
+  const latest = useRef({ counts, onSelect, data });
+  latest.current = { counts, onSelect, data };
 
   useEffect(() => {
     if (!map.getPane(PANE)) map.createPane(PANE).style.zIndex = '410';
     const layers = layerByBarangay.current;
+
+    const places = latest.current.data;
+    const barangayByPsgc = new Map(places.barangays.map((b) => [b.psgc_code, b]));
+    const municipalityName = new Map(places.municipalities.map((m) => [m.id, m.name]));
 
     const group = L.geoJSON(geojson, {
       pane: PANE,
@@ -65,7 +67,7 @@ export function BarangayLayer({ data, geojson, shading, counts, selectedId, onSe
       group.remove();
       layers.clear();
     };
-  }, [map, geojson, barangayByPsgc, municipalityName]);
+  }, [map, geojson]);
 
   useEffect(() => {
     for (const [id, path] of layerByBarangay.current) {

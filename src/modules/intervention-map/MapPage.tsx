@@ -10,12 +10,17 @@ import {
   unassignedRecords,
   type ChoroplethMode,
 } from './lib/choropleth';
+import { EditPanelHost } from './edit/EditPanelHost';
+import { MoveConfirm } from './edit/MoveConfirm';
+import { Notice, PhotoDialog } from './edit/RecordPanels';
 import { MapView } from './map/MapView';
 import { BarangayProfile } from './panel/BarangayProfile';
 import { LayerPanel } from './panel/LayerPanel';
 import { Legend } from './panel/Legend';
 import { UnassignedPanel } from './panel/UnassignedPanel';
+import { isFormOpen, useEditUi } from './state/edit-ui';
 import { useMapUi } from './state/map-ui';
+import { StoreContext } from './state/store-context';
 import { useMapData, type Boundaries } from './state/use-map-data';
 
 function shadingTitle(mode: ChoroplethMode, data: MapData, programId: number | null, typeId: number | null) {
@@ -32,6 +37,11 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   const selected = data.barangays.find((b) => b.id === selectedId) ?? null;
 
   const ui = useMapUi();
+  const panel = useEditUi((state) => state.panel);
+  const picking = useEditUi((state) => state.picking);
+  const setPicking = useEditUi((state) => state.setPicking);
+  const openPanel = useEditUi((state) => state.openPanel);
+  const closePanel = useEditUi((state) => state.closePanel);
 
   useEffect(() => {
     const firstProgram = data.programs.filter((p) => p.is_active).sort((a, b) => a.sort_order - b.sort_order)[0];
@@ -73,12 +83,25 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   };
   const closeProfile = () => navigate('/');
 
+  // A click on the map belongs to the form while one is open, so it can't navigate away from it.
+  const onMapSelectBarangay = (id: number) => {
+    const edit = useEditUi.getState();
+    if (edit.picking || isFormOpen(edit.panel)) return;
+    if (edit.panel) edit.closePanel();
+    openBarangay(id);
+  };
+
   return (
-    <main className={`workspace${selected || ui.showUnassigned ? ' has-right-panel' : ''}`}>
+    <main className={`workspace${selected || ui.showUnassigned || panel ? ' has-right-panel' : ''}`}>
       <LayerPanel
         data={data}
         records={allRecords}
         onGoToBarangay={(id) => {
+          if (isFormOpen(useEditUi.getState().panel)) {
+            ui.zoomToBarangay(id); // the form stays open, and the map goes there
+            return;
+          }
+          closePanel();
           openBarangay(id);
           ui.zoomToBarangay(id);
         }}
@@ -92,7 +115,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
           counts={counts}
           markers={markers}
           selectedBarangayId={selectedId}
-          onSelectBarangay={openBarangay}
+          onSelectBarangay={onMapSelectBarangay}
         />
         <button
           type="button"
@@ -102,6 +125,28 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
         >
           {ui.panelOpen ? 'Close layers' : 'Layers and filters'}
         </button>
+        {!panel && (
+          <button
+            type="button"
+            className="add-record-button"
+            onClick={() => {
+              ui.setPanelOpen(false);
+              openPanel({ kind: 'add' }, { picking: true });
+            }}
+          >
+            + Add intervention
+          </button>
+        )}
+        {picking && (
+          <div className="map-hint" role="status">
+            Click the map to set the location.
+            <button type="button" className="link-button" onClick={() => setPicking(false)}>
+              Cancel
+            </button>
+          </div>
+        )}
+        <MoveConfirm data={data} />
+        <Notice />
         <Legend
           mode={mode}
           shading={shading}
@@ -114,12 +159,19 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
         />
       </div>
 
-      {selected && !ui.showUnassigned && (
-        <BarangayProfile barangay={selected} data={data} allRecords={allRecords} onClose={closeProfile} />
+      {panel ? (
+        <EditPanelHost data={data} />
+      ) : (
+        <>
+          {selected && !ui.showUnassigned && (
+            <BarangayProfile barangay={selected} data={data} allRecords={allRecords} onClose={closeProfile} />
+          )}
+          {ui.showUnassigned && (
+            <UnassignedPanel records={unassigned} data={data} onClose={() => ui.setShowUnassigned(false)} />
+          )}
+        </>
       )}
-      {ui.showUnassigned && (
-        <UnassignedPanel records={unassigned} data={data} onClose={() => ui.setShowUnassigned(false)} />
-      )}
+      <PhotoDialog />
     </main>
   );
 }
@@ -155,5 +207,9 @@ export function MapPage({ onDataSources }: { onDataSources(sources: string[]): v
     );
   }
 
-  return <MapWorkspace data={state.data} boundaries={state.boundaries} />;
+  return (
+    <StoreContext.Provider value={{ store: state.store, places: state.places }}>
+      <MapWorkspace data={state.data} boundaries={state.boundaries} />
+    </StoreContext.Provider>
+  );
 }

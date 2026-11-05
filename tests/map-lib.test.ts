@@ -37,7 +37,10 @@ function record(over: Partial<Intervention> & { id: string }): Intervention {
     banner_program_id: RICE,
     year_funded: 2022,
     quantity: 1,
+    unit_cost: null,
+    fund_source: null,
     beneficiary: 'Test FA',
+    beneficiary_type_id: null,
     municipality_id: 1,
     barangay_id: 100,
     barangay_raw: 'Alpha',
@@ -48,8 +51,12 @@ function record(over: Partial<Intervention> & { id: string }): Intervention {
     data_source: 'test',
     qa_flags: [],
     geojson: { type: 'Point', coordinates: [121.9, 13.4] },
+    plotted_barangay_id: null,
     plotted_barangay: null,
     plotted_municipality: null,
+    version: 1,
+    created_at: '2026-10-21T00:00:00Z',
+    updated_at: '2026-10-21T00:00:00Z',
     deleted_at: null,
     ...over,
   };
@@ -253,7 +260,7 @@ describe('statusTimeline', () => {
 });
 
 const places = {
-  barangays: [{ id: 100, municipality_id: 1, name: 'Alpha', psgc_code: 'A', attributes: {} }],
+  barangays: [{ id: 100, municipality_id: 1, name: 'Alpha', psgc_code: 'A', attributes: {}, version: 1 }],
   municipalities: [{ id: 1, name: 'Boac', psgc_code: 'B' }],
 };
 
@@ -322,7 +329,7 @@ describe('fieldValue', () => {
 });
 
 describe('recordName', () => {
-  const data = { categories: [{ id: 1, name: 'Hand Tractor', intervention_type_id: 1 }] };
+  const data = { categories: [{ id: 1, name: 'Hand Tractor', intervention_type_id: 1, sort_order: 1, is_active: true }] };
 
   it('uses the title, then the category, and adds the variant', () => {
     expect(recordName(record({ id: 'a', title: 'Bacong SPIS' }), data)).toBe('Bacong SPIS');
@@ -336,9 +343,11 @@ describe('popupHtml', () => {
     ...places,
     icons: [],
     programs: [{ id: RICE, code: 'rice', name: 'Rice Program', color: '#000000', sort_order: 1, is_active: true }],
-    categories: [{ id: 1, name: 'Hand Tractor', intervention_type_id: 1 }],
+    categories: [{ id: 1, name: 'Hand Tractor', intervention_type_id: 1, sort_order: 1, is_active: true }],
     statuses: [{ id: 1, name: 'Turned-over', color: '#000000' }],
-    locationBases: [{ id: 1, name: 'Unknown' }],
+    locationBases: [{ id: 1, name: 'Unknown', sort_order: 1, is_active: true }],
+    beneficiaryTypes: [],
+    typeStatuses: [],
     types: [
       {
         id: MACHINERY,
@@ -349,6 +358,7 @@ describe('popupHtml', () => {
         color: '#000000',
         sort_order: 1,
         is_active: true,
+        core_field_rules: {},
         field_schema: {
           fields: [
             { key: 'engine_no', label: 'Engine No.', input: 'text' },
@@ -360,6 +370,7 @@ describe('popupHtml', () => {
     barangayFields: { fields: [] },
     interventions: [],
     links: [],
+    photos: [],
     statusHistory: [
       {
         id: 's',
@@ -369,6 +380,7 @@ describe('popupHtml', () => {
         date_basis: 'as_of',
         source_note: 'RAED report',
         remarks: null,
+        photo_id: null,
         created_at: '2026-11-05',
       },
     ],

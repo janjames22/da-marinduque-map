@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import type { Intervention, MapData } from '../data/types';
 import type { ChoroplethMode } from '../lib/choropleth';
+import { useEditUi } from '../state/edit-ui';
 import { useMapUi, type BasemapId } from '../state/map-ui';
+import { LocalDataSection } from './LocalDataSection';
 
 const BASEMAP_OPTIONS: { id: BasemapId; label: string }[] = [
   { id: 'osm', label: 'OpenStreetMap' },
@@ -55,6 +57,7 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
 
   const recordsOfType = (id: number) => records.filter((r) => r.intervention_type_id === id).length;
   const numberOrNull = (value: string) => (value === '' ? null : Number(value));
+  const deletedCount = data.interventions.filter((r) => r.deleted_at !== null).length;
 
   return (
     <aside className={`panel panel-left${ui.panelOpen ? ' is-open' : ''}`} aria-label="Layers and filters">
@@ -218,6 +221,22 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
           </label>
         ))}
       </section>
+
+      <section>
+        <h2 className="section-title">Records</h2>
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => {
+            ui.setPanelOpen(false);
+            useEditUi.getState().openPanel({ kind: 'deleted' });
+          }}
+        >
+          Deleted records ({deletedCount})
+        </button>
+      </section>
+
+      <LocalDataSection data={data} />
     </aside>
   );
 }
