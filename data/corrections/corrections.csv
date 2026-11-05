@@ -1,0 +1,7 @@
+﻿source_id,field,raw_value,corrected_value,evidence,status,confirmed_by,confirmed_date
+RAED-2026-10-21-051,barangay,Pingan,Pinggan,"Point falls inside Pinggan, Gasan; the name differs by one letter.",proposed,,
+RAED-2026-10-21-130,barangay,Kiñaman,Kinyaman,"Beneficiary is Kinyaman Kaganhao Kilo-Kilo Vegetable Grower Association. The ñ to ny rule already links this name to Kinyaman, so confirming changes nothing on the record. The point falls in Libjo, 440 m outside Kinyaman, so barangay_mismatch remains until the location is checked.",proposed,,
+RAED-2026-10-21-099,municipality,Boac,Gasan,"Beneficiary is Bognuyan Farmers Association; point falls inside Bognuyan, Gasan, 7.6 km outside Boac. Confirm together with the barangay row.",proposed,,
+RAED-2026-10-21-099,barangay,Tabi,Bognuyan,"Beneficiary is Bognuyan Farmers Association; point falls inside Bognuyan, Gasan, 7.6 km outside Boac. Confirm together with the municipality row.",proposed,,
+RAED-2026-10-21-160,municipality,Santa Cruz,Torrijos,"Beneficiary is Kayduke Anifarms Seed Growers; point falls inside Kay Duke, Torrijos, 3.1 km outside Santa Cruz. Confirm together with the barangay row.",proposed,,
+RAED-2026-10-21-160,barangay,,Kay Duke,"Barangay is blank in the source. Beneficiary is Kayduke Anifarms Seed Growers; point falls inside Kay Duke, Torrijos. Confirm together with the municipality row.",proposed,,

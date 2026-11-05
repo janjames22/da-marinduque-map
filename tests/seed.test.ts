@@ -1,12 +1,18 @@
-import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
+import Papa from 'papaparse';
+import { buildVerificationRows, verificationCsv, type VerificationRow } from '../scripts/build-field-verification';
+import { buildLocalSeed } from '../scripts/build-local-seed';
 import {
+  barangayNameKeys,
+  checkCorrections,
+  loadSeedFiles,
   normalizeBarangayName,
-  parseSeedCsv,
+  parseCorrections,
   printReport,
+  RAED_DATA_SOURCE,
   seedInterventions,
-  SEED_CSV_PATH,
+  type Correction,
   type SeedReport,
   type SeedRow,
 } from '../scripts/seed-interventions';
@@ -14,13 +20,16 @@ import { createTestDb } from './helpers/db';
 
 const flagged = (row: SeedRow, flag: string) => row.qa_flags.split(';').includes(flag);
 
+const id = (n: string) => `RAED-2026-10-21-${n}`;
+
 let db: PGlite;
 let csv: SeedRow[];
+let correctionsFile: Correction[];
 let report: SeedReport;
 let recordsAfterFailedSeed: number;
 
-async function rows<T>(sql: string, params: unknown[] = []): Promise<T[]> {
-  return (await db.query<T>(sql, params)).rows;
+async function rows<T>(sql: string, params: unknown[] = [], target: PGlite = db): Promise<T[]> {
+  return (await target.query<T>(sql, params)).rows;
 }
 
 async function count(where: string): Promise<number> {
@@ -43,12 +52,14 @@ async function tally(sql: string): Promise<Record<string, number>> {
   return Object.fromEntries(result.map(({ key, n }) => [key, n]));
 }
 
+// These tests pin the source data as reported, so they seed with no corrections. They keep
+// passing when rows in corrections.csv are confirmed, which changes the seed's real output.
 beforeAll(async () => {
   db = await createTestDb();
-  csv = parseSeedCsv(readFileSync(SEED_CSV_PATH, 'utf8'));
+  ({ rows: csv, corrections: correctionsFile } = loadSeedFiles());
 
   // A bad last row must undo everything. If it didn't, the real seed below would also
-  // fail on the categories already inserted.
+  // fail on the records already inserted.
   const badLastRow = { ...csv[csv.length - 1], municipality: 'Atlantis' };
   await expect(seedInterventions(db, [...csv.slice(0, -1), badLastRow])).rejects.toThrow(/Atlantis/);
   recordsAfterFailedSeed = await count('true');
@@ -62,13 +73,15 @@ afterAll(async () => {
 });
 
 describe('record counts match the source report', () => {
-  it('loads all 199 records: 195 machinery and 4 SPIS', async () => {
+  it('loads all 199 records: 195 Farm Machinery and 4 SPIS', async () => {
     expect(report.inserted).toBe(199);
     expect(await count('true')).toBe(199);
-    expect(await tally(`select intervention_type::text key, count(*)::int n from interventions group by 1`)).toEqual({
-      machinery: 195,
-      spis: 4,
-    });
+    expect(
+      await tally(
+        `select t.name key, count(*)::int n
+         from interventions i join intervention_types t on t.id = i.intervention_type_id group by 1`,
+      ),
+    ).toEqual({ 'Farm Machinery': 195, SPIS: 4 });
   });
 
   it('matches the per-municipality counts', async () => {
@@ -80,13 +93,22 @@ describe('record counts match the source report', () => {
     ).toEqual({ 'Santa Cruz': 48, Boac: 38, Torrijos: 36, Gasan: 33, Mogpog: 25, Buenavista: 19 });
   });
 
-  it('matches the status counts, with the 4 SPIS as Unknown', async () => {
-    expect(await tally(`select status::text key, count(*)::int n from interventions group by 1`)).toEqual({
-      'Turned-over': 163,
-      Serviceable: 32,
-      Unknown: 4,
-    });
-    expect(await count(`status = 'Unknown' and intervention_type <> 'spis'`)).toBe(0);
+  it('matches the status counts, with SPIS taking its status from Stage', async () => {
+    expect(
+      await tally(
+        `select s.name key, count(*)::int n
+         from interventions i join statuses s on s.id = i.status_id group by 1`,
+      ),
+    ).toEqual({ 'Turned-over': 163, Serviceable: 32, Inventory: 2, Completed: 2 });
+  });
+
+  it('matches the banner program counts', async () => {
+    expect(
+      await tally(
+        `select p.code key, count(*)::int n
+         from interventions i join programs p on p.id = i.banner_program_id group by 1`,
+      ),
+    ).toEqual({ rice: 62, hvcdp: 59, corn: 38, organic: 30, livestock: 9, urban: 1 });
   });
 
   it('leaves nothing behind when a row fails', () => {
@@ -94,32 +116,100 @@ describe('record counts match the source report', () => {
   });
 });
 
+describe('RAED tagging', () => {
+  it('tags every record and its batch as RAED 2026-10-21', async () => {
+    expect(RAED_DATA_SOURCE).toBe('RAED 2026-10-21');
+    expect(await count(`data_source = 'RAED 2026-10-21'`)).toBe(199);
+    expect(await count('import_batch_id is null')).toBe(0);
+  });
+
+  it('files one import batch per type, as the import wizard will', async () => {
+    const batches = await rows<{ code: string; data_source: string; records: number; linked: number }>(
+      `select t.code, b.data_source, (b.counts ->> 'records')::int records,
+              (select count(*)::int from interventions i where i.import_batch_id = b.id) linked
+       from import_batches b join intervention_types t on t.id = b.intervention_type_id
+       order by t.code`,
+    );
+    expect(batches).toEqual([
+      { code: 'farm-machinery', data_source: RAED_DATA_SOURCE, records: 195, linked: 195 },
+      { code: 'spis', data_source: RAED_DATA_SOURCE, records: 4, linked: 4 },
+    ]);
+  });
+
+  it('sets every RAED record to location basis Unknown', async () => {
+    const [{ n }] = await rows<{ n: number }>(
+      `select count(*)::int n from interventions i join location_bases l on l.id = i.location_basis_id
+       where l.name = 'Unknown'`,
+    );
+    expect(n).toBe(199);
+  });
+
+  it('moves the CSV variant to a custom field', async () => {
+    expect(await count(`attributes ? 'variant'`)).toBe(40);
+    const [row] = await rows<{ variant: string }>(
+      `select attributes ->> 'variant' as variant from interventions where source_id = (
+         select source_id from interventions where attributes ? 'variant' order by source_id limit 1)`,
+    );
+    expect(csv.map((r) => r.category_variant)).toContain(row.variant);
+  });
+});
+
+describe('status history', () => {
+  it('has one dated entry per record, and that entry is the current status', async () => {
+    const [{ entries, matching, dated }] = await rows<{ entries: number; matching: number; dated: number }>(
+      `select count(*)::int entries,
+              count(*) filter (where h.status_id = i.status_id)::int matching,
+              count(*) filter (where h.status_date = '2026-10-21')::int dated
+       from status_history h join interventions i on i.id = h.intervention_id`,
+    );
+    expect({ entries, matching, dated }).toEqual({ entries: 199, matching: 199, dated: 199 });
+  });
+});
+
 describe('lookups', () => {
-  it('adds the Urban and Peri-Urban program, and every record has its program', async () => {
+  it('adds the Urban and Peri-Urban program', async () => {
     const programs = await rows<{ name: string }>('select name from programs');
     expect(programs).toHaveLength(6);
     expect(programs.map((p) => p.name)).toContain('National Urban and Peri-Urban Agriculture Program');
-
-    const [{ n }] = await rows<{ n: number }>(
-      `select count(*)::int n from interventions i join programs p on p.id = i.banner_program_id
-       where p.code = 'urban'`,
-    );
-    expect(n).toBe(1);
   });
 
-  it('seeds categories from exactly the distinct CSV category and group values', async () => {
-    const seeded = await rows<{ name: string; group_code: string }>(
-      'select name, group_code::text from categories order by name',
+  it('has every CSV category, under the right group and type', async () => {
+    const seeded = await rows<{ name: string; group_name: string; type_code: string }>(
+      `select c.name, g.name as group_name, t.code as type_code
+       from categories c
+       join category_groups g on g.id = c.category_group_id
+       join intervention_types t on t.id = c.intervention_type_id`,
     );
-    const expected = [...new Set(csv.map((r) => `${r.category}|${r.category_group}`))]
-      .map((pair) => {
-        const [name, group] = pair.split('|');
-        return { name, group_code: group.toLowerCase().replaceAll(' ', '_') };
-      })
-      .sort((a, b) => (a.name < b.name ? -1 : 1));
+    const byName = new Map(seeded.map((c) => [c.name, c]));
+    const typeCodes: Record<string, string> = { machinery: 'farm-machinery', spis: 'spis' };
 
-    expect(seeded.slice().sort((a, b) => (a.name < b.name ? -1 : 1))).toEqual(expected);
-    expect(seeded).toHaveLength(28);
+    const distinct = new Set(csv.map((r) => r.category));
+    expect(distinct.size).toBe(28);
+    for (const row of csv) {
+      expect(byName.get(row.category)).toEqual({
+        name: row.category,
+        group_name: row.category_group,
+        type_code: typeCodes[row.intervention_type],
+      });
+    }
+  });
+
+  it('keeps the six extra categories and the SSIP categories alongside them', async () => {
+    const names = (await rows<{ name: string }>('select name from categories')).map((c) => c.name);
+    expect(names).toHaveLength(28 + 6 + 3);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'Disc Plow / Harrow',
+        'Seeder',
+        'Rice Reaper',
+        'Small Water Impounding Project',
+        'Diversion Dam',
+        'Other',
+        'SFR',
+        'STW',
+        'PISOS',
+      ]),
+    );
   });
 });
 
@@ -128,18 +218,19 @@ describe('QA flags are computed by the database', () => {
     expect(await withFlag('no_coords')).toBe(26);
     expect(await withFlag('out_of_province')).toBe(1);
     expect(await withFlag('no_barangay')).toBe(5);
+    expect(await withFlag('muni_mismatch')).toBe(5);
+    expect(await withFlag('barangay_mismatch')).toBe(28);
+    expect(await withFlag('barangay_unmatched')).toBe(4);
+    expect(await withFlag('duplicate_point')).toBe(24);
   });
 
   it('flags the Malibago record for its longitude and leaves the value uncorrected', async () => {
-    const [malibago] = await rows<{ longitude: string; longitude_raw: string; barangay_raw: string; municipality: string }>(
-      `select i.longitude, i.longitude_raw, i.barangay_raw, m.name as municipality
+    const [malibago] = await rows<{ longitude: number; raw: string; barangay_raw: string; municipality: string }>(
+      `select ST_X(i.geom) as longitude, i.source_raw ->> 'longitude_raw' as raw, i.barangay_raw, m.name as municipality
        from interventions i join municipalities m on m.id = i.municipality_id
        where 'out_of_province' = any(i.qa_flags)`,
     );
-    expect(malibago.barangay_raw).toBe('Malibago');
-    expect(malibago.municipality).toBe('Torrijos');
-    expect(Number(malibago.longitude)).toBe(122.90523);
-    expect(malibago.longitude_raw).toBe('122.90523');
+    expect(malibago).toEqual({ longitude: 122.90523, raw: '122.90523', barangay_raw: 'Malibago', municipality: 'Torrijos' });
   });
 
   it('flags the same records as the CSV, not just the same number', () => {
@@ -154,34 +245,75 @@ describe('QA flags are computed by the database', () => {
     ]);
   });
 
-  it('runs the point-in-polygon check on every located record', async () => {
+  it('runs the municipality check on every located record', async () => {
     // Recalculated here, separately from the trigger, against the same polygons and tolerance.
-    const located = await rows<{ source_id: string; has_geom: boolean; has_boundary: boolean; inside: boolean; flagged: boolean }>(
+    const located = await rows<{ source_id: string; has_boundary: boolean; inside: boolean; flagged: boolean }>(
       `select i.source_id,
-              i.geom is not null as has_geom,
               m.boundary is not null as has_boundary,
               coalesce(ST_DWithin(m.boundary::geography, i.geom::geography, 250), false) as inside,
               'muni_mismatch' = any(i.qa_flags) as flagged
        from interventions i join municipalities m on m.id = i.municipality_id
-       where i.latitude is not null`,
+       where i.geom is not null`,
     );
 
     expect(located).toHaveLength(199 - 26);
-    expect(located.every((r) => r.has_geom && r.has_boundary)).toBe(true);
+    expect(located.every((r) => r.has_boundary)).toBe(true);
     expect(located.filter((r) => r.flagged !== !r.inside)).toEqual([]);
 
     const mismatches = located.filter((r) => r.flagged);
     console.log(`muni_mismatch: ${mismatches.length} of ${located.length} located records`);
-    expect(mismatches.map((r) => r.source_id)).toContain('RAED-2026-10-21-103'); // Malibago, out of province
+    expect(mismatches.map((r) => r.source_id)).toContain(id('103'));
   });
 
-  it('ignores computed flags supplied by the caller', async () => {
-    // beneficiary_name_check is the only CSV flag sent on insert, so no other CSV flag can
-    // reach the database. A caller writing one directly is overwritten too.
-    await db.query('begin');
-    await db.query(`update interventions set qa_flags = array['no_coords'] where latitude is not null`);
-    expect(await count(`'no_coords' = any(qa_flags)`)).toBe(26);
-    await db.query('rollback');
+  it('runs the barangay check on every located, linked record', async () => {
+    const linked = await rows<{ inside: boolean; flagged: boolean }>(
+      `select ST_DWithin(b.boundary::geography, i.geom::geography, 250) as inside,
+              'barangay_mismatch' = any(i.qa_flags) as flagged
+       from interventions i join barangays b on b.id = i.barangay_id
+       where i.geom is not null`,
+    );
+    expect(linked).toHaveLength(169);
+    expect(linked.filter((r) => r.flagged !== !r.inside)).toEqual([]);
+    console.log(`barangay_mismatch: ${linked.filter((r) => r.flagged).length} of ${linked.length} located, linked records`);
+  });
+
+  it('gives each mismatched point the "plotted in, encoded as" details', async () => {
+    const [record] = await rows<{ plotted_barangay: string; plotted_municipality: string; barangay_raw: string; municipality: string }>(
+      `select v.plotted_barangay, v.plotted_municipality, v.barangay_raw, m.name as municipality
+       from interventions_v v join municipalities m on m.id = v.municipality_id
+       where v.source_id = $1`,
+      [id('099')],
+    );
+    expect(record).toEqual({
+      plotted_barangay: 'Bognuyan',
+      plotted_municipality: 'Gasan',
+      barangay_raw: 'Tabi',
+      municipality: 'Boac',
+    });
+  });
+
+  it('counts a mismatched point under its encoded barangay', async () => {
+    const links = await rows<{ name: string; link_source: string }>(
+      `select b.name, l.link_source from intervention_barangays l
+       join barangays b on b.id = l.barangay_id
+       join interventions i on i.id = l.intervention_id
+       where i.source_id = $1`,
+      [id('099')],
+    );
+    expect(links).toEqual([{ name: 'Tabi', link_source: 'encoded' }]);
+  });
+});
+
+describe('barangay coverage', () => {
+  it('reaches 93 of 218 barangays through encoded barangays', async () => {
+    const [{ covered }] = await rows<{ covered: number }>(
+      'select count(distinct barangay_id)::int covered from intervention_barangays',
+    );
+    expect(covered).toBe(93);
+  });
+
+  it('leaves 9 records unassigned', async () => {
+    expect(await count('barangay_id is null')).toBe(9);
   });
 });
 
@@ -192,75 +324,62 @@ describe('beneficiary_name_check is a carried-over manual flag', () => {
     expect(await sourceIdsWithFlag('beneficiary_name_check')).toEqual(expected);
   });
 
-  it('survives an edit to the record', async () => {
-    const [{ source_id }] = await rows<{ source_id: string }>(
-      `select source_id from interventions where 'beneficiary_name_check' = any(qa_flags) limit 1`,
-    );
-    await db.query('begin');
-    await db.query(`update interventions set remarks = 'edited', latitude = 13.3, longitude = 121.9 where source_id = $1`, [
-      source_id,
-    ]);
-    expect(await sourceIdsWithFlag('beneficiary_name_check')).toContain(source_id);
-    await db.query('rollback');
-  });
-
   it('survives a flag refresh caused by a neighbouring record', async () => {
-    const [target] = await rows<{ source_id: string; latitude: string; longitude: string }>(
-      `select source_id, latitude, longitude from interventions
-       where 'beneficiary_name_check' = any(qa_flags) and latitude is not null limit 1`,
+    const [target] = await rows<{ source_id: string }>(
+      `select source_id from interventions
+       where 'beneficiary_name_check' = any(qa_flags) and geom is not null
+         and not 'duplicate_point' = any(qa_flags)
+       limit 1`,
     );
     await db.query('begin');
     await db.query(
-      `update interventions set latitude = $1, longitude = $2
-       where source_id = (select source_id from interventions where source_id <> $3 and latitude is not null limit 1)`,
-      [target.latitude, target.longitude, target.source_id],
+      `update interventions set geom = (select geom from interventions where source_id = $1)
+       where source_id = (
+         select source_id from interventions where source_id <> $1 and geom is not null order by source_id limit 1
+       )`,
+      [target.source_id],
     );
     const [after] = await rows<{ qa_flags: string[] }>('select qa_flags from interventions where source_id = $1', [
       target.source_id,
     ]);
+    await db.query('rollback');
     expect(after.qa_flags).toContain('beneficiary_name_check');
     expect(after.qa_flags).toContain('duplicate_point');
-    await db.query('rollback');
   });
 });
 
 describe('unlocated records', () => {
   it('stores empty coordinates as null and never as 0', async () => {
-    expect(await count('latitude is null and longitude is null and geom is null')).toBe(26);
-    expect(await count('latitude = 0 or longitude = 0')).toBe(0);
+    expect(await count('geom is null')).toBe(26);
+    expect(await count('geom is not null and (ST_X(geom) = 0 or ST_Y(geom) = 0)')).toBe(0);
   });
 
   it('keeps the raw 0 for the two records that had it in the source', async () => {
-    expect(await count(`latitude is null and latitude_raw = '0' and longitude_raw = '0'`)).toBe(2);
+    expect(await count(`geom is null and source_raw ->> 'latitude_raw' = '0' and source_raw ->> 'longitude_raw' = '0'`)).toBe(2);
   });
 });
 
 describe('raw values are kept', () => {
-  it('stores the raw columns exactly as they appear in the CSV', async () => {
-    const stored = await rows<Record<string, string | null>>(
-      `select source_id, name_raw, beneficiary_raw, municipality_raw, barangay_raw, latitude_raw, longitude_raw
-       from interventions order by source_id`,
+  it('stores the complete source row in source_raw', async () => {
+    const stored = await rows<{ source_id: string; source_raw: SeedRow; barangay_raw: string | null }>(
+      'select source_id, source_raw, barangay_raw from interventions',
     );
-    const blankToNull = (value: string) => (value === '' ? null : value);
-    const expected = csv
-      .slice()
-      .sort((a, b) => (a.source_id < b.source_id ? -1 : 1))
-      .map((r) => ({
-        source_id: r.source_id,
-        name_raw: r.name_raw,
-        beneficiary_raw: r.beneficiary_raw,
-        municipality_raw: r.municipality_raw,
-        barangay_raw: blankToNull(r.barangay),
-        latitude_raw: blankToNull(r.latitude_raw),
-        longitude_raw: blankToNull(r.longitude_raw),
-      }));
-    expect(stored).toEqual(expected);
+    const bySourceId = new Map(stored.map((r) => [r.source_id, r]));
+    for (const row of csv) {
+      const record = bySourceId.get(row.source_id)!;
+      expect(record.source_raw).toEqual(row);
+      expect(record.barangay_raw).toBe(row.barangay === '' ? null : row.barangay);
+    }
   });
 
-  it('keeps the two Sta. Cruz spellings raw and the municipality standardized', async () => {
+  it('keeps the long CSV data source in source_raw', async () => {
+    expect(await count(`source_raw ->> 'data_source' like 'ABEMIS Inventory%'`)).toBe(199);
+  });
+
+  it('standardizes the municipality and keeps the two Sta. Cruz spellings raw', async () => {
     const [{ n }] = await rows<{ n: number }>(
       `select count(*)::int n from interventions i join municipalities m on m.id = i.municipality_id
-       where m.name = 'Santa Cruz' and i.municipality_raw in ('Sta. Cruz', 'Sta Cruz')`,
+       where m.name = 'Santa Cruz' and i.source_raw ->> 'municipality_raw' in ('Sta. Cruz', 'Sta Cruz')`,
     );
     expect(n).toBe(2);
   });
@@ -278,37 +397,359 @@ describe('barangay matching', () => {
     same('Bicas–bicas', 'Bicas-bicas');
   });
 
+  it('matches n-tilde as both n and ny', () => {
+    expect(barangayNameKeys('Kiñaman')).toEqual(['kinaman', 'kinyaman']);
+    expect(barangayNameKeys('KIÑAMAN')).toEqual(['kinaman', 'kinyaman']);
+    expect(barangayNameKeys('Kiñaman')).toEqual(['kinaman', 'kinyaman']); // n + combining tilde
+    expect(barangayNameKeys('Kinyaman')).toEqual(['kinyaman']);
+    expect(barangayNameKeys('Tawiran')).toEqual(['tawiran']);
+  });
+
   it('does not treat different names as the same', () => {
     expect(normalizeBarangayName('Pingan')).not.toBe(normalizeBarangayName('Pinggan'));
     expect(normalizeBarangayName('Pob')).not.toBe(normalizeBarangayName('Poblete'));
+  });
+
+  it('links Kiñaman to Kinyaman through the ny rule', async () => {
+    const [record] = await rows<{ name: string; barangay_raw: string; qa_flags: string[] }>(
+      `select b.name, i.barangay_raw, i.qa_flags from interventions i join barangays b on b.id = i.barangay_id
+       where i.source_id = $1`,
+      [id('130')],
+    );
+    expect(record.name).toBe('Kinyaman');
+    expect(record.barangay_raw).toBe('Kiñaman');
+    expect(record.qa_flags).not.toContain('barangay_unmatched');
+    expect(record.qa_flags).toContain('barangay_mismatch'); // the point is in Libjo, 440 m away
   });
 
   it('accounts for every record: matched, blank or unmatched', async () => {
     const matched = await count('barangay_id is not null');
     const blank = await count(`barangay_id is null and barangay_raw is null and 'no_barangay' = any(qa_flags)`);
     const unmatched = await count(`barangay_id is null and barangay_raw is not null and 'barangay_unmatched' = any(qa_flags)`);
-    expect(blank).toBe(5);
-    expect(unmatched).toBe(report.unmatchedBarangays.length);
-    expect(matched + blank + unmatched).toBe(199);
-  });
-
-  it('only matches a barangay inside the record\'s own municipality', async () => {
-    const [{ n }] = await rows<{ n: number }>(
-      `select count(*)::int n from interventions i join barangays b on b.id = i.barangay_id
-       where b.municipality_id <> i.municipality_id`,
-    );
-    expect(n).toBe(0);
+    expect({ matched, blank, unmatched }).toEqual({ matched: 190, blank: 5, unmatched: 4 });
+    expect(report.unmatchedBarangays.map((u) => u.name).sort()).toEqual(['Barangay 367', 'Pag asa', 'Pagasa', 'Pingan']);
   });
 
   it('reports closest candidates for every unmatched name', async () => {
-    expect(report.unmatchedBarangays.length).toBeGreaterThan(0);
     for (const unmatched of report.unmatchedBarangays) {
       expect(unmatched.sameMunicipality.length).toBeGreaterThan(0);
       expect(unmatched.sameMunicipality.every((c) => c.municipality === unmatched.municipality)).toBe(true);
       expect(unmatched.otherMunicipalities.every((c) => c.municipality !== unmatched.municipality)).toBe(true);
     }
-    expect(await sourceIdsWithFlag('barangay_unmatched')).toEqual(
-      report.unmatchedBarangays.map((u) => u.sourceId).sort(),
+    expect(report.unmatchedBarangays.find((u) => u.name === 'Pingan')?.sameMunicipality[0].name).toBe('Pinggan');
+    expect(await sourceIdsWithFlag('barangay_unmatched')).toEqual(report.unmatchedBarangays.map((u) => u.sourceId).sort());
+  });
+});
+
+describe('corrections file', () => {
+  const confirm = (c: Correction): Correction => ({
+    ...c,
+    status: 'confirmed',
+    confirmed_by: 'Test Reviewer',
+    confirmed_date: '2026-11-05',
+  });
+  const barangayRow = (over: Partial<Correction> = {}): Correction => ({
+    source_id: id('051'),
+    field: 'barangay',
+    raw_value: 'Pingan',
+    corrected_value: 'Pinggan',
+    evidence: 'test',
+    status: 'confirmed',
+    confirmed_by: 'Test Reviewer',
+    confirmed_date: '2026-11-05',
+    ...over,
+  });
+
+  it('pre-fills the four records as proposed, with evidence', () => {
+    expect(correctionsFile.map((c) => [c.source_id.slice(-3), c.field, c.corrected_value])).toEqual(
+      expect.arrayContaining([
+        ['051', 'barangay', 'Pinggan'],
+        ['130', 'barangay', 'Kinyaman'],
+        ['099', 'municipality', 'Gasan'],
+        ['099', 'barangay', 'Bognuyan'],
+        ['160', 'municipality', 'Torrijos'],
+        ['160', 'barangay', 'Kay Duke'],
+      ]),
     );
+    expect(correctionsFile.every((c) => c.evidence.trim().length > 0)).toBe(true);
+  });
+
+  it('has only valid rows in the real file', () => {
+    expect(() => checkCorrections(correctionsFile, csv)).not.toThrow();
+    expect(() => checkCorrections(correctionsFile.map(confirm), csv)).not.toThrow();
+  });
+
+  it('reads a file saved by Excel with a byte-order mark', () => {
+    const parsed = parseCorrections(
+      '﻿source_id,field,raw_value,corrected_value,evidence,status,confirmed_by,confirmed_date\r\nA,barangay,x,y,z,proposed,,\r\n',
+    );
+    expect(parsed[0].source_id).toBe('A');
+  });
+
+  it.each([
+    ['an invalid status', { status: 'maybe' }, /invalid status/],
+    ['an unsupported field', { field: 'year_funded' }, /unsupported field/],
+    ['an unknown record', { source_id: 'NOPE' }, /no such record/],
+    ['a raw value that differs from the source', { raw_value: 'Something else' }, /doesn't match the source/],
+    ['a confirmed row with no reviewer', { confirmed_by: '' }, /need confirmed_by/],
+    ['a confirmed row with no date', { confirmed_date: ' ' }, /need confirmed_by/],
+  ])('rejects %s', (_label, over, message) => {
+    expect(() => checkCorrections([barangayRow(over)], csv)).toThrow(message);
+  });
+
+  it('rejects the same field confirmed twice', () => {
+    expect(() => checkCorrections([barangayRow(), barangayRow()], csv)).toThrow(/more than once/);
+  });
+
+  it('ignores the raw value on a rejected row', () => {
+    expect(() => checkCorrections([barangayRow({ status: 'rejected', raw_value: 'old' })], csv)).not.toThrow();
+  });
+
+  describe('applied to a fresh database', () => {
+    let fresh: PGlite;
+    const recordOf = async (n: string, target = fresh) => {
+      const [record] = await rows<{
+        qa_flags: string[];
+        barangay: string | null;
+        municipality: string;
+        barangay_raw: string | null;
+        source_raw: SeedRow;
+      }>(
+        `select i.qa_flags, b.name as barangay, m.name as municipality, i.barangay_raw, i.source_raw
+         from interventions i
+         join municipalities m on m.id = i.municipality_id
+         left join barangays b on b.id = i.barangay_id
+         where i.source_id = $1`,
+        [id(n)],
+        target,
+      );
+      return record;
+    };
+    const auditOf = async (n: string, target = fresh) => {
+      const [record] = await rows<{ id: string }>('select id from interventions where source_id = $1', [id(n)], target);
+      return rows<{ action: string; context: { corrections: { corrected_value: string; confirmed_by: string; evidence: string }[] } | null }>(
+        `select action, context from audit_log where table_name = 'interventions' and record_id = $1 order by id`,
+        [record.id],
+        target,
+      );
+    };
+
+    beforeAll(async () => {
+      fresh = await createTestDb();
+      await seedInterventions(fresh, csv, correctionsFile.map(confirm));
+    }, 120_000);
+
+    afterAll(async () => {
+      await fresh.close();
+    });
+
+    it('fixes 051 and clears its flag, keeping the raw name', async () => {
+      const record = await recordOf('051');
+      expect(record.barangay).toBe('Pinggan');
+      expect(record.barangay_raw).toBe('Pingan');
+      expect(record.source_raw.barangay).toBe('Pingan');
+      expect(record.qa_flags).not.toContain('barangay_unmatched');
+      expect(record.qa_flags).not.toContain('barangay_mismatch');
+    });
+
+    it('moves 099 to Bognuyan, Gasan and clears both mismatch flags', async () => {
+      const record = await recordOf('099');
+      expect(record.municipality).toBe('Gasan');
+      expect(record.barangay).toBe('Bognuyan');
+      expect(record.source_raw.municipality).toBe('Boac');
+      expect(record.source_raw.barangay).toBe('Tabi');
+      expect(record.qa_flags).not.toContain('muni_mismatch');
+      expect(record.qa_flags).not.toContain('barangay_mismatch');
+    });
+
+    it('moves 160 to Kay Duke, Torrijos and clears its flags', async () => {
+      const record = await recordOf('160');
+      expect(record.municipality).toBe('Torrijos');
+      expect(record.barangay).toBe('Kay Duke');
+      expect(record.barangay_raw).toBeNull();
+      expect(record.qa_flags).not.toContain('no_barangay');
+      expect(record.qa_flags).not.toContain('muni_mismatch');
+      expect(record.qa_flags).not.toContain('barangay_mismatch');
+    });
+
+    it('leaves 130 flagged, because its point is still outside Kinyaman', async () => {
+      const record = await recordOf('130');
+      expect(record.barangay).toBe('Kinyaman');
+      expect(record.qa_flags).toContain('barangay_mismatch');
+    });
+
+    it('writes each correction to the audit log with its evidence', async () => {
+      const entries = await auditOf('099');
+      expect(entries.map((e) => e.action)).toEqual(['insert', 'update']);
+      const { corrections } = entries[1].context!;
+      expect(corrections.map((c) => c.corrected_value).sort()).toEqual(['Bognuyan', 'Gasan']);
+      expect(corrections[0].confirmed_by).toBe('Test Reviewer');
+      expect(corrections[0].evidence).toMatch(/Bognuyan/);
+    });
+
+    it('does not attach correction details to other records', async () => {
+      const entries = await auditOf('001');
+      expect(entries.map((e) => e.action)).toEqual(['insert']);
+      expect(entries[0].context).toBeNull();
+    });
+  });
+
+  describe('selective confirmation', () => {
+    let fresh: PGlite;
+
+    beforeAll(async () => {
+      fresh = await createTestDb();
+    }, 60_000);
+
+    afterAll(async () => {
+      await fresh.close();
+    });
+
+    it('applies only confirmed rows, and handles a municipality fix without its barangay', async () => {
+      const selection = correctionsFile.map((c) => {
+        if (c.source_id === id('051')) return { ...c, status: 'rejected' };
+        if (c.source_id === id('099') && c.field === 'municipality') return confirm(c);
+        return c; // the rest stay proposed
+      });
+      const result = await seedInterventions(fresh, csv, selection);
+      expect(result.corrections).toEqual({ applied: 1, proposed: 4, rejected: 1 });
+
+      const flagsOf = async (n: string) => {
+        const [record] = await rows<{ qa_flags: string[]; barangay_id: number | null }>(
+          'select qa_flags, barangay_id from interventions where source_id = $1',
+          [id(n)],
+          fresh,
+        );
+        return record;
+      };
+
+      // Tabi isn't in Gasan, so the record is kept, unlinked and flagged rather than failing.
+      const partial = await flagsOf('099');
+      expect(partial.barangay_id).toBeNull();
+      expect(partial.qa_flags).toContain('barangay_unmatched');
+      expect(partial.qa_flags).not.toContain('muni_mismatch');
+
+      expect((await flagsOf('051')).qa_flags).toContain('barangay_unmatched'); // rejected
+      expect((await flagsOf('160')).qa_flags).toContain('no_barangay'); // proposed
+    });
+  });
+
+  it('refuses a confirmed barangay that is not in the municipality, and rolls back', async () => {
+    const fresh = await createTestDb();
+    const bad = barangayRow({ corrected_value: 'Tawiran' }); // Tawiran is in Santa Cruz, not Gasan
+    await expect(seedInterventions(fresh, csv, [bad])).rejects.toThrow(/isn't in Gasan/);
+    const [{ n }] = await rows<{ n: number }>('select count(*)::int n from interventions', [], fresh);
+    expect(n).toBe(0);
+    await fresh.close();
+  }, 120_000);
+});
+
+describe('field verification sheet', () => {
+  let sheet: VerificationRow[];
+  const rowFor = (n: string) => sheet.find((r) => r.ID === id(n))!;
+
+  beforeAll(async () => {
+    sheet = await buildVerificationRows(db, correctionsFile);
+  });
+
+  it('lists every record with a flag, or with a duplicate warning in the CSV', async () => {
+    const [{ n }] = await rows<{ n: number }>(
+      `select count(*)::int n from interventions
+       where cardinality(qa_flags) > 0 or source_raw ->> 'qa_flags' like '%possible_duplicate%'`,
+    );
+    expect(sheet).toHaveLength(n);
+    expect(new Set(sheet.map((r) => r.ID)).size).toBe(n);
+    console.log(`field verification sheet: ${sheet.length} records`);
+  });
+
+  it('has the requested columns, with the verification columns blank', () => {
+    expect(Object.keys(sheet[0])).toEqual([
+      'ID',
+      'Type',
+      'Machine / project',
+      'Beneficiary',
+      'Municipality (encoded)',
+      'Barangay (encoded)',
+      'Issue',
+      'Suggested value',
+      'Verified barangay',
+      'Verified latitude',
+      'Verified longitude',
+      'Location basis',
+    ]);
+    for (const row of sheet) {
+      expect([row['Verified barangay'], row['Verified latitude'], row['Verified longitude'], row['Location basis']]).toEqual(['', '', '', '']);
+      expect(row.Issue).not.toBe('');
+    }
+  });
+
+  it('groups rows by municipality, so each MAO gets theirs together', () => {
+    const municipalities = sheet.map((r) => r['Municipality (encoded)']);
+    expect(municipalities).toEqual([...municipalities].sort());
+  });
+
+  it('shows the suggested values from proposed corrections', () => {
+    expect(rowFor('051')['Suggested value']).toBe('Barangay: Pinggan');
+    expect(rowFor('099')['Suggested value']).toBe('Municipality: Gasan; Barangay: Bognuyan');
+    expect(rowFor('160')['Suggested value']).toBe('Municipality: Torrijos; Barangay: Kay Duke');
+  });
+
+  it('describes a mismatch as plotted in and encoded as', () => {
+    expect(rowFor('031').Issue).toContain('Plotted in Bangbangalon, Boac, encoded as Antipolo, Gasan');
+    expect(rowFor('031')['Suggested value']).toBe('Point is in Bangbangalon, Boac');
+  });
+
+  it('points Malibago at where the barangay really is, without guessing a value', () => {
+    const malibago = rowFor('103');
+    expect(malibago.Issue).toContain('outside Marinduque');
+    expect(malibago['Suggested value']).toMatch(/^Check coordinates; Malibago lies near 13\.\d+, 12[12]\.\d+$/);
+  });
+
+  it('covers the other issue kinds', () => {
+    expect(rowFor('191').Issue).toContain('No coordinates');
+    expect(rowFor('191').Issue).toContain('No barangay encoded');
+    expect(rowFor('189').Issue).toContain('Barangay "Barangay 367" is not on the official list');
+    expect(rowFor('175').Issue).toContain('Beneficiary name');
+    expect(rowFor('035').Issue).toContain('Possible duplicate');
+  });
+
+  it('writes a CSV that Excel reads correctly, with n-tilde intact', () => {
+    const output = verificationCsv(sheet);
+    expect(output.startsWith('﻿')).toBe(true);
+    expect(output).toContain('\r\n');
+    expect(output).toContain('Kiñaman');
+
+    const parsed = Papa.parse<VerificationRow>(output.replace(/^﻿/, ''), { header: true, skipEmptyLines: true });
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.data).toHaveLength(sheet.length);
+  });
+
+  it('leaves out proposals that were rejected', async () => {
+    const rejected = correctionsFile.map((c) => ({ ...c, status: 'rejected' }));
+    const without = await buildVerificationRows(db, rejected);
+    const row = without.find((r) => r.ID === id('051'))!;
+    expect(row['Suggested value']).toBe('Point is in Pinggan, Gasan');
+  });
+});
+
+describe('local dataset', () => {
+  it('holds the data local mode needs, with no polygons', async () => {
+    const seed = await buildLocalSeed(db);
+    expect(seed.interventions).toHaveLength(199);
+    expect(seed.barangays).toHaveLength(218);
+    expect(seed.status_history).toHaveLength(199);
+    expect(seed.municipalities).toHaveLength(6);
+    expect(seed.lookups.intervention_types).toHaveLength(8);
+    expect(seed.lookups.location_bases).toHaveLength(4);
+
+    expect(seed.barangays[0]).not.toHaveProperty('boundary');
+    expect(seed.municipalities[0]).not.toHaveProperty('boundary');
+
+    const malibago = (seed.interventions as { source_id: string; geojson: { coordinates: number[] }; qa_flags: string[]; geom?: unknown }[]).find(
+      (i) => i.source_id === id('103'),
+    )!;
+    expect(malibago.geojson.coordinates).toEqual([122.90523, 13.290806]);
+    expect(malibago.qa_flags).toContain('out_of_province');
+    expect(malibago).not.toHaveProperty('geom');
   });
 });

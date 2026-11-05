@@ -58,7 +58,7 @@ Importing must keep these records and flag them. It must never drop or silently 
 | No coordinates | 26 (24 blank, 2 written as `0, 0`) | Stored as unlocated, listed in "Needs geotag", left off the map |
 | Outside the province | 1: Malibago, Torrijos, longitude `122.90523` (the barangay lies at about 122.0° E) | Flagged and left off the map; a person confirms the correction |
 | Outside the encoded municipality | 5, including Malibago | Flagged, still plotted, with a warning in the popup |
-| Outside the encoded barangay | 28 of the 169 located records that have a linked barangay (median about 1.5 km away) | Flagged, still plotted. Counted under the encoded barangay. The popup says "Plotted in [X], encoded as [Y]" |
+| Outside the encoded barangay | 28 of the 169 located records that have a linked barangay (median about 1.4 km away, leaving out the Malibago typo) | Flagged, still plotted. Counted under the encoded barangay. The popup says "Plotted in [X], encoded as [Y]" |
 | Blank barangay | 5 | Flagged; shown under "Unassigned" |
 | Barangay name not on the official list | 4 (Pingan, Pag asa, Pagasa, Barangay 367) | Flagged; shown under "Unassigned"; the raw name is kept |
 | Beneficiary names a place outside Marinduque | 7 (Guiuan, Tanauan, Taal) | Manual review flag carried over from the seed file |

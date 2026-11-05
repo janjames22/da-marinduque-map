@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "seed:dry-run": "tsx scripts/seed-interventions.ts"
+    "seed:dry-run": "tsx scripts/seed-interventions.ts",
+    "build:field-sheet": "tsx scripts/build-field-verification.ts",
+    "build:local-seed": "tsx scripts/build-local-seed.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
