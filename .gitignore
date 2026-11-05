@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.local
+.env
+.env.*
+!.env.example
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+
+*.tsbuildinfo
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
