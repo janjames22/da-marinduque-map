@@ -276,7 +276,7 @@ test.describe('layer panel', () => {
     const panel = page.getByLabel('Layers and filters');
     await expect(panel.getByLabel('Barangays (always on)')).toBeDisabled();
     await expect(page.locator('.municipality-label')).toHaveCount(6);
-    await panel.getByLabel('Municipalities').uncheck();
+    await panel.getByRole('checkbox', { name: 'Municipalities' }).uncheck();
     await expect(page.locator('.municipality-label')).toHaveCount(0);
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
   });

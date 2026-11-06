@@ -2,7 +2,9 @@
 // fake of the service's network protocol. The same tests also run on a production build, under the
 // site's real security headers.
 import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
+import JSZip from 'jszip';
 import { jpegWithGps } from '../tests/helpers/exif-fixture';
 import { FAKE_HOST, installFakeSupabase, inviteHash, PASSWORD, seedData, signIn, USERS, type FakeSupabase } from './helpers/fake-supabase';
 
@@ -351,6 +353,54 @@ test.describe('saving', () => {
     await expect(list).toContainText('Reason: GPS was off');
     await expect(list).toContainText('Remarks');
     await expect(list).toContainText('Location');
+  });
+});
+
+test.describe('exporting', () => {
+  const download = async (page: Page) => {
+    const started = page.waitForEvent('download');
+    await page.getByRole('dialog').getByRole('button', { name: 'Download' }).click();
+    return started;
+  };
+
+  test('a Viewer can export, the login is what names them, and the log gets the details', async ({ page }) => {
+    const fake = await signedIn(page, USERS.viewer);
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await page.getByRole('dialog').getByLabel('Barangay gap map').check();
+
+    const file = await download(page);
+    expect(file.suggestedFilename()).toMatch(/^Marinduque_Province_\d{4}-\d{2}-\d{2}\.kmz$/);
+
+    const zip = await JSZip.loadAsync(await readFile((await file.path())!));
+    expect(Object.keys(zip.files)[0]).toBe('doc.kml');
+    const icons = Object.keys(zip.files).filter((name) => name.endsWith('.png'));
+    expect(icons.length).toBeGreaterThan(1);
+    const png = await zip.files[icons[0]].async('uint8array');
+    expect(Array.from(png.slice(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
+
+    const call = fake.rpcCalls.find(({ name }) => name === 'log_export')!;
+    expect(call.args).toMatchObject({
+      p_format: 'kmz',
+      p_file_name: file.suggestedFilename(),
+      p_record_count: seedData.interventions.length,
+      p_filters: { municipality: null, program: null, layers: { gapMap: true, barangayBoundaries: false } },
+    });
+    expect(JSON.stringify(call.args)).not.toContain(USERS.viewer.id);
+  });
+
+  test('if the log can\'t be written, nothing is downloaded, and the person is told', async ({ page }) => {
+    const fake = await signedIn(page, USERS.encoder);
+    fake.onRpc(({ name }) => (name === 'log_export' ? { status: 403, body: { code: '42501', message: 'Only members can export' } } : undefined));
+    let downloads = 0;
+    page.on('download', () => {
+      downloads += 1;
+    });
+
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Download' }).click();
+    await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Nothing was exported.');
+    await expect(page.getByRole('dialog').getByRole('alert')).toContainText('permission');
+    expect(downloads).toBe(0);
   });
 });
 

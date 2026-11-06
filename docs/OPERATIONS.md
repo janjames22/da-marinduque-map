@@ -85,6 +85,23 @@ Accounts are by invitation only.
 
 The SMTP password stays in Supabase's settings. Don't put it in `.env.local` or anywhere in this project.
 
+## Exports
+
+Every signed-in role can export, from the **Export** button on the map or **Export this barangay** in a profile. An export takes what the map's filters show, and each one is recorded in the audit log: who, the format, the filters and the record count. If the log can't be written, nothing is downloaded.
+
+| Format | Records without coordinates | Good for |
+|---|---|---|
+| KMZ | Listed by name in the file's description | Google Earth, with the map's icons |
+| KML | Listed by name in the file's description | Google Earth and QGIS, with colored dots |
+| CSV | Included, with blank latitude and longitude | Excel |
+| GeoJSON | Included, with no geometry | QGIS and web maps |
+| Shapefile | Listed in `records-left-out.txt` in the .zip | QGIS and ArcGIS |
+
+- **Shapefile field names:** these are limited to 10 characters, so `fields.txt` in the .zip gives each one's full name. Text over 254 bytes is cut short, and `fields.txt` says which fields that happened to.
+- **Records outside Marinduque:** these have coordinates, so they're exported where they're plotted, with their QA flag showing, even though the map leaves them off.
+- **Sample files:** `npm run export:samples` writes samples to `exports/samples/`, using the local dataset. Run `npm run build:local-seed` first.
+- **Exported files hold beneficiary names, so take care who gets them.** `exports/` is ignored by git.
+
 ## Backups
 
 ```
@@ -134,6 +151,8 @@ Add `--photos backups/photos-2026-11-05` to either command to upload the photo f
 The new project has no accounts, so "created by" and "updated by" become empty and saved views are left out. The audit log keeps the old account ids.
 
 ## Changing the database
+
+Run the migration before deploying the site that needs it. Otherwise, people can't use the new features until it's applied. For example, exports are refused until `0006_export.sql` is in.
 
 Add a new numbered file to `supabase/migrations`, take a backup, then run `npm run db:migrate`. Each file runs once, in its own transaction, and a failed file is rolled back. Never edit a file that has already been applied, because the change won't run.
 

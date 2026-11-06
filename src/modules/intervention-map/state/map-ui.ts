@@ -24,6 +24,8 @@ interface MapUiState extends ViewFilters {
   setProgramFilter(id: number | null): void;
   setYearFrom(year: number | null): void;
   setYearTo(year: number | null): void;
+  setMunicipalityFilter(id: number | null): void;
+  setBarangayFilter(id: number | null): void;
   clearFilters(): void;
   zoomToRecord(id: string): void;
   zoomToBarangay(id: number): void;
@@ -39,6 +41,8 @@ export const useMapUi = create<MapUiState>((set) => ({
   programId: null,
   yearFrom: null,
   yearTo: null,
+  municipalityId: null,
+  barangayId: null,
   basemap: 'osm',
   showMunicipal: true,
   showProvince: true,
@@ -64,7 +68,9 @@ export const useMapUi = create<MapUiState>((set) => ({
   setProgramFilter: (programId) => set({ programId }),
   setYearFrom: (yearFrom) => set({ yearFrom }),
   setYearTo: (yearTo) => set({ yearTo }),
-  clearFilters: () => set({ programId: null, yearFrom: null, yearTo: null }),
+  setMunicipalityFilter: (municipalityId) => set({ municipalityId, barangayId: null }),
+  setBarangayFilter: (barangayId) => set({ barangayId }),
+  clearFilters: () => set({ programId: null, yearFrom: null, yearTo: null, municipalityId: null, barangayId: null }),
   zoomToRecord: (id) => set({ focusRecord: { id, nonce: ++nonce }, panelOpen: false }),
   zoomToBarangay: (id) => set({ focusBarangay: { id, nonce: ++nonce }, panelOpen: false }),
 }));

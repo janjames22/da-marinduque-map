@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Barangay, Intervention, MapData } from '../data/types';
 import { useEditUi } from '../state/edit-ui';
+import { useExportUi } from '../state/export-ui';
 import { useMapUi } from '../state/map-ui';
 import { usePermissions } from '../state/store-context';
 import { BaselineSection } from './BaselineSection';
@@ -95,6 +96,10 @@ export function BarangayProfile({ barangay, data, allRecords, onClose }: Baranga
           Add intervention here
         </button>
       )}
+
+      <button type="button" className="secondary-button" onClick={() => useExportUi.getState().openExport(barangay.id)}>
+        Export this barangay
+      </button>
 
       <section>
         <h3 className="section-title">

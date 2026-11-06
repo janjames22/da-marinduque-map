@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { useExportUi } from '../state/export-ui';
 import type { Boundaries } from '../state/use-map-data';
 import type { BasemapId } from '../state/map-ui';
 import { useMapUi } from '../state/map-ui';
@@ -55,6 +56,23 @@ function KeepSizeInSync() {
   return null;
 }
 
+// An export can be limited to what's on screen.
+function ReportBounds() {
+  const map = useMap();
+  useEffect(() => {
+    const report = () => {
+      const bounds = map.getBounds();
+      useExportUi.getState().setMapBounds({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() });
+    };
+    report();
+    map.on('moveend', report);
+    return () => {
+      map.off('moveend', report);
+    };
+  }, [map]);
+  return null;
+}
+
 interface MapViewProps {
   data: MapData;
   boundaries: Boundaries;
@@ -70,6 +88,7 @@ export function MapView({ data, boundaries, shading, counts, markers, selectedBa
     <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} maxZoom={MAX_ZOOM} className="map" zoomSnap={0.5}>
       <Basemap />
       <KeepSizeInSync />
+      <ReportBounds />
       <BarangayLayer
         data={data}
         geojson={boundaries.barangays}

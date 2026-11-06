@@ -71,6 +71,14 @@ export class LocalSeedMissingError extends Error {
   }
 }
 
+// What the audit log keeps about an export.
+export interface ExportLogEntry {
+  format: string;
+  file_name: string;
+  filters: Record<string, unknown>;
+  record_count: number;
+}
+
 export type ConnectionListener = (live: boolean) => void;
 
 // Only for local mode, whose changes live in one browser.
@@ -93,6 +101,7 @@ export interface DataStore {
   addStatus(interventionId: string, status: NewStatus, note?: ChangeNote): Promise<StatusEntry>;
   updateBarangayBaseline(id: number, expectedVersion: number, attributes: Record<string, unknown>, note?: ChangeNote): Promise<Barangay>;
   auditFor(interventionId: string): Promise<AuditEntry[]>;
+  logExport(entry: ExportLogEntry): Promise<void>;
   photoUrl(photoId: string): Promise<string | null>;
   // Fires on any change, from this tab or another. Screens reload through load().
   subscribe(listener: () => void): () => void;

@@ -1,4 +1,4 @@
-import type { FieldDefinition, Intervention, MapData, StatusEntry } from '../data/types';
+import type { FieldDefinition, Icon, Intervention, MapData, StatusEntry } from '../data/types';
 import { formatPoint, googleMapsUrl } from './coordinates';
 import type { Permissions } from './permissions';
 
@@ -9,6 +9,26 @@ export function recordName(record: Intervention, data: Pick<MapData, 'categories
   const variant = typeof record.attributes.variant === 'string' ? record.attributes.variant : null;
   const name = record.title ?? byId(data.categories, record.category_id)?.name ?? 'Unnamed record';
   return variant ? `${name} (${variant})` : name;
+}
+
+const FALLBACK_COLOR = '#757575';
+
+// The map's markers and the exports both draw a record with these, so the two always match.
+export function recordColor(record: Intervention, data: Pick<MapData, 'programs' | 'types'>): string {
+  const program = byId(data.programs, record.banner_program_id);
+  const type = byId(data.types, record.intervention_type_id);
+  return program?.color ?? type?.color ?? FALLBACK_COLOR;
+}
+
+export function recordIcon(record: Intervention, data: Pick<MapData, 'categories' | 'icons' | 'types'>): Icon | undefined {
+  const category = byId(data.categories, record.category_id);
+  const type = byId(data.types, record.intervention_type_id);
+  return byId(data.icons, category?.icon_id ?? type?.icon_id ?? null);
+}
+
+// Icons are drawn in white on the program's color.
+export function whiteIconSvg(svg: string): string {
+  return svg.replace('<svg ', '<svg fill="white" color="white" ');
 }
 
 // A status with an as-of date was reported that way on that date. It may have changed earlier,

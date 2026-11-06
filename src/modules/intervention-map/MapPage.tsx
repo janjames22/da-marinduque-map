@@ -3,11 +3,13 @@ import { useMatch, useNavigate } from 'react-router-dom';
 import { LocalSeedMissingError } from './data/store';
 import type { AppUser, MapData } from './data/types';
 import {
+  barangaysInScope,
   buildShading,
   countByBarangay,
   liveRecords,
   recordsInView,
   unassignedRecords,
+  visibleRecords,
   type ChoroplethMode,
 } from './lib/choropleth';
 import { EditPanelHost } from './edit/EditPanelHost';
@@ -15,10 +17,12 @@ import { MoveConfirm } from './edit/MoveConfirm';
 import { ConnectionNotice, Notice, PhotoDialog } from './edit/RecordPanels';
 import { MapView } from './map/MapView';
 import { BarangayProfile } from './panel/BarangayProfile';
+import { ExportDialog } from './panel/ExportDialog';
 import { LayerPanel } from './panel/LayerPanel';
 import { Legend } from './panel/Legend';
 import { UnassignedPanel } from './panel/UnassignedPanel';
 import { isFormOpen, useEditUi } from './state/edit-ui';
+import { useExportUi } from './state/export-ui';
 import { useMapUi } from './state/map-ui';
 import { StoreContext, usePermissions } from './state/store-context';
 import { useMapData, type Boundaries } from './state/use-map-data';
@@ -59,24 +63,22 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
 
   const allRecords = useMemo(() => liveRecords(data.interventions, data.types), [data.interventions, data.types]);
 
-  const { mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo } = ui;
-  const inView = useMemo(
-    () => recordsInView(allRecords, { mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo }),
-    [allRecords, mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo],
+  const { mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId } = ui;
+  const view = useMemo(
+    () => ({ mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId }),
+    [mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId],
   );
+  const inView = useMemo(() => recordsInView(allRecords, view, data.links), [allRecords, view, data.links]);
+  const scoped = useMemo(() => barangaysInScope(data.barangays, view), [data.barangays, view]);
 
   const counts = useMemo(() => countByBarangay(inView, data.links), [inView, data.links]);
   const unassigned = useMemo(() => unassignedRecords(inView, data.links), [inView, data.links]);
   const shading = useMemo(
-    () => buildShading(mode, shadingTitle(mode, data, pickedProgramId, pickedTypeId), counts, data.barangays),
-    [mode, data, pickedProgramId, pickedTypeId, counts],
+    () => buildShading(mode, shadingTitle(mode, data, pickedProgramId, pickedTypeId), counts, scoped),
+    [mode, data, pickedProgramId, pickedTypeId, counts, scoped],
   );
 
-  // By-type shading follows the picked type, but markers always respect the layer switches.
-  const markers = useMemo(
-    () => inView.filter((r) => !hiddenTypeIds.includes(r.intervention_type_id)),
-    [inView, hiddenTypeIds],
-  );
+  const markers = useMemo(() => visibleRecords(allRecords, view, data.links), [allRecords, view, data.links]);
 
   const openBarangay = (id: number) => {
     ui.setShowUnassigned(false);
@@ -126,17 +128,31 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
         >
           {ui.panelOpen ? 'Close layers' : 'Layers and filters'}
         </button>
-        {!panel && canEdit && (
-          <button
-            type="button"
-            className="add-record-button"
-            onClick={() => {
-              ui.setPanelOpen(false);
-              openPanel({ kind: 'add' }, { picking: true });
-            }}
-          >
-            + Add intervention
-          </button>
+        {!panel && (
+          <div className="map-toolbar">
+            {canEdit && (
+              <button
+                type="button"
+                className="add-record-button"
+                onClick={() => {
+                  ui.setPanelOpen(false);
+                  openPanel({ kind: 'add' }, { picking: true });
+                }}
+              >
+                + Add intervention
+              </button>
+            )}
+            <button
+              type="button"
+              className="export-button"
+              onClick={() => {
+                ui.setPanelOpen(false);
+                useExportUi.getState().openExport();
+              }}
+            >
+              Export
+            </button>
+          </div>
         )}
         {picking && (
           <div className="map-hint" role="status">
@@ -152,7 +168,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
         <Legend
           mode={mode}
           shading={shading}
-          totalBarangays={data.barangays.length}
+          totalBarangays={scoped.length}
           unassigned={unassigned.length}
           onShowUnassigned={() => {
             closeProfile();
@@ -174,6 +190,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
         </>
       )}
       <PhotoDialog />
+      <ExportDialog data={data} boundaries={boundaries} allRecords={allRecords} />
     </main>
   );
 }

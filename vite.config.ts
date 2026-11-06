@@ -32,5 +32,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), localSeed(), ...(mode === 'phone' ? [basicSsl()] : [])],
   test: {
     include: ['tests/**/*.test.ts'],
+    // Many files each run a real database at once, and these limits aren't what they test.
+    testTimeout: 30_000,
   },
 }));

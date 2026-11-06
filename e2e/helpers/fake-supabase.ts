@@ -196,6 +196,7 @@ export async function installFakeSupabase(page: Page, users: FakeUser[] = Object
       if (answer) return respond(route, answer.status, answer.body);
       if (name === 'member_names') return respond(route, 200, users.map((u) => ({ id: u.id, full_name: u.profile?.full_name ?? null })));
       if (name === 'audit_for_intervention') return respond(route, 200, []);
+      if (name === 'log_export') return respond(route, 200, null);
       return respond(route, 500, { code: 'XX000', message: `Not faked: ${name}` });
     }
 

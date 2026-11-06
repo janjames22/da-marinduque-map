@@ -6,19 +6,17 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import type { Intervention, MapData } from '../data/types';
 import { roundPoint } from '../lib/coordinates';
 import { copyText } from '../lib/copy-text';
-import { isOnMap, popupHtml, type PopupAction } from '../lib/display';
+import { isOnMap, popupHtml, recordColor, recordIcon, whiteIconSvg, type PopupAction } from '../lib/display';
 import { openRecordPanel } from '../edit/open-panel';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
 import { usePermissions } from '../state/store-context';
 
-const FALLBACK_COLOR = '#757575';
 const FOCUS_WAIT_MS = 3000;
 
 // Icons load through <img>, so scripts inside an icon's SVG can't run. Phase 5 adds uploads.
 function iconDataUrl(svg: string): string {
-  const white = svg.replace('<svg ', '<svg fill="white" color="white" ');
-  return `data:image/svg+xml,${encodeURIComponent(white)}`;
+  return `data:image/svg+xml,${encodeURIComponent(whiteIconSvg(svg))}`;
 }
 
 function clusterIcon(cluster: L.MarkerCluster) {
@@ -108,10 +106,8 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
   const iconFor = useMemo(() => {
     const cache = new Map<string, L.DivIcon>();
     return (record: Intervention) => {
-      const type = data.types.find((t) => t.id === record.intervention_type_id);
-      const program = data.programs.find((p) => p.id === record.banner_program_id);
-      const color = program?.color ?? type?.color ?? FALLBACK_COLOR;
-      const icon = data.icons.find((i) => i.id === type?.icon_id);
+      const color = recordColor(record, data);
+      const icon = recordIcon(record, data);
       const key = `${color}-${icon?.id}`;
 
       let divIcon = cache.get(key);
@@ -126,7 +122,7 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
       }
       return { divIcon, key };
     };
-  }, [data.types, data.programs, data.icons]);
+  }, [data.types, data.programs, data.icons, data.categories]);
 
   useEffect(() => {
     const cluster = L.markerClusterGroup({

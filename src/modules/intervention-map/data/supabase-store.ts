@@ -51,9 +51,9 @@ export interface SupabaseBackend {
 }
 
 const INTERVENTION_COLUMNS =
-  'id,intervention_type_id,category_id,title,banner_program_id,year_funded,quantity,unit_cost,fund_source,beneficiary,' +
+  'id,source_id,source_page,intervention_type_id,category_id,title,banner_program_id,year_funded,quantity,unit_cost,fund_source,beneficiary,' +
   'beneficiary_type_id,municipality_id,barangay_id,barangay_raw,location_basis_id,status_id,attributes,remarks,data_source,' +
-  'qa_flags,geojson,plotted_barangay_id,plotted_barangay,plotted_municipality,version,created_at,updated_at,deleted_at';
+  'qa_flags,geojson,plotted_barangay_id,plotted_barangay,plotted_municipality,version,created_by,updated_by,created_at,updated_at,deleted_at';
 const BARANGAY_COLUMNS = 'id,municipality_id,name,psgc_code,attributes,version';
 
 const PHOTO_EXTENSIONS: Record<string, string> = {
@@ -195,6 +195,10 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         members,
       };
       return loaded;
+    },
+
+    async logExport({ format, file_name, filters, record_count }) {
+      await call('log_export', { p_format: format, p_file_name: file_name, p_filters: filters, p_record_count: record_count });
     },
 
     async createIntervention(values, status, note) {
