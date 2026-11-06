@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useMatch, useNavigate } from 'react-router-dom';
-import { LocalSeedMissingError } from './data/local-store';
-import type { MapData } from './data/types';
+import { LocalSeedMissingError } from './data/store';
+import type { AppUser, MapData } from './data/types';
 import {
   buildShading,
   countByBarangay,
@@ -12,7 +12,7 @@ import {
 } from './lib/choropleth';
 import { EditPanelHost } from './edit/EditPanelHost';
 import { MoveConfirm } from './edit/MoveConfirm';
-import { Notice, PhotoDialog } from './edit/RecordPanels';
+import { ConnectionNotice, Notice, PhotoDialog } from './edit/RecordPanels';
 import { MapView } from './map/MapView';
 import { BarangayProfile } from './panel/BarangayProfile';
 import { LayerPanel } from './panel/LayerPanel';
@@ -20,7 +20,7 @@ import { Legend } from './panel/Legend';
 import { UnassignedPanel } from './panel/UnassignedPanel';
 import { isFormOpen, useEditUi } from './state/edit-ui';
 import { useMapUi } from './state/map-ui';
-import { StoreContext } from './state/store-context';
+import { StoreContext, usePermissions } from './state/store-context';
 import { useMapData, type Boundaries } from './state/use-map-data';
 
 function shadingTitle(mode: ChoroplethMode, data: MapData, programId: number | null, typeId: number | null) {
@@ -42,6 +42,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   const setPicking = useEditUi((state) => state.setPicking);
   const openPanel = useEditUi((state) => state.openPanel);
   const closePanel = useEditUi((state) => state.closePanel);
+  const { canEdit } = usePermissions();
 
   useEffect(() => {
     const firstProgram = data.programs.filter((p) => p.is_active).sort((a, b) => a.sort_order - b.sort_order)[0];
@@ -125,7 +126,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
         >
           {ui.panelOpen ? 'Close layers' : 'Layers and filters'}
         </button>
-        {!panel && (
+        {!panel && canEdit && (
           <button
             type="button"
             className="add-record-button"
@@ -147,6 +148,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
         )}
         <MoveConfirm data={data} />
         <Notice />
+        <ConnectionNotice />
         <Legend
           mode={mode}
           shading={shading}
@@ -176,8 +178,8 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   );
 }
 
-export function MapPage({ onDataSources }: { onDataSources(sources: string[]): void }) {
-  const state = useMapData();
+export function MapPage({ user, onDataSources }: { user: AppUser; onDataSources(sources: string[]): void }) {
+  const state = useMapData(user);
 
   useEffect(() => {
     if (state.status === 'ready') onDataSources(state.data.dataSources);

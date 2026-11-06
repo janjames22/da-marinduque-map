@@ -6,6 +6,7 @@ import { encodedPlace, isOnMap, recordName } from '../lib/display';
 import { openRecordPanel } from './open-panel';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
+import { useConnection } from '../state/connection';
 import { useStore } from '../state/store-context';
 import { PanelFrame, TextField } from './FormParts';
 
@@ -123,14 +124,20 @@ export function HistoryPanel({ data, record }: { data: MapData; record: Interven
   const { store } = useStore();
   const closePanel = useEditUi((state) => state.closePanel);
   const [entries, setEntries] = useState<AuditEntry[] | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
   const schema = data.types.find((t) => t.id === record.intervention_type_id)?.field_schema;
 
   // Depends on the record itself, so the list refreshes when the record changes.
   useEffect(() => {
     let cancelled = false;
-    void store.auditFor(record.id).then((found) => {
-      if (!cancelled) setEntries(found);
-    });
+    store
+      .auditFor(record.id)
+      .then((found) => {
+        if (!cancelled) setEntries(found);
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setFailure(`Could not load the history: ${error.message}`);
+      });
     return () => {
       cancelled = true;
     };
@@ -138,7 +145,11 @@ export function HistoryPanel({ data, record }: { data: MapData; record: Interven
 
   return (
     <PanelFrame title="Change history" subtitle={recordName(record, data)} onClose={closePanel}>
-      {entries === null ? (
+      {failure ? (
+        <p className="field-error" role="alert">
+          {failure}
+        </p>
+      ) : entries === null ? (
         <p>Loading…</p>
       ) : (
         <ol className="audit-list">
@@ -149,6 +160,7 @@ export function HistoryPanel({ data, record }: { data: MapData; record: Interven
               <li key={entry.id}>
                 <strong>{auditHeadline(entry, data)}</strong>
                 <span className="record-meta"> {new Date(entry.at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</span>
+                {entry.actor_name && <div className="record-meta">By {entry.actor_name}</div>}
                 {reason && <div>Reason: {reason}</div>}
                 {changes.length > 0 && (
                   <ul>
@@ -173,19 +185,27 @@ export function PhotoDialog() {
   const photoId = useEditUi((state) => state.photoId);
   const showPhoto = useEditUi((state) => state.showPhoto);
   const [url, setUrl] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
   useEffect(() => {
     if (!photoId) return;
     let cancelled = false;
     let created: string | null = null;
-    void store.photoUrl(photoId).then((found) => {
-      if (cancelled) {
-        if (found) URL.revokeObjectURL(found);
-        return;
-      }
-      created = found;
-      setUrl(found);
-    });
+    setFailure(null);
+    store
+      .photoUrl(photoId)
+      .then((found) => {
+        if (cancelled) {
+          if (found) URL.revokeObjectURL(found);
+          return;
+        }
+        created = found;
+        setUrl(found);
+        if (!found) setFailure('This photo could not be found.');
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setFailure(error.message);
+      });
     return () => {
       cancelled = true;
       if (created) URL.revokeObjectURL(created);
@@ -208,7 +228,32 @@ export function PhotoDialog() {
       <button type="button" className="close-button" aria-label="Close photo" autoFocus onClick={() => showPhoto(null)}>
         ×
       </button>
-      {url ? <img src={url} alt="Taken with this status update" /> : <p>Loading…</p>}
+      {url ? <img src={url} alt="Taken with this status update" /> : <p>{failure ?? 'Loading…'}</p>}
+    </div>
+  );
+}
+
+const RECONNECT_GRACE_MS = 5000;
+
+// A map that has quietly stopped updating is worse than one that says so, especially on a phone
+// moving in and out of signal. A short drop isn't worth interrupting anyone for.
+export function ConnectionNotice() {
+  const live = useConnection((state) => state.live);
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (live) {
+      setShow(false);
+      return;
+    }
+    const timer = setTimeout(() => setShow(true), RECONNECT_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [live]);
+
+  if (!show) return null;
+  return (
+    <div className="connection-notice" role="status">
+      Live updates paused. Reconnecting… Changes by others may not show until then.
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { FieldDefinition, Intervention, MapData, StatusEntry } from '../data/types';
 import { formatPoint, googleMapsUrl } from './coordinates';
+import type { Permissions } from './permissions';
 
 const byId = <T extends { id: number }>(items: T[], id: number | null): T | undefined =>
   id === null ? undefined : items.find((item) => item.id === id);
@@ -82,7 +83,7 @@ const actionButton = (action: PopupAction, label: string, extra = '') =>
   `<button type="button" class="popup-action" data-action="${action}"${extra}>${escapeHtml(label)}</button>`;
 
 // The popup is plain HTML handed to Leaflet, so every value from the data must be escaped.
-export function popupHtml(record: Intervention, data: MapData): string {
+export function popupHtml(record: Intervention, data: MapData, permissions: Permissions): string {
   const type = byId(data.types, record.intervention_type_id);
   const program = byId(data.programs, record.banner_program_id);
   const locationBasis = byId(data.locationBases, record.location_basis_id);
@@ -104,7 +105,9 @@ export function popupHtml(record: Intervention, data: MapData): string {
       const remarks = entry.remarks ? `<div class="status-remarks">${escapeHtml(entry.remarks)}</div>` : '';
       const photo = data.photos.find((p) => p.id === entry.photo_id);
       const photoButton = photo ? actionButton('photo', 'View photo', ` data-photo-id="${escapeHtml(photo.id)}"`) : '';
-      return `<li><strong>${escapeHtml(status)}</strong> ${escapeHtml(statusDateLabel(entry))}${remarks}${photoButton}</li>`;
+      const person = data.members.find((member) => member.id === entry.created_by)?.full_name;
+      const by = person ? `<div class="status-remarks">By ${escapeHtml(person)}</div>` : '';
+      return `<li><strong>${escapeHtml(status)}</strong> ${escapeHtml(statusDateLabel(entry))}${remarks}${by}${photoButton}</li>`;
     })
     .join('');
 
@@ -122,11 +125,11 @@ export function popupHtml(record: Intervention, data: MapData): string {
   }
 
   const editActions = [
-    actionButton('edit', 'Edit'),
-    actionButton('status', 'Update status'),
-    needsReview(record) ? actionButton('resolve', 'Resolve flag') : '',
-    actionButton('history', 'History'),
-    actionButton('delete', 'Delete'),
+    permissions.canEdit ? actionButton('edit', 'Edit') : '',
+    permissions.canEdit ? actionButton('status', 'Update status') : '',
+    permissions.canEdit && needsReview(record) ? actionButton('resolve', 'Resolve flag') : '',
+    permissions.canSeeHistory ? actionButton('history', 'History') : '',
+    permissions.canEdit ? actionButton('delete', 'Delete') : '',
   ].join('');
 
   return [
@@ -146,7 +149,7 @@ export function popupHtml(record: Intervention, data: MapData): string {
     `</table>`,
     timeline ? `<h4>Status</h4><ol class="status-timeline">${timeline}</ol>` : '',
     locationActions,
-    `<div class="popup-actions">${editActions}</div>`,
+    editActions ? `<div class="popup-actions">${editActions}</div>` : '',
     `</div>`,
   ].join('');
 }

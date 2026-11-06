@@ -1,5 +1,5 @@
 import type { LatLng } from '../lib/coordinates';
-import type { AuditEntry, Barangay, Intervention, MapData, StatusEntry } from './types';
+import type { AppUser, AuditEntry, Barangay, Intervention, MapData, StatusEntry } from './types';
 
 // Everything a person enters for a record. Location is a point for now, as both active types are.
 export interface InterventionValues {
@@ -64,6 +64,15 @@ export class ValidationError extends Error {
   }
 }
 
+export class LocalSeedMissingError extends Error {
+  constructor() {
+    super('Local dataset not found');
+    this.name = 'LocalSeedMissingError';
+  }
+}
+
+export type ConnectionListener = (live: boolean) => void;
+
 // Only for local mode, whose changes live in one browser.
 export interface LocalControls {
   changeCount(): Promise<number>;
@@ -75,6 +84,7 @@ export interface LocalControls {
 // Supabase. Writes reject with ConflictError if the record changed since expectedVersion was read,
 // and with ValidationError if the values break a rule.
 export interface DataStore {
+  user: AppUser;
   load(): Promise<MapData>;
   createIntervention(values: InterventionValues, status: NewStatus, note?: ChangeNote): Promise<Intervention>;
   updateIntervention(id: string, expectedVersion: number, patch: InterventionPatch, note?: ChangeNote): Promise<Intervention>;
@@ -86,5 +96,7 @@ export interface DataStore {
   photoUrl(photoId: string): Promise<string | null>;
   // Fires on any change, from this tab or another. Screens reload through load().
   subscribe(listener: () => void): () => void;
+  // Starts live updates from other devices, and reports when they stop and resume. Local mode has none.
+  watchConnection?(listener: ConnectionListener): () => void;
   local?: LocalControls;
 }

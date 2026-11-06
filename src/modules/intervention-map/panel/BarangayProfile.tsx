@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Barangay, Intervention, MapData } from '../data/types';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
+import { usePermissions } from '../state/store-context';
 import { BaselineSection } from './BaselineSection';
 import { RecordList } from './RecordList';
 
@@ -57,6 +58,7 @@ export function BarangayProfile({ barangay, data, allRecords, onClose }: Baranga
   }, [allRecords, data.links, barangay.id]);
 
   const municipality = data.municipalities.find((m) => m.id === barangay.municipality_id);
+  const { canEdit } = usePermissions();
 
   const byType = tally(records, (record) => {
     const type = data.types.find((t) => t.id === record.intervention_type_id);
@@ -88,9 +90,11 @@ export function BarangayProfile({ barangay, data, allRecords, onClose }: Baranga
         </button>
       </header>
 
-      <button type="button" className="primary-button" onClick={addHere}>
-        Add intervention here
-      </button>
+      {canEdit && (
+        <button type="button" className="primary-button" onClick={addHere}>
+          Add intervention here
+        </button>
+      )}
 
       <section>
         <h3 className="section-title">

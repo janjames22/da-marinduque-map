@@ -1,6 +1,6 @@
 -- DA Marinduque Intervention Map: baseline schema (spec section 4).
 -- 0003_boundaries.sql loads barangays and polygons. 0004_audit_triggers.sql then turns on auditing.
--- Write policies and the Realtime publication arrive with the Supabase switch (Phase 4).
+-- 0005_access_control.sql adds write access, photo storage and live change signals.
 
 create schema if not exists extensions;
 create extension if not exists postgis with schema extensions;
@@ -786,7 +786,7 @@ left join lateral (
 ) plotted on true;
 
 -- ---------------------------------------------------------------------------
--- Row-level security: members can read. Write policies arrive in Phase 4.
+-- Row-level security: members can read. Write access is in 0005_access_control.sql.
 -- ---------------------------------------------------------------------------
 
 create function public.current_user_role()
@@ -811,7 +811,7 @@ begin
   ] loop
     execute format('alter table public.%I enable row level security', table_name);
     execute format(
-      'create policy "members read" on public.%I for select to authenticated using (public.current_user_role() is not null)',
+      'create policy "members read" on public.%I for select to authenticated using ((select public.current_user_role()) is not null)',
       table_name
     );
   end loop;
@@ -820,21 +820,21 @@ $$;
 
 alter table public.profiles enable row level security;
 create policy "users read own profile" on public.profiles
-  for select to authenticated using (id = auth.uid());
+  for select to authenticated using (id = (select auth.uid()));
 
 alter table public.interventions enable row level security;
 create policy "members read interventions" on public.interventions
-  for select to authenticated using (public.current_user_role() is not null and deleted_at is null);
+  for select to authenticated using ((select public.current_user_role()) is not null and deleted_at is null);
 
 alter table public.saved_views enable row level security;
 create policy "members read own and shared views" on public.saved_views
   for select to authenticated using (
-    public.current_user_role() is not null and (owner_id = auth.uid() or is_shared)
+    (select public.current_user_role()) is not null and (owner_id = (select auth.uid()) or is_shared)
   );
 
 alter table public.audit_log enable row level security;
 create policy "admins read audit log" on public.audit_log
-  for select to authenticated using (public.current_user_role() = 'admin');
+  for select to authenticated using ((select public.current_user_role()) = 'admin');
 
 revoke all on all tables in schema public from anon;
 

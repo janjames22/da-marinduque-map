@@ -2,6 +2,7 @@ import type { Intervention, MapData } from '../data/types';
 import { openRecordPanel } from '../edit/open-panel';
 import { encodedPlace, isOnMap, locationWarning, needsReview, recordName, statusDateLabel, statusTimeline } from '../lib/display';
 import { useMapUi } from '../state/map-ui';
+import { usePermissions } from '../state/store-context';
 
 interface RecordListProps {
   records: Intervention[];
@@ -15,6 +16,7 @@ function compareRecords(a: Intervention, b: Intervention) {
 
 export function RecordList({ records, data, showEncodedPlace = false }: RecordListProps) {
   const zoomToRecord = useMapUi((state) => state.zoomToRecord);
+  const { canEdit, canSeeHistory } = usePermissions();
 
   return (
     <ul className="record-list">
@@ -52,25 +54,35 @@ export function RecordList({ records, data, showEncodedPlace = false }: RecordLi
               </div>
             )}
             {warning && <div className="record-warning">{warning}</div>}
-            <div className="record-actions">
-              <button type="button" className="link-button" onClick={() => openRecordPanel('edit', record)}>
-                Edit
-              </button>
-              <button type="button" className="link-button" onClick={() => openRecordPanel('status', record)}>
-                Update status
-              </button>
-              {needsReview(record) && (
-                <button type="button" className="link-button" onClick={() => openRecordPanel('resolve', record)}>
-                  Resolve flag
-                </button>
-              )}
-              <button type="button" className="link-button" onClick={() => openRecordPanel('history', record)}>
-                History
-              </button>
-              <button type="button" className="link-button" onClick={() => openRecordPanel('delete', record)}>
-                Delete
-              </button>
-            </div>
+            {(canEdit || canSeeHistory) && (
+              <div className="record-actions">
+                {canEdit && (
+                  <button type="button" className="link-button" onClick={() => openRecordPanel('edit', record)}>
+                    Edit
+                  </button>
+                )}
+                {canEdit && (
+                  <button type="button" className="link-button" onClick={() => openRecordPanel('status', record)}>
+                    Update status
+                  </button>
+                )}
+                {canEdit && needsReview(record) && (
+                  <button type="button" className="link-button" onClick={() => openRecordPanel('resolve', record)}>
+                    Resolve flag
+                  </button>
+                )}
+                {canSeeHistory && (
+                  <button type="button" className="link-button" onClick={() => openRecordPanel('history', record)}>
+                    History
+                  </button>
+                )}
+                {canEdit && (
+                  <button type="button" className="link-button" onClick={() => openRecordPanel('delete', record)}>
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
           </li>
         );
       })}

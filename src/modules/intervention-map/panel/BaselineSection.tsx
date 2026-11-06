@@ -6,10 +6,11 @@ import { fieldValue } from '../lib/display';
 import { attributesFromText, attributesToText } from '../lib/form-values';
 import { activeFields, attributeKey, validateAttributes, type FieldErrors } from '../lib/validation';
 import { useEditUi } from '../state/edit-ui';
-import { useStore } from '../state/store-context';
+import { usePermissions, useStore } from '../state/store-context';
 
 export function BaselineSection({ barangay, data }: { barangay: Barangay; data: MapData }) {
   const { store } = useStore();
+  const { canEdit } = usePermissions();
   const setNotice = useEditUi((state) => state.setNotice);
   const schema = data.barangayFields;
   const fields = activeFields(schema);
@@ -97,9 +98,11 @@ export function BaselineSection({ barangay, data }: { barangay: Barangay; data: 
               </div>
             ))}
           </dl>
-          <button type="button" className="secondary-button" onClick={startEditing}>
-            Edit baseline
-          </button>
+          {canEdit && (
+            <button type="button" className="secondary-button" onClick={startEditing}>
+              Edit baseline
+            </button>
+          )}
         </>
       )}
     </section>
