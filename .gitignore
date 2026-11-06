@@ -25,6 +25,9 @@ backups/
 .e2e-dist/
 .e2e-dist-live/
 
+# Which Netlify site this folder deploys to
+.netlify/
+
 # Editor / OS
 .vscode/*
 !.vscode/extensions.json
