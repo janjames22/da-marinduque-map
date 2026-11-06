@@ -6,7 +6,7 @@ import { binFor, COUNT_BINS, countByBarangay, GAP_NONE_COLOR } from '../lib/chor
 import { escapeHtml, recordColor, recordIcon } from '../lib/display';
 import { buildFields, placemarkName, unlocatedLine, type ExportField, type FieldValue } from './fields';
 import type { RenderMarker } from './marker-image';
-import { isLocated, NEEDS_LOCATION_CHECK, needsLocationCheck } from './records';
+import { geometryBounds, isLocated, NEEDS_LOCATION_CHECK, needsLocationCheck } from './records';
 
 export interface KmlLayers {
   municipalBoundaries: boolean;
@@ -37,6 +37,19 @@ export interface KmlInput {
 const STANDARD_DOT = 'https://maps.google.com/mapfiles/kml/shapes/placemark_circle.png';
 const GAP_NOTE = 'Shows what has been encoded, not what exists on the ground.';
 const NO_BARANGAY = 'No barangay';
+const READ_ME_FOLDER = 'Read me – legend and unlocated records';
+const READ_ME_MARKER: MarkerStyle = {
+  id: 'read-me',
+  color: '#374151',
+  svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><rect x="10" y="10" width="4" height="11" rx="1"/></svg>',
+  iconPath: 'icons/read-me.png',
+};
+const READ_ME_OFFSET = 0.005; // degrees, about 500 m
+// About 38%, so satellite imagery shows through.
+const GAP_FILL_ALPHA = 0x60;
+const HIDDEN = '<visibility>0</visibility>';
+// Without this, list panels show a balloon's first lines as raw text under the name.
+const NO_SNIPPET = '<Snippet maxLines="0"></Snippet>';
 const collator = new Intl.Collator('en');
 
 // Characters XML can't hold at all would make the whole file unreadable.
@@ -110,13 +123,16 @@ function markerStyleFor(record: Intervention, data: MapData, styles: Map<string,
   return style;
 }
 
-// Labels stay hidden until a marker is pointed at, or hundreds of them would cover the map.
-function markerStyleXml(style: MarkerStyle, packaged: boolean): string {
+function iconStyleXml(style: MarkerStyle, packaged: boolean, scale: number): string {
   // KML fixes the order of these elements: color, then scale, then the icon.
   const color = packaged ? '' : `<color>${kmlColor(style.color)}</color>`;
   const href = packaged ? style.iconPath : STANDARD_DOT;
-  const iconStyle = (scale: number) =>
-    `<IconStyle>${color}<scale>${scale}</scale><Icon><href>${href}</href></Icon><hotSpot x="0.5" y="0.5" xunits="fraction" yunits="fraction"/></IconStyle>`;
+  return `<IconStyle>${color}<scale>${scale}</scale><Icon><href>${href}</href></Icon><hotSpot x="0.5" y="0.5" xunits="fraction" yunits="fraction"/></IconStyle>`;
+}
+
+// Labels stay hidden until a marker is pointed at, or hundreds of them would cover the map.
+function markerStyleXml(style: MarkerStyle, packaged: boolean): string {
+  const iconStyle = (scale: number) => iconStyleXml(style, packaged, scale);
   const shapes = `<LineStyle><color>${kmlColor(style.color)}</color><width>3</width></LineStyle><PolyStyle><color>${kmlColor(style.color, 0x66)}</color></PolyStyle>`;
   return (
     `<Style id="${style.id}-normal">${iconStyle(0.8)}<LabelStyle><scale>0</scale></LabelStyle>${shapes}</Style>` +
@@ -125,16 +141,20 @@ function markerStyleXml(style: MarkerStyle, packaged: boolean): string {
   );
 }
 
-function folder(name: string, content: string, description?: string): string {
-  const note = description ? `<description>${cdata(description)}</description>` : '';
-  return `<Folder><name>${xml(name)}</name>${note}${content}</Folder>`;
+// A folder's note is plain text, as Google Earth Web lists it with any tags showing. Formatted text
+// goes in a placemark's balloon.
+function folder(name: string, content: string, { note, hidden, open }: { note?: string; hidden?: boolean; open?: boolean } = {}): string {
+  return (
+    `<Folder><name>${xml(name)}</name>${hidden ? HIDDEN : ''}${open ? '<open>1</open>' : ''}` +
+    `${note ? `<description>${xml(note)}</description>` : ''}${content}</Folder>`
+  );
 }
 
 function recordPlacemark(record: Intervention, data: MapData, fields: ExportField[], styles: Map<string, MarkerStyle>): string {
   const style = markerStyleFor(record, data, styles);
   const rows = fields.map((field): [string, string] => [field.key, valueText(field.read(record))]);
   return (
-    `<Placemark><name>${xml(placemarkName(record, data))}</name>` +
+    `<Placemark><name>${xml(placemarkName(record, data))}</name>${NO_SNIPPET}` +
     `<description>${cdata(balloon(record, fields))}</description>` +
     `<styleUrl>#${style.id}</styleUrl>${extendedData(rows)}${geometryXml(record.geojson!)}</Placemark>`
   );
@@ -144,7 +164,7 @@ function recordPlacemark(record: Intervention, data: MapData, fields: ExportFiel
 function locationCheckFolder(records: Intervention[], data: MapData, fields: ExportField[], styles: Map<string, MarkerStyle>): string {
   if (records.length === 0) return '';
   const placemarks = [...records].sort((a, b) => collator.compare(placemarkName(a, data), placemarkName(b, data))).map((record) => recordPlacemark(record, data, fields, styles));
-  return folder(NEEDS_LOCATION_CHECK, placemarks.join(''), '<p>The coordinates of these records are outside Marinduque, so they may not show where the intervention really is. Check each location.</p>');
+  return folder(NEEDS_LOCATION_CHECK, placemarks.join(''), { note: 'The coordinates of these records are outside Marinduque, so they may not show where the intervention really is. Check each location.' });
 }
 
 function recordFolders(records: Intervention[], data: MapData, fields: ExportField[], styles: Map<string, MarkerStyle>): string {
@@ -180,9 +200,8 @@ function recordFolders(records: Intervention[], data: MapData, fields: ExportFie
     .join('');
 }
 
-function boundaryPlacemark(name: string, geometry: GeoJSON.Geometry, style: string, description = '', data = ''): string {
-  const note = description ? `<description>${cdata(description)}</description>` : '';
-  return `<Placemark><name>${xml(name)}</name>${note}<styleUrl>#${style}</styleUrl>${data}${geometryXml(geometry)}</Placemark>`;
+function boundaryPlacemark(name: string, geometry: GeoJSON.Geometry, style: string): string {
+  return `<Placemark><name>${xml(name)}</name><styleUrl>#${style}</styleUrl>${geometryXml(geometry)}</Placemark>`;
 }
 
 function outlineStyle(id: string, color: string, width: number): string {
@@ -220,7 +239,7 @@ function boundaryFolder(input: KmlInput): { styles: string; content: string } {
 }
 
 function gapStyle(id: string, color: string): string {
-  return `<Style id="${id}"><LineStyle><color>${kmlColor('#6b6a66')}</color><width>1</width></LineStyle><PolyStyle><color>${kmlColor(color, 0xb3)}</color></PolyStyle></Style>`;
+  return `<Style id="${id}"><LineStyle><color>${kmlColor('#6b6a66')}</color><width>1</width></LineStyle><PolyStyle><color>${kmlColor(color, GAP_FILL_ALPHA)}</color></PolyStyle></Style>`;
 }
 
 function gapLayer(input: KmlInput): { styles: string; content: string } {
@@ -267,34 +286,68 @@ function gapLayer(input: KmlInput): { styles: string; content: string } {
           ['Psgc', barangay.psgc_code],
           ['Interventions', String(count)],
         ]);
-        return [boundaryPlacemark(`${barangay.name}: ${count === 0 ? 'none encoded yet' : count}`, feature.geometry, style, description, fields)];
+        return [
+          `<Placemark><name>${xml(`${barangay.name}: ${count === 0 ? 'none encoded yet' : count}`)}</name>${NO_SNIPPET}` +
+            `<description>${cdata(description)}</description><styleUrl>#${style}</styleUrl>${fields}${geometryXml(feature.geometry)}</Placemark>`,
+        ];
       });
     return folder(municipality.name, placemarks.join(''));
   });
 
-  const key = [`<li style="color:${GAP_NONE_COLOR}">None encoded yet</li>`, ...COUNT_BINS.map((bin) => `<li style="color:${bin.color}">${escapeHtml(bin.label)}</li>`)].join('');
-  return { styles, content: folder('Barangay gap map', folders.join(''), `<p>Number of interventions in each barangay. ${escapeHtml(GAP_NOTE)}</p><ul>${key}</ul>`) };
+  // Off at this folder only. Google Earth Web's switch on a folder doesn't reach what's inside, so
+  // anything else set to off here would stay off. Older reports say Google Earth Pro may still draw
+  // a folder's contents when only the folder is off: one click on its checkbox would clear them.
+  const note = `Number of interventions in each barangay. ${GAP_NOTE} Off when the file opens, so switch this folder on to show it. The legend is in the Read me folder.`;
+  return { styles, content: folder('Barangay gap map', folders.join(''), { note, hidden: true }) };
 }
 
-function documentDescription(input: KmlInput, located: Intervention[], unlocated: Intervention[]): string {
+const recordCount = (count: number) => `${count} ${count === 1 ? 'record' : 'records'}`;
+
+function documentSummary({ records, exportedOn }: KmlInput, located: Intervention[], unlocated: Intervention[]): string {
+  return `${recordCount(records.length)}: ${located.length} on the map, ${unlocated.length} without coordinates. Exported ${exportedOn}. See the folder "${READ_ME_FOLDER}".`;
+}
+
+const swatches = (rows: { color: string; label: string }[]) =>
+  `<table cellpadding="2">${rows.map(({ color, label }) => `<tr><td bgcolor="${escapeHtml(color)}">&nbsp;&nbsp;&nbsp;</td><td>${escapeHtml(label)}</td></tr>`).join('')}</table>`;
+
+function readMeBalloon(input: KmlInput, located: Intervention[], unlocated: Intervention[]): string {
   const { data, filterLines, exportedOn, exportedBy, layers } = input;
   const toCheck = located.filter(needsLocationCheck).length;
-  const programs = data.programs
-    .filter((program) => located.some((record) => record.banner_program_id === program.id))
-    .map((program) => `<tr><td bgcolor="${program.color}">&nbsp;&nbsp;&nbsp;</td><td>${escapeHtml(program.name)}</td></tr>`)
-    .join('');
-  const parts = [
-    `<p><b>${input.records.length}</b> records: ${located.length} on the map, ${unlocated.length} without coordinates.</p>`,
+  const programs = data.programs.filter((program) => located.some((record) => record.banner_program_id === program.id)).map(({ color, name }) => ({ color, label: name }));
+  const gapKey = [{ color: GAP_NONE_COLOR, label: 'None encoded yet' }, ...COUNT_BINS.map(({ color, label }) => ({ color, label }))];
+  return [
+    `<p><b>${recordCount(input.records.length)}</b>: ${located.length} on the map, ${unlocated.length} without coordinates.</p>`,
     `<p>Exported ${escapeHtml(exportedOn)}${exportedBy ? ` by ${escapeHtml(exportedBy)}` : ''}.</p>`,
     toCheck > 0 ? `<p><b>${toCheck} ${toCheck === 1 ? 'record has' : 'records have'} coordinates outside Marinduque.</b> See the folder "${escapeHtml(NEEDS_LOCATION_CHECK)}".</p>` : '',
     filterLines.length > 0 ? `<p>Filters:</p><ul>${filterLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : '',
-    programs ? `<p>Marker color is the program:</p><table cellpadding="2">${programs}</table>` : '',
+    programs.length > 0 ? `<p><b>Marker color is the program:</b></p>${swatches(programs)}` : '',
+    layers.gapMap ? `<p><b>Barangay gap map, by number of interventions:</b></p>${swatches(gapKey)}<p>${escapeHtml(GAP_NOTE)} It's off when the file opens, so switch its folder on to show it.</p>` : '',
     unlocated.length > 0
       ? `<p><b>Left out, as they have no coordinates (${unlocated.length}):</b></p><ol>${unlocated.map((record) => `<li>${escapeHtml(unlocatedLine(record, data))}</li>`).join('')}</ol>`
-      : '',
+      : '<p>Every record in this file has coordinates.</p>',
     layers.municipalBoundaries || layers.barangayBoundaries || layers.gapMap ? '<p>Boundaries: NAMRIA, PSA via HDX (CC BY-IGO).</p>' : '',
-  ];
-  return parts.join('');
+  ].join('');
+}
+
+// Just past the top left corner of the export's place, with its label always on, so it can't pass
+// for a record.
+function readMePosition({ barangays, boundaries }: KmlInput): number[] {
+  const codes = new Set(barangays.map((barangay) => barangay.psgc_code));
+  const places = boundaries.barangays.features.filter((feature) => codes.has(feature.properties?.adm4_pcode)).map((feature) => feature.geometry);
+  const { west, north } = geometryBounds({ type: 'GeometryCollection', geometries: places });
+  return [west - READ_ME_OFFSET, north + READ_ME_OFFSET];
+}
+
+// A placemark with a point, as KML only promises formatted text in a placemark's balloon.
+function readMeFolder(input: KmlInput, located: Intervention[], unlocated: Intervention[]): string {
+  const placemark =
+    `<Placemark><name>Read me</name>${NO_SNIPPET}<description>${cdata(readMeBalloon(input, located, unlocated))}</description>` +
+    `<styleUrl>#${READ_ME_MARKER.id}</styleUrl>${geometryXml({ type: 'Point', coordinates: readMePosition(input) })}</Placemark>`;
+  return folder(READ_ME_FOLDER, placemark, { note: 'Open "Read me" for the legend and the list of records without coordinates.', open: true });
+}
+
+function readMeStyleXml(packaged: boolean): string {
+  return `<Style id="${READ_ME_MARKER.id}">${iconStyleXml(READ_ME_MARKER, packaged, 1)}<LabelStyle><scale>1</scale></LabelStyle></Style>`;
 }
 
 export interface BuiltKml {
@@ -316,22 +369,24 @@ export function buildKml(input: KmlInput, packaged: boolean): BuiltKml {
   const boundaries = boundaryFolder(input);
   const gap = layers.gapMap ? gapLayer(input) : { styles: '', content: '' };
   const markerStyles = [...styles.values()];
+  const readMe = readMeFolder(input, located, unlocated);
 
   const kml =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${xml(title)}</name><open>1</open>` +
-    `<Snippet maxLines="1">${xml(`${located.length} on the map, ${unlocated.length} without coordinates`)}</Snippet>` +
-    `<description>${cdata(documentDescription(input, located, unlocated))}</description>` +
+    `<description>${xml(documentSummary(input, located, unlocated))}</description>` +
+    readMeStyleXml(packaged) +
     markerStyles.map((style) => markerStyleXml(style, packaged)).join('') +
     boundaries.styles +
     gap.styles +
+    readMe +
     boundaries.content +
     gap.content +
     checkXml +
     recordsXml +
     `</Document></kml>`;
 
-  return { kml, markers: markerStyles, placemarks: located.length };
+  return { kml, markers: [READ_ME_MARKER, ...markerStyles], placemarks: located.length };
 }
 
 export async function buildKmz(input: KmlInput, renderMarker: RenderMarker): Promise<Uint8Array> {

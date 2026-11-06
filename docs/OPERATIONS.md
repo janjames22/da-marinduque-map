@@ -91,12 +91,14 @@ Every signed-in role can export, from the **Export** button on the map or **Expo
 
 | Format | Records without coordinates | Good for |
 |---|---|---|
-| KMZ | Listed by name in the file's description | Google Earth, with the map's icons |
-| KML | Listed by name in the file's description | Google Earth and QGIS, with colored dots |
+| KMZ | Listed by name in the "Read me" folder | Google Earth, with the map's icons |
+| KML | Listed by name in the "Read me" folder | Google Earth and QGIS, with colored dots |
 | CSV | Included, with blank latitude and longitude | Excel |
 | GeoJSON | Included, with no geometry | QGIS and web maps |
 | Shapefile | Listed in `records-left-out.txt` in the .zip | QGIS and ArcGIS |
 
+- **The "Read me" folder:** every KML and KMZ opens with a top-level folder, "Read me – legend and unlocated records". It holds one pin, labeled "Read me", just past the top left corner of the exported area. Open it for the legend and the list of records without coordinates.
+- **Barangay gap map:** this layer's folder is set to off in the file, while the boundary outlines stay on. Switch the folder on in Google Earth to show it.
 - **Shapefile field names:** these are limited to 10 characters, so `fields.txt` in the .zip gives each one's full name. Text over 254 bytes is cut short, and `fields.txt` says which fields that happened to.
 - **Records outside Marinduque:** these have coordinates, so they're exported where they're plotted, even though the map leaves them off. In KML and KMZ, they go in a separate top-level folder, "QA – needs location check", not in their municipality's. In CSV, Shapefile and GeoJSON, they stay with the other records, and the first column, "QA – needs location check", marks them. The next column has all of a record's QA flags.
 - **Sample files:** `npm run export:samples` writes samples to `exports/samples/`, using the local dataset. Run `npm run build:local-seed` first.

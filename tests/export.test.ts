@@ -95,7 +95,10 @@ const parseXml = (text: string) => new DOMParser().parseFromString(text, 'text/x
 const childrenNamed = (node: Element, name: string) => Array.from(node.childNodes as unknown as Node[]).filter((child) => child.nodeName === name) as Element[];
 const folderName = (folder: Element) => childrenNamed(folder, 'name')[0].textContent;
 const documentOf = (text: string) => parseXml(text).getElementsByTagName('Document')[0] as unknown as Element;
-const featuresOf = (text: string) => kmlToGeoJson(parseXml(text) as unknown as Document).features;
+const readMeFolder = (text: string) => childrenNamed(documentOf(text), 'Folder')[0];
+const readMeBalloon = (text: string) => childrenNamed(childrenNamed(readMeFolder(text), 'Placemark')[0], 'description')[0].textContent!;
+// Just the records, without the Read me placemark.
+const recordFeaturesOf = (text: string) => kmlToGeoJson(parseXml(text) as unknown as Document).features.filter((feature) => feature.properties?.RecordId);
 
 beforeAll(async () => {
   db = await createTestDb();
@@ -222,9 +225,9 @@ describe('KML', () => {
     const { kml, placemarks } = buildKml(kmlInput(raed), true);
     expect(placemarks).toBe(173);
     const coordinates = Array.from(parseXml(kml).getElementsByTagName('coordinates')).map((node) => node.textContent!.split(','));
-    expect(coordinates).toHaveLength(173);
+    expect(coordinates).toHaveLength(174); // the records, and Read me
 
-    const features = featuresOf(kml);
+    const features = recordFeaturesOf(kml);
     expect(features).toHaveLength(173);
     for (const record of raed.filter(isLocated)) {
       const feature = features.find((f) => f.properties?.RecordId === record.id)!;
@@ -245,11 +248,11 @@ describe('KML', () => {
   it('folders run Municipality, Barangay, Type, with no barangay last', () => {
     const { kml } = buildKml(kmlInput(raed), true);
     const municipalities = childrenNamed(documentOf(kml), 'Folder');
-    expect(municipalities.map(folderName)).toEqual(['QA – needs location check', 'Boac', 'Buenavista', 'Gasan', 'Mogpog', 'Santa Cruz', 'Torrijos']);
+    expect(municipalities.map(folderName)).toEqual(['Read me – legend and unlocated records', 'QA – needs location check', 'Boac', 'Buenavista', 'Gasan', 'Mogpog', 'Santa Cruz', 'Torrijos']);
 
     let placemarks = 0;
     const typeNames = new Set<string>();
-    for (const municipality of municipalities.slice(1)) {
+    for (const municipality of municipalities.slice(2)) {
       const barangays = childrenNamed(municipality, 'Folder');
       const names = barangays.map(folderName);
       if (names.includes('No barangay')) expect(names.at(-1)).toBe('No barangay');
@@ -267,11 +270,11 @@ describe('KML', () => {
   it('files a record under its encoded place, once', () => {
     const record = raed.find((r) => isLocated(r) && r.barangay_id !== null)!;
     const { kml } = buildKml(kmlInput([record]), true);
-    const municipality = childrenNamed(documentOf(kml), 'Folder')[0];
+    const municipality = childrenNamed(documentOf(kml), 'Folder')[1];
     const barangay = childrenNamed(municipality, 'Folder')[0];
     expect(folderName(municipality)).toBe(data.municipalities.find((m) => m.id === record.municipality_id)!.name);
     expect(folderName(barangay)).toBe(data.barangays.find((b) => b.id === record.barangay_id)!.name);
-    expect(parseXml(kml).getElementsByTagName('Placemark')).toHaveLength(1);
+    expect(recordFeaturesOf(kml)).toHaveLength(1);
   });
 
   it('names a placemark Category – Beneficiary (Year), leaving out blanks', () => {
@@ -283,7 +286,7 @@ describe('KML', () => {
 
   it('carries every field through ExtendedData, including ñ and custom attributes', () => {
     const { kml } = buildKml(kmlInput(all), true);
-    const feature = featuresOf(kml).find((f) => f.properties?.RecordId === awkward.id)!;
+    const feature = recordFeaturesOf(kml).find((f) => f.properties?.RecordId === awkward.id)!;
     expect(feature.properties).toMatchObject({
       Beneficiary: AWKWARD_NAME,
       SerialNo: 'SN-Ñ-1',
@@ -298,7 +301,7 @@ describe('KML', () => {
   it('shows status with its as-of date, location basis and flags in the balloon', () => {
     const flagged = raed.find((r) => isLocated(r) && r.qa_flags.includes('beneficiary_name_check'))!;
     const { kml } = buildKml(kmlInput([flagged]), true);
-    const description = featuresOf(kml)[0].properties?.description as string | { value: string };
+    const description = recordFeaturesOf(kml)[0].properties?.description as string | { value: string };
     const html = typeof description === 'string' ? description : description.value;
     expect(html).toContain('Status as of');
     expect(html).toContain('as of 2026-10-21 (RAED report)');
@@ -310,25 +313,25 @@ describe('KML', () => {
   it('escapes values, so a balloon can\'t carry markup or break the file', () => {
     const hostile = { ...awkward, remarks: '<script>alert(1)</script> ]]> <b>' };
     const { kml } = buildKml(kmlInput([hostile]), true);
-    expect(parseXml(kml).getElementsByTagName('Placemark')).toHaveLength(1);
+    expect(recordFeaturesOf(kml)).toHaveLength(1);
     expect(kml).not.toContain('<script>');
     expect(kml).toContain('&lt;script&gt;');
   });
 
   it('survives characters XML can\'t hold', () => {
     const { kml } = buildKml(kmlInput([{ ...awkward, remarks: 'bell\u0007here' }]), true);
-    expect(featuresOf(kml)[0].properties?.Remarks).toBe('bellhere');
+    expect(recordFeaturesOf(kml)[0].properties?.Remarks).toBe('bellhere');
   });
 
-  it('leaves out records without coordinates, and lists each by name in the document description', () => {
+  it('leaves out records without coordinates, and lists each by name in the Read me balloon', () => {
     const { kml } = buildKml(kmlInput(all), true);
-    const description = childrenNamed(documentOf(kml), 'description')[0].textContent!;
+    const description = readMeBalloon(kml);
     expect(description).toContain('Left out, as they have no coordinates (27)');
     expect(description).toContain('Doña Unlocated Farmers');
     for (const record of raed.filter((r) => !isLocated(r))) {
       expect(description).toContain(placemarkName(record, data).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;'));
     }
-    expect(featuresOf(kml).some((f) => f.properties?.RecordId === unlocatedAwkward.id)).toBe(false);
+    expect(recordFeaturesOf(kml).some((f) => f.properties?.RecordId === unlocatedAwkward.id)).toBe(false);
   });
 
   it('uses Google\'s colored dot on its own, as plain KML can\'t carry icons', () => {
@@ -348,9 +351,9 @@ describe('KML', () => {
         expect(names, parent).toEqual(sorted);
       }
     };
-    order('Placemark', ['name', 'Snippet', 'description', 'styleUrl', 'ExtendedData', 'Point', 'LineString', 'Polygon', 'MultiGeometry']);
+    order('Placemark', ['name', 'visibility', 'Snippet', 'description', 'styleUrl', 'ExtendedData', 'Point', 'LineString', 'Polygon', 'MultiGeometry']);
     order('Document', ['name', 'open', 'Snippet', 'description', 'Style', 'Folder']);
-    order('Folder', ['name', 'description', 'Folder', 'Placemark']);
+    order('Folder', ['name', 'visibility', 'open', 'description', 'Folder', 'Placemark']);
     order('Style', ['IconStyle', 'LabelStyle', 'LineStyle', 'PolyStyle']);
     order('IconStyle', ['color', 'scale', 'Icon', 'hotSpot']);
     order('LineStyle', ['color', 'width']);
@@ -368,7 +371,7 @@ describe('KML', () => {
     it('go in their own top-level folder, and no municipality folder', () => {
       const { kml, placemarks } = buildKml(kmlInput(raed), true);
       expect(placemarks).toBe(173);
-      const [check, ...municipalities] = topFolders(kml);
+      const [, check, ...municipalities] = topFolders(kml);
       expect(folderName(check)).toBe('QA – needs location check');
       expect(placemarkIds(check)).toEqual(raed.filter((r) => r.qa_flags.includes('out_of_province')).map((r) => r.id));
       expect(childrenNamed(check, 'description')[0].textContent).toContain('outside Marinduque');
@@ -377,15 +380,15 @@ describe('KML', () => {
 
     it('still have their coordinates, balloon and flag', () => {
       const { kml } = buildKml(kmlInput([outside()]), true);
-      const feature = featuresOf(kml)[0];
+      const feature = recordFeaturesOf(kml)[0];
       expect(feature.geometry).toEqual({ type: 'Point', coordinates: [...(outside().geojson as GeoJSON.Point).coordinates, 0] });
       expect(feature.properties?.QaFlags).toContain('Outside Marinduque');
       expect(feature.properties?.QaLocationCheck).toBe('Outside Marinduque');
     });
 
-    it('are pointed out in the document description', () => {
+    it('are pointed out in the Read me balloon', () => {
       const { kml } = buildKml(kmlInput(raed), true);
-      expect(childrenNamed(documentOf(kml), 'description')[0].textContent).toContain('1 record has coordinates outside Marinduque');
+      expect(readMeBalloon(kml)).toContain('1 record has coordinates outside Marinduque');
     });
 
     it('leave no empty folder, and no note, when there are none', () => {
@@ -438,7 +441,7 @@ describe('KML', () => {
 
   it('keeps lines and polygons', () => {
     const { kml } = buildKml(kmlInput([road, area]), true);
-    const features = featuresOf(kml);
+    const features = recordFeaturesOf(kml);
     expect(features.map((f) => f.geometry?.type).sort()).toEqual(['LineString', 'Polygon']);
     expect(kml).toContain('<LineStyle>');
     expect(kml).toContain('<PolyStyle>');
@@ -487,8 +490,28 @@ describe('optional KML layers', () => {
       expect(childrenNamed(placemark!, 'description')[0].textContent).toContain(`<th align="left">Interventions</th><td>${count}</td>`);
       expect(childrenNamed(placemark!, 'styleUrl')[0].textContent).toBe(count === 0 ? '#gap-none' : `#gap-${COUNT_BINS.findIndex((bin) => count >= bin.min && count <= bin.max) + 1}`);
     }
-    expect(kml).toContain(`<Style id="gap-none"><LineStyle><color>${kmlColor('#6b6a66')}</color><width>1</width></LineStyle><PolyStyle><color>${kmlColor(GAP_NONE_COLOR, 0xb3)}</color>`);
+    expect(kml).toContain(`<Style id="gap-none"><LineStyle><color>${kmlColor('#6b6a66')}</color><width>1</width></LineStyle><PolyStyle><color>${kmlColor(GAP_NONE_COLOR, 0x60)}</color>`);
     expect(kml).toContain('Shows what has been encoded, not what exists on the ground.');
+  });
+
+  it('start with the gap map off at its top folder only, and the outlines on', () => {
+    const { kml } = buildKml(kmlInput(raed, { layers: { municipalBoundaries: true, barangayBoundaries: true, gapMap: true } }), true);
+    const hidden = (node: Element) => childrenNamed(node, 'visibility')[0]?.textContent === '0';
+    const gap = inFolder(kml, 'Barangay gap map');
+    expect(hidden(gap)).toBe(true);
+    // Google Earth Web's switch on a folder doesn't reach inside it, so nothing in here may be off too.
+    expect(gap.getElementsByTagName('Placemark')).toHaveLength(218);
+    expect(kml.match(/<visibility>/g)).toHaveLength(1);
+  });
+
+  it('fill the gap map at 35 to 40% opacity, so imagery shows through', () => {
+    const { kml } = buildKml(kmlInput(raed, { layers: { ...NO_LAYERS, gapMap: true } }), true);
+    const alphas = [...kml.matchAll(/<Style id="gap-[^"]+">.*?<PolyStyle><color>([0-9a-f]{2})/g)].map((match) => parseInt(match[1], 16) / 255);
+    expect(alphas).toHaveLength(COUNT_BINS.length + 1);
+    for (const alpha of alphas) {
+      expect(alpha).toBeGreaterThanOrEqual(0.35);
+      expect(alpha).toBeLessThanOrEqual(0.4);
+    }
   });
 
   it('cover only the export\'s own place', () => {
@@ -499,6 +522,128 @@ describe('optional KML layers', () => {
     expect(childrenNamed(inFolder(kml, 'Boundaries', 'Municipal boundaries'), 'Placemark')).toHaveLength(1);
     expect(childrenNamed(inFolder(kml, 'Boundaries', 'Barangay boundaries'), 'Placemark')).toHaveLength(barangays.length);
     expect(childrenNamed(inFolder(kml, 'Barangay gap map'), 'Folder').map(folderName)).toEqual(['Gasan']);
+  });
+});
+
+describe('the Read me folder', () => {
+  const READ_ME = 'Read me – legend and unlocated records';
+  const ALL_LAYERS = { municipalBoundaries: true, barangayBoundaries: true, gapMap: true };
+  const pinOf = (kml: string) => childrenNamed(readMeFolder(kml), 'Placemark')[0];
+
+  it('leaves the document description as short plain text', () => {
+    const { kml } = buildKml(kmlInput(raed, { layers: ALL_LAYERS, filterLines: ['Municipality: Gasan'] }), true);
+    expect(childrenNamed(documentOf(kml), 'description')[0].textContent).toBe(`199 records: 173 on the map, 26 without coordinates. Exported ${TODAY}. See the folder "${READ_ME}".`);
+    expect(kml).not.toMatch(/<Document>(?:(?!<Folder>).)*<!\[CDATA\[/s);
+  });
+
+  it('counts one record properly', () => {
+    const { kml } = buildKml(kmlInput([awkward]), true);
+    expect(childrenNamed(documentOf(kml), 'description')[0].textContent).toContain('1 record: 1 on the map, 0 without coordinates.');
+  });
+
+  it('keeps tags out of what list panels show', () => {
+    const { kml } = buildKml(kmlInput(all, { layers: ALL_LAYERS }), true);
+    const root = documentOf(kml);
+    const lists = [root, ...Array.from(root.getElementsByTagName('Folder'))];
+    for (const node of lists) {
+      const [note] = childrenNamed(node as Element, 'description');
+      if (note) expect(note.textContent, note.textContent!).not.toMatch(/[<>]/);
+    }
+    // A balloon's own first lines would otherwise show under its name in the list.
+    for (const placemark of Array.from(root.getElementsByTagName('Placemark'))) {
+      if (childrenNamed(placemark, 'description').length === 0) continue;
+      expect(childrenNamed(placemark, 'Snippet')[0]?.getAttribute('maxLines'), folderName(placemark)!).toBe('0');
+    }
+  });
+
+  it('comes first and open, holding one placemark, with its balloon in CDATA', () => {
+    const { kml } = buildKml(kmlInput(all), true);
+    const folder = readMeFolder(kml);
+    expect(folderName(folder)).toBe(READ_ME);
+    expect(childrenNamed(folder, 'open')[0].textContent).toBe('1');
+    expect(childrenNamed(folder, 'Placemark')).toHaveLength(1);
+    expect(folderName(pinOf(kml))).toBe('Read me');
+    expect(kml).toContain('<Placemark><name>Read me</name><Snippet maxLines="0"></Snippet><description><![CDATA[<p><b>');
+    expect(readMeBalloon(kml)).toContain('<ol><li>');
+  });
+
+  it('isn\'t counted or read back as a record', () => {
+    const { kml, placemarks } = buildKml(kmlInput(raed), true);
+    expect(placemarks).toBe(173);
+    expect(pinOf(kml).getElementsByTagName('ExtendedData')).toHaveLength(0);
+    expect(recordFeaturesOf(kml)).toHaveLength(173);
+  });
+
+  it('has its label always on, unlike the records', () => {
+    const { kml } = buildKml(kmlInput(raed), true);
+    expect(kml).toContain('<Style id="read-me"><IconStyle><scale>1</scale><Icon><href>icons/read-me.png</href></Icon>');
+    expect(kml).toMatch(/<Style id="read-me">.*?<LabelStyle><scale>1<\/scale><\/LabelStyle><\/Style>/);
+    expect(childrenNamed(pinOf(kml), 'styleUrl')[0].textContent).toBe('#read-me');
+  });
+
+  it('sits just past the top left corner of the export\'s own place, longitude first', () => {
+    const pinPosition = (kml: string) => pinOf(kml).getElementsByTagName('coordinates')[0].textContent!.split(',').map(Number);
+    const corner = (barangays: Barangay[]) => {
+      const codes = new Set(barangays.map((b) => b.psgc_code));
+      return geometryBounds({ type: 'GeometryCollection', geometries: boundaries.barangays.features.filter((f) => codes.has(f.properties?.adm4_pcode)).map((f) => f.geometry) });
+    };
+
+    const province = corner(data.barangays);
+    const [longitude, latitude] = pinPosition(buildKml(kmlInput(raed), true).kml);
+    expect(longitude).toBeCloseTo(province.west - 0.005, 6);
+    expect(latitude).toBeCloseTo(province.north + 0.005, 6);
+    expect(longitude).toBeGreaterThan(121);
+    expect(latitude).toBeLessThan(14);
+
+    const inGasan = barangaysInScope(data.barangays, { municipalityId: gasan.id });
+    const [gasanLongitude, gasanLatitude] = pinPosition(buildKml(kmlInput(raed.filter((r) => r.municipality_id === gasan.id), { barangays: inGasan, municipalities: [gasan] }), true).kml);
+    expect(gasanLongitude).toBeCloseTo(corner(inGasan).west - 0.005, 6);
+    expect(gasanLatitude).toBeCloseTo(corner(inGasan).north + 0.005, 6);
+  });
+
+  it('isn\'t moved by a record with coordinates far outside Marinduque', () => {
+    const inside = raed.filter((r) => isLocated(r) && !r.qa_flags.includes('out_of_province'));
+    const without = pinOf(buildKml(kmlInput(inside), true).kml).getElementsByTagName('coordinates')[0].textContent;
+    const withIt = pinOf(buildKml(kmlInput(raed), true).kml).getElementsByTagName('coordinates')[0].textContent;
+    expect(withIt).toBe(without);
+  });
+
+  it('has a color in its legend for every marker on the map', () => {
+    const records = raed.filter(isLocated);
+    const html = readMeBalloon(buildKml(kmlInput(records), true).kml);
+    expect(html).toContain('Marker color is the program');
+    for (const record of records) expect(html, placemarkName(record, data)).toContain(`<td bgcolor="${recordColor(record, data)}">`);
+  });
+
+  it('holds the export date, who made it, and the filters', () => {
+    const html = readMeBalloon(buildKml(kmlInput(raed, { filterLines: ['Municipality: Niño & Sons'] }), true).kml);
+    expect(html).toContain(`Exported ${TODAY} by Vera Viewer.`);
+    expect(html).toContain('<li>Municipality: Niño &amp; Sons</li>');
+  });
+
+  it('has the gap map key and the boundary credit only when those layers are in', () => {
+    const without = readMeBalloon(buildKml(kmlInput(raed), true).kml);
+    expect(without).not.toContain('Barangay gap map');
+    expect(without).not.toContain('NAMRIA');
+
+    const html = readMeBalloon(buildKml(kmlInput(raed, { layers: { ...NO_LAYERS, gapMap: true } }), true).kml);
+    expect(html).toContain('Barangay gap map, by number of interventions');
+    expect(html).toContain(`<td bgcolor="${GAP_NONE_COLOR}">`);
+    for (const bin of COUNT_BINS) expect(html).toContain(`<td bgcolor="${bin.color}">`);
+    expect(html).toContain('NAMRIA');
+  });
+
+  it('says so when no record was left out', () => {
+    const html = readMeBalloon(buildKml(kmlInput(raed.filter(isLocated)), true).kml);
+    expect(html).toContain('Every record in this file has coordinates.');
+    expect(html).not.toContain('Left out');
+  });
+
+  it('escapes values, so its balloon can\'t carry markup or end the CDATA early', () => {
+    const { kml } = buildKml(kmlInput(all, { filterLines: ['<script>alert(1)</script> ]]>'] }), true);
+    expect(kml).not.toContain('<script>');
+    expect(readMeBalloon(kml)).toContain('&lt;script&gt;');
+    expect(recordFeaturesOf(kml)).toHaveLength(174);
   });
 });
 
@@ -535,6 +680,7 @@ describe('KMZ', () => {
       const image = await loadImage(Buffer.from(bytes));
       expect(image.width).toBe(MARKER_SIZE);
     }
+    expect(names).toContain('icons/read-me.png');
     expect(names.some((name) => /\.(jpe?g|heic|webp)$/i.test(name))).toBe(false);
   });
 
@@ -547,13 +693,13 @@ describe('KMZ', () => {
       expect(href).toMatch(/^icons\//);
       expect(zip.files[href], href).toBeTruthy();
     }
-    const styles = new Set([...kml.matchAll(/<StyleMap id="([^"]+)"/g)].map((match) => match[1]));
+    const styles = new Set([...kml.matchAll(/<Style(?:Map)? id="([^"]+)"/g)].map((match) => match[1]));
     for (const [, used] of kml.matchAll(/<Placemark><name>.*?<styleUrl>#([^<]+)<\/styleUrl>/g)) expect(styles.has(used)).toBe(true);
   });
 
   it('round-trips the count, coordinates, fields and ñ', async () => {
     const { zip } = await buildZip(all);
-    const features = featuresOf(await zip.files['doc.kml'].async('string'));
+    const features = recordFeaturesOf(await zip.files['doc.kml'].async('string'));
     expect(features).toHaveLength(174);
     const back = features.find((f) => f.properties?.RecordId === awkward.id)!;
     expect(back.properties?.Beneficiary).toBe(AWKWARD_NAME);
@@ -796,7 +942,7 @@ describe('what an export takes', () => {
     expect(Papa.parse(buildCsv(records, data).replace(/^﻿/, ''), { header: true, skipEmptyLines: true }).data).toHaveLength(33);
     expect((JSON.parse(buildGeoJson(records, data)) as GeoJSON.FeatureCollection).features).toHaveLength(33);
     const located = records.filter(isLocated).length;
-    expect(featuresOf(buildKml(kmlInput(records), true).kml)).toHaveLength(located);
+    expect(recordFeaturesOf(buildKml(kmlInput(records), true).kml)).toHaveLength(located);
   });
 
   it('takes a barangay the way its profile does, by link', () => {
@@ -853,7 +999,7 @@ describe('what an export takes', () => {
   it('keeps an out-of-province record, which has coordinates, with its flag showing', () => {
     const outside = raed.find((r) => r.qa_flags.includes('out_of_province'))!;
     expect(select({}).includes(outside)).toBe(true);
-    const feature = featuresOf(buildKml(kmlInput([outside]), true).kml)[0];
+    const feature = recordFeaturesOf(buildKml(kmlInput([outside]), true).kml)[0];
     expect(feature.properties?.QaFlags).toContain('Outside Marinduque');
   });
 });

@@ -184,7 +184,9 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
             </label>
             <label className="choice">
               <input type="checkbox" checked={layers.gapMap} onChange={(event) => setLayers({ ...layers, gapMap: event.target.checked })} />
-              Barangay gap map
+              <span>
+                Barangay gap map <span className="field-hint">Off when the file opens. Switch it on in Google Earth to show it.</span>
+              </span>
             </label>
           </fieldset>
         )}
@@ -196,7 +198,7 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
           {leavesOutUnlocated(format) && unlocated > 0 && (
             <p className="field-hint">
               {located} on the map. {plural(unlocated, 'record')} without coordinates can't be plotted, so {unlocated === 1 ? 'it is' : 'they are'} listed by name
-              {format === 'shp' ? ' in a text file in the .zip' : ' in the file\'s description'}.
+              {format === 'shp' ? ' in a text file in the .zip' : ' in the file\'s "Read me" folder'}.
             </p>
           )}
           {toCheck > 0 && (
