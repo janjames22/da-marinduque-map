@@ -10,6 +10,8 @@ export interface ViewFilters {
   programId: number | null;
   yearFrom: number | null;
   yearTo: number | null;
+  municipalityId?: number | null;
+  barangayId?: number | null;
 }
 
 // A single blue ramp for magnitude, more is darker. Zero has its own neutral so that
@@ -48,8 +50,11 @@ export function liveRecords(records: Intervention[], types: InterventionType[]):
   return records.filter((r) => r.deleted_at === null && active.has(r.intervention_type_id));
 }
 
-export function recordsInView(records: Intervention[], view: ViewFilters): Intervention[] {
+export function recordsInView(records: Intervention[], view: ViewFilters, links: InterventionBarangay[] = []): Intervention[] {
   const program = view.mode === 'program' ? view.pickedProgramId : view.programId;
+  // In a barangay means what its profile means: linked to it, as encoded or where it's plotted.
+  const inBarangay =
+    view.barangayId == null ? null : new Set(links.filter((l) => l.barangay_id === view.barangayId).map((l) => l.intervention_id));
 
   return records.filter((r) => {
     if (view.mode === 'type') {
@@ -60,8 +65,26 @@ export function recordsInView(records: Intervention[], view: ViewFilters): Inter
     if (program !== null && r.banner_program_id !== program) return false;
     if (view.yearFrom !== null && (r.year_funded === null || r.year_funded < view.yearFrom)) return false;
     if (view.yearTo !== null && (r.year_funded === null || r.year_funded > view.yearTo)) return false;
+    if (view.municipalityId != null && r.municipality_id !== view.municipalityId) return false;
+    if (inBarangay && !inBarangay.has(r.id)) return false;
     return true;
   });
+}
+
+// What the map's markers show, and so what an export takes. By-type shading follows the picked
+// type, but markers always respect the layer switches.
+export function visibleRecords(records: Intervention[], view: ViewFilters, links: InterventionBarangay[] = []): Intervention[] {
+  return recordsInView(records, view, links).filter((r) => !view.hiddenTypeIds.includes(r.intervention_type_id));
+}
+
+// With a place filter on, only that place is shaded and counted. The rest aren't gaps.
+export function barangaysInScope<T extends Pick<Barangay, 'id' | 'municipality_id'>>(
+  barangays: T[],
+  view: Pick<ViewFilters, 'municipalityId' | 'barangayId'>,
+): T[] {
+  if (view.barangayId != null) return barangays.filter((b) => b.id === view.barangayId);
+  if (view.municipalityId != null) return barangays.filter((b) => b.municipality_id === view.municipalityId);
+  return barangays;
 }
 
 // A record counts once in each barangay it's linked to. A road crossing three counts in all three.
@@ -96,6 +119,8 @@ export function buildShading(
   const barangaysWithRecords = barangays.filter((b) => countOf(b.id) > 0).length;
   const barangaysWithout = barangays.length - barangaysWithRecords;
   const summary = { title, barangaysWithRecords, barangaysWithout };
+  const inScope = new Set(barangays.map((b) => b.id));
+  const outside = { color: ZERO_COLOR, opacity: 0 };
 
   if (mode === 'off') {
     return {
@@ -108,10 +133,7 @@ export function buildShading(
   if (mode === 'gap') {
     return {
       ...summary,
-      fillFor: (id) => ({
-        color: countOf(id) === 0 ? GAP_NONE_COLOR : GAP_SOME_COLOR,
-        opacity: FILL_OPACITY,
-      }),
+      fillFor: (id) => (inScope.has(id) ? { color: countOf(id) === 0 ? GAP_NONE_COLOR : GAP_SOME_COLOR, opacity: FILL_OPACITY } : outside),
       legend: [
         { label: 'None encoded yet', color: GAP_NONE_COLOR, barangays: barangaysWithout },
         { label: 'At least one', color: GAP_SOME_COLOR, barangays: barangaysWithRecords },
@@ -121,7 +143,7 @@ export function buildShading(
 
   return {
     ...summary,
-    fillFor: (id) => ({ color: binFor(countOf(id))?.color ?? ZERO_COLOR, opacity: FILL_OPACITY }),
+    fillFor: (id) => (inScope.has(id) ? { color: binFor(countOf(id))?.color ?? ZERO_COLOR, opacity: FILL_OPACITY } : outside),
     legend: [
       { label: '0', color: ZERO_COLOR, barangays: barangaysWithout },
       ...COUNT_BINS.map((bin) => ({

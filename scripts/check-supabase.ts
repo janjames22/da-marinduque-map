@@ -2,6 +2,8 @@
 // expected. Reads only. Prints no keys and no record data.
 //
 // Usage: npm run check:supabase
+import { readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { appUrl, connectDb, loadEnv, projectUrl, publicKey, run } from './lib/env';
 
@@ -37,7 +39,9 @@ run(async () => {
   try {
     const one = async (sql: string) => (await db.query<{ n: number }>(sql)).rows[0].n;
     const { rows: applied } = await db.query<{ file: string }>('select file from private.schema_migrations order by file');
-    add('Migrations applied', applied.length >= 4, applied.map((row) => row.file).join(', '));
+    const expected = readdirSync(resolve(import.meta.dirname, '..', 'supabase', 'migrations')).filter((file) => file.endsWith('.sql'));
+    const missing = expected.filter((file) => !applied.some((row) => row.file === file));
+    add('Migrations applied', missing.length === 0, missing.length > 0 ? `Run npm run db:migrate. Missing: ${missing.join(', ')}` : applied.map((row) => row.file).join(', '));
 
     add('Every table has row-level security', (await one(`select count(*)::int as n from pg_tables where schemaname = 'public' and not rowsecurity`)) === 0, '');
     add('The photo bucket is private', (await one(`select count(*)::int as n from storage.buckets where id = 'intervention-photos' and not public`)) === 1, '');

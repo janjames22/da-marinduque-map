@@ -52,6 +52,7 @@ export interface Category {
   id: number;
   name: string;
   intervention_type_id: number | null;
+  icon_id?: number | null;
   sort_order: number;
   is_active: boolean;
 }
@@ -116,6 +117,8 @@ export interface Barangay {
 
 export interface Intervention {
   id: string;
+  source_id?: string | null;
+  source_page?: number | null;
   intervention_type_id: number;
   category_id: number | null;
   title: string | null;
@@ -140,6 +143,8 @@ export interface Intervention {
   plotted_barangay: string | null;
   plotted_municipality: string | null;
   version: number;
+  created_by?: string | null;
+  updated_by?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -174,7 +179,7 @@ export interface InterventionPhoto {
   created_at: string;
 }
 
-export type AuditAction = 'insert' | 'update' | 'delete' | 'soft_delete' | 'restore';
+export type AuditAction = 'insert' | 'update' | 'delete' | 'soft_delete' | 'restore' | 'export';
 
 export interface AuditEntry {
   id: number;

@@ -21,6 +21,9 @@ data/local/
 # npm run backup. These hold beneficiary names.
 backups/
 
+# Exported files and npm run export:samples. These hold beneficiary names too.
+exports/
+
 # Production build used by the browser tests
 .e2e-dist/
 .e2e-dist-live/

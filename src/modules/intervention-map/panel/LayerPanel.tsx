@@ -186,7 +186,38 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
             </select>
           </label>
         </div>
-        {(ui.programId !== null || ui.yearFrom !== null || ui.yearTo !== null) && (
+        <label className="field">
+          <span>Municipality</span>
+          <select
+            value={ui.municipalityId ?? ''}
+            onChange={(event) => ui.setMunicipalityFilter(numberOrNull(event.target.value))}
+          >
+            <option value="">All municipalities</option>
+            {barangaysByMunicipality.map(({ municipality }) => (
+              <option key={municipality.id} value={municipality.id}>
+                {municipality.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>Barangay</span>
+          <select
+            value={ui.barangayId ?? ''}
+            disabled={ui.municipalityId === null}
+            onChange={(event) => ui.setBarangayFilter(numberOrNull(event.target.value))}
+          >
+            <option value="">{ui.municipalityId === null ? 'Choose a municipality first' : 'All barangays'}</option>
+            {barangaysByMunicipality
+              .find(({ municipality }) => municipality.id === ui.municipalityId)
+              ?.barangays.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+          </select>
+        </label>
+        {(ui.programId !== null || ui.yearFrom !== null || ui.yearTo !== null || ui.municipalityId !== null) && (
           <button type="button" className="link-button" onClick={ui.clearFilters}>
             Clear filters
           </button>

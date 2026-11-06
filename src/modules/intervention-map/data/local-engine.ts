@@ -6,7 +6,7 @@ import { valuesFromRecord } from '../lib/form-values';
 import { pointOf, computeFlags, locatePoint, samePoint, type PlaceIndex } from '../lib/qa';
 import type { LatLng } from '../lib/coordinates';
 import { validateAttributes, validateIntervention, validateStatus } from '../lib/validation';
-import { ConflictError, ValidationError, type ChangeNote, type InterventionPatch, type InterventionValues, type PhotoMeta } from './store';
+import { ConflictError, ValidationError, type ChangeNote, type ExportLogEntry, type InterventionPatch, type InterventionValues, type PhotoMeta } from './store';
 import type {
   AuditAction,
   AuditEntry,
@@ -84,6 +84,20 @@ function audit(
     new_row: newRow,
     actor_id: null, // the single implicit user in local mode
     context: note ? { ...note } : null,
+    at: context.now(),
+  });
+}
+
+export function logExport(rows: LocalRows, context: EngineContext, entry: ExportLogEntry) {
+  rows.auditLog.push({
+    id: (rows.auditLog.at(-1)?.id ?? 0) + 1,
+    table_name: 'exports',
+    record_id: null,
+    action: 'export',
+    old_row: null,
+    new_row: null,
+    actor_id: null,
+    context: { ...entry },
     at: context.now(),
   });
 }

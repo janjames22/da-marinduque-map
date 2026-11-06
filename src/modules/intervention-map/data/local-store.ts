@@ -197,7 +197,7 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
 
   // One transaction reads, changes and writes the state, so two tabs can't overwrite each other.
   // Nothing inside the callback may wait on anything else, or the transaction would close early.
-  const mutate = <T>(change: (rows: LocalRows, context: EngineContext, photos: IDBObjectStore) => T) =>
+  const mutate = <T>(change: (rows: LocalRows, context: EngineContext, photos: IDBObjectStore) => T, { isChange = true } = {}) =>
     new Promise<T>((resolve, reject) => {
       const transaction = db.transaction(['state', 'photos'], 'readwrite');
       const states = transaction.objectStore('state');
@@ -209,7 +209,7 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
         const state = request.result as LocalState;
         try {
           result = change(state.rows, contextFor(state), transaction.objectStore('photos'));
-          state.rows.changeCount += 1;
+          if (isChange) state.rows.changeCount += 1;
           states.put(state, STATE_KEY);
         } catch (error) {
           failure = error;
@@ -269,6 +269,11 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
     async auditFor(interventionId) {
       const state = await readState();
       return state ? engine.auditForRecord(state.rows.auditLog, interventionId) : [];
+    },
+
+    // An export changes no data, so it doesn't stop a newer dataset replacing this one.
+    async logExport(entry) {
+      await mutate((rows, context) => engine.logExport(rows, context, entry), { isChange: false });
     },
 
     photoUrl(photoId) {

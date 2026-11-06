@@ -369,7 +369,7 @@ Notes:
 - KML colors are written as `aabbggrr` (alpha, blue, green, red), not `#rrggbb`. Convert them.
 - A KMZ is a ZIP containing `doc.kml` at the root and an `icons/` folder; the KML references icons by relative path.
 - A record appears once in an export, under its primary barangay, even if it crosses several.
-- Unlocated records are left out of KML/KMZ and listed in a note in the document description.
+- Unlocated records are left out of KML/KMZ and listed in the file's "Read me" folder.
 
 ### 5.8 Reports (later phase)
 
@@ -494,6 +494,7 @@ Layout: left panel for layers and filters, center map, right or bottom panel for
 - [ ] Filters update the map, charts, table and exports together.
 - [ ] The exported **KMZ** opens in Google Earth with folders (Municipality → Barangay → Type), styles and an attribute balloon, for points, lines and polygons.
 - [ ] The exported KML opens in QGIS with all attributes as fields.
+- [ ] **Pending manual check:** the exported Shapefile opens in QGIS and shows correctly. There is no QGIS available yet, so for now it's checked only by automated tests, which read the file back with an independent parser.
 - [ ] Markers with the same coordinates can all be reached.
 - [ ] The site works on desktop and mobile Chrome.
 
