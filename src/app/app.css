@@ -595,7 +595,7 @@ body,
 }
 
 .map-toolbar {
-  align-items: flex-start;
+  align-items: stretch;
   display: flex;
   gap: 6px;
   position: absolute;
@@ -606,23 +606,31 @@ body,
 
 .add-record-button,
 .export-button {
+  border: 2px solid var(--da-green);
   border-radius: 4px;
   box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
   cursor: pointer;
   font: inherit;
   font-weight: 600;
-  padding: 7px 12px;
+  padding: 5px 12px;
 }
 
 .add-record-button {
   background: var(--da-green);
-  border: 0;
   color: #ffffff;
 }
 
 .export-button {
+  align-items: center;
   background: var(--surface);
-  border: 1px solid var(--border);
+  color: var(--da-green);
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.export-button:hover {
+  background: var(--surface-muted);
 }
 
 .secondary-button {
@@ -1024,7 +1032,6 @@ body,
 
   /* Stacked, so the three map buttons fit beside each other on the narrowest phones. */
   .map-toolbar {
-    align-items: flex-end;
     flex-direction: column;
   }
 

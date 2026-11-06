@@ -92,6 +92,25 @@ test('offers Export on the toolbar, and shows the count before anything download
   await expect(dialog(page)).toHaveCount(0);
 });
 
+test('Export stands out, right beside "+ Add intervention"', async ({ page }) => {
+  await open(page);
+  const add = (await page.locator('.add-record-button').boundingBox())!;
+  const button = (await toolbarExport(page).boundingBox())!;
+  if (await page.getByRole('button', { name: 'Layers and filters' }).isVisible()) {
+    // Stacked on a phone, at the same width.
+    expect(button.y - (add.y + add.height)).toBeLessThanOrEqual(8);
+    expect(button.width).toBeCloseTo(add.width, 0);
+  } else {
+    expect(Math.abs(button.y - add.y)).toBeLessThan(1);
+    expect(button.x - (add.x + add.width)).toBeLessThanOrEqual(8);
+  }
+  expect(button.height).toBeCloseTo(add.height, 0);
+  await expect(toolbarExport(page)).toHaveCSS('color', 'rgb(20, 83, 45)');
+  await expect(toolbarExport(page)).toHaveCSS('border-top-color', 'rgb(20, 83, 45)');
+  await expect(toolbarExport(page)).toHaveCSS('border-top-width', '2px');
+  await expect(toolbarExport(page).locator('svg')).toBeVisible();
+});
+
 test('the toolbar buttons all fit, without covering each other', async ({ page }) => {
   await open(page);
   const boxes = await Promise.all([toolbarExport(page), page.locator('.add-record-button')].map((button) => button.boundingBox()));
@@ -178,7 +197,9 @@ test('a KMZ made in the browser has its folders, icons, layers and left-out list
   const recordFeatures = features.filter((f) => f.properties?.RecordId);
   expect(recordFeatures.map((f) => f.properties?.RecordId).sort()).toEqual(located.map((r) => r.id).sort());
   expect(kml).toContain('<name>Municipal boundaries</name>');
-  expect(kml).toContain('<name>Barangay gap map</name>');
+  expect(kml).toContain('<Folder><name>Barangay gap map</name><visibility>0</visibility>');
+  expect(kml).toContain('<Folder><name>Read me – legend and unlocated records</name>');
+  expect(Object.keys(zip.files)).toContain('icons/read-me.png');
   expect(kml).toContain(`Left out, as they have no coordinates (${inGasan.length - located.length})`);
   expect(kml).toContain('DA Interventions – Gasan, Marinduque');
 });
