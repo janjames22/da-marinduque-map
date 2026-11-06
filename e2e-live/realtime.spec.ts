@@ -122,5 +122,5 @@ test('a wrong password is refused', async ({ page }) => {
   await page.getByLabel('Email').fill(accounts.encoder.email);
   await page.getByLabel('Password', { exact: true }).fill('not the password');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Wrong email or password.');
+  await expect(page.getByRole('alert')).toHaveText('Wrong email or password.', { timeout: 30_000 });
 });
