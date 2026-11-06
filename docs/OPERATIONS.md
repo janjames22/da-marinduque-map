@@ -70,9 +70,20 @@ Accounts are by invitation only.
 | Give access back | `npm run users -- reactivate someone@example.com` |
 
 - **Links:** `invite` and `link` print a link for you to send. It works once and expires, so send it privately and soon.
-- **Email instead:** add `--send-email` to `invite` to have Supabase send it. Its built-in sender allows only a few emails an hour.
+- **Email instead:** add `--send-email` to `invite` to have Supabase send it. Its built-in sender allows only a few emails an hour, so see [Before inviting the MAOs](#before-inviting-the-maos).
 - **Role changes** apply the next time the person loads the map.
 - **People who leave:** deactivate them rather than deleting the account. Their name stays on what they encoded.
+
+### Before inviting the MAOs
+
+**Set up a custom SMTP sender first.** Supabase's built-in email sends only a few emails an hour, so a batch of MAO invites would stall or fail.
+
+1. Choose an email provider and verify the address the invites will come from.
+2. In Supabase, go to Authentication > Emails > SMTP Settings. Turn on custom SMTP and enter the provider's host, port, username and password, plus the sender's name and address.
+3. Check the email limit under Authentication > Rate Limits, and raise it if it's lower than the batch you plan to send.
+4. Test it by inviting one person with `--send-email` and confirming the email arrives and the link opens the map.
+
+The SMTP password stays in Supabase's settings. Don't put it in `.env.local` or anywhere in this project.
 
 ## Backups
 
