@@ -245,11 +245,11 @@ describe('KML', () => {
   it('folders run Municipality, Barangay, Type, with no barangay last', () => {
     const { kml } = buildKml(kmlInput(raed), true);
     const municipalities = childrenNamed(documentOf(kml), 'Folder');
-    expect(municipalities.map(folderName)).toEqual(['Boac', 'Buenavista', 'Gasan', 'Mogpog', 'Santa Cruz', 'Torrijos']);
+    expect(municipalities.map(folderName)).toEqual(['QA – needs location check', 'Boac', 'Buenavista', 'Gasan', 'Mogpog', 'Santa Cruz', 'Torrijos']);
 
     let placemarks = 0;
     const typeNames = new Set<string>();
-    for (const municipality of municipalities) {
+    for (const municipality of municipalities.slice(1)) {
       const barangays = childrenNamed(municipality, 'Folder');
       const names = barangays.map(folderName);
       if (names.includes('No barangay')) expect(names.at(-1)).toBe('No barangay');
@@ -260,7 +260,7 @@ describe('KML', () => {
         }
       }
     }
-    expect(placemarks).toBe(173);
+    expect(placemarks).toBe(172);
     expect([...typeNames].sort()).toEqual(['Farm Machinery', 'SSIP']);
   });
 
@@ -355,6 +355,85 @@ describe('KML', () => {
     order('IconStyle', ['color', 'scale', 'Icon', 'hotSpot']);
     order('LineStyle', ['color', 'width']);
     order('Polygon', ['tessellate', 'outerBoundaryIs', 'innerBoundaryIs']);
+  });
+
+  describe('records with coordinates outside Marinduque', () => {
+    const outside = () => raed.find((r) => r.qa_flags.includes('out_of_province'))!;
+    const topFolders = (kml: string) => childrenNamed(documentOf(kml), 'Folder');
+    const placemarkIds = (node: Element) =>
+      Array.from(node.getElementsByTagName('Data'))
+        .filter((data) => data.getAttribute('name') === 'RecordId')
+        .map((data) => data.getElementsByTagName('value')[0].textContent);
+
+    it('go in their own top-level folder, and no municipality folder', () => {
+      const { kml, placemarks } = buildKml(kmlInput(raed), true);
+      expect(placemarks).toBe(173);
+      const [check, ...municipalities] = topFolders(kml);
+      expect(folderName(check)).toBe('QA – needs location check');
+      expect(placemarkIds(check)).toEqual(raed.filter((r) => r.qa_flags.includes('out_of_province')).map((r) => r.id));
+      expect(childrenNamed(check, 'description')[0].textContent).toContain('outside Marinduque');
+      for (const municipality of municipalities) expect(placemarkIds(municipality)).not.toContain(outside().id);
+    });
+
+    it('still have their coordinates, balloon and flag', () => {
+      const { kml } = buildKml(kmlInput([outside()]), true);
+      const feature = featuresOf(kml)[0];
+      expect(feature.geometry).toEqual({ type: 'Point', coordinates: [...(outside().geojson as GeoJSON.Point).coordinates, 0] });
+      expect(feature.properties?.QaFlags).toContain('Outside Marinduque');
+      expect(feature.properties?.QaLocationCheck).toBe('Outside Marinduque');
+    });
+
+    it('are pointed out in the document description', () => {
+      const { kml } = buildKml(kmlInput(raed), true);
+      expect(childrenNamed(documentOf(kml), 'description')[0].textContent).toContain('1 record has coordinates outside Marinduque');
+    });
+
+    it('leave no empty folder, and no note, when there are none', () => {
+      const { kml } = buildKml(kmlInput(raed.filter((r) => !r.qa_flags.includes('out_of_province'))), true);
+      expect(topFolders(kml).map(folderName)).not.toContain('QA – needs location check');
+      expect(kml).not.toContain('coordinates outside Marinduque');
+    });
+
+    it('are in the CSV, marked in its first column, with the QA flags next', () => {
+      const parsed = Papa.parse<Record<string, string>>(buildCsv(raed, data).replace(/^\ufeff/, ''), { header: true, skipEmptyLines: true });
+      expect(parsed.meta.fields?.slice(0, 2)).toEqual(['QA – needs location check', 'QA flags']);
+      expect(parsed.data).toHaveLength(199);
+      const marked = parsed.data.filter((row) => row['QA – needs location check'] !== '');
+      expect(marked.map((row) => row['Record ID'])).toEqual([outside().id]);
+      expect(marked[0]['QA – needs location check']).toBe('Outside Marinduque');
+      expect(marked[0]['QA flags']).toContain('Outside Marinduque');
+      expect(Number(marked[0].Longitude)).toBe((outside().geojson as GeoJSON.Point).coordinates[0]);
+    });
+
+    it('are in the Shapefile, marked in its first field, and explained in fields.txt', async () => {
+      const built = await buildShapefile(raed, data, 'Marinduque_Test', new Date('2026-11-07T00:00:00Z'));
+      const zip = await JSZip.loadAsync(built.zip);
+      const collection = await readShapefile(await zip.files['Marinduque_Test.shp'].async('uint8array'), await zip.files['Marinduque_Test.dbf'].async('uint8array'), { encoding: 'utf-8' });
+      expect(collection.features).toHaveLength(173);
+
+      const names = Object.keys(collection.features[0].properties!);
+      expect(names.slice(0, 2)).toEqual(['QALOCATION', 'QAFLAGS']);
+      const marked = collection.features.filter((f) => f.properties?.QALOCATION);
+      expect(marked).toHaveLength(1);
+      expect(marked[0].properties?.QALOCATION).toBe('Outside Marinduque');
+      expect(marked[0].geometry).toEqual(outside().geojson);
+      const fieldsText = await zip.files['fields.txt'].async('string');
+      expect(fieldsText).toContain('QALOCATION  QA – needs location check');
+      expect(fieldsText).toContain('QAFLAGS     QA flags');
+    });
+
+    it('are in GeoJSON, marked the same way', () => {
+      const parsed = JSON.parse(buildGeoJson(raed, data)) as GeoJSON.FeatureCollection;
+      expect(parsed.features.filter((f) => f.properties?.QaLocationCheck).map((f) => f.id)).toEqual([outside().id]);
+    });
+
+    it('aren\'t confused with records that merely have no coordinates', () => {
+      const { data: rows } = Papa.parse<Record<string, string>>(buildCsv(raed, data).replace(/^\ufeff/, ''), { header: true, skipEmptyLines: true });
+      const unlocated = rows.filter((row) => row.Latitude === '');
+      expect(unlocated).toHaveLength(26);
+      expect(unlocated.every((row) => row['QA – needs location check'] === '')).toBe(true);
+      expect(unlocated.every((row) => row['QA flags'].includes('No coordinates'))).toBe(true);
+    });
   });
 
   it('keeps lines and polygons', () => {

@@ -68,6 +68,10 @@ export function selectExportRecords(
 // A record with no coordinates has nowhere to go in a map file.
 export const isLocated = (record: Intervention) => record.geojson !== null;
 
+// Its coordinates are outside Marinduque, so they can't be trusted to show where it really is.
+export const NEEDS_LOCATION_CHECK = 'QA – needs location check';
+export const needsLocationCheck = (record: Intervention) => record.qa_flags.includes('out_of_province');
+
 // The filters in force, as names people can read. They go in the dialog, the file and the audit log.
 export interface ExportFilters {
   types: string[];

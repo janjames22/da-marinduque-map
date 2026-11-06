@@ -6,7 +6,7 @@ import { binFor, COUNT_BINS, countByBarangay, GAP_NONE_COLOR } from '../lib/chor
 import { escapeHtml, recordColor, recordIcon } from '../lib/display';
 import { buildFields, placemarkName, unlocatedLine, type ExportField, type FieldValue } from './fields';
 import type { RenderMarker } from './marker-image';
-import { isLocated } from './records';
+import { isLocated, NEEDS_LOCATION_CHECK, needsLocationCheck } from './records';
 
 export interface KmlLayers {
   municipalBoundaries: boolean;
@@ -130,6 +130,23 @@ function folder(name: string, content: string, description?: string): string {
   return `<Folder><name>${xml(name)}</name>${note}${content}</Folder>`;
 }
 
+function recordPlacemark(record: Intervention, data: MapData, fields: ExportField[], styles: Map<string, MarkerStyle>): string {
+  const style = markerStyleFor(record, data, styles);
+  const rows = fields.map((field): [string, string] => [field.key, valueText(field.read(record))]);
+  return (
+    `<Placemark><name>${xml(placemarkName(record, data))}</name>` +
+    `<description>${cdata(balloon(record, fields))}</description>` +
+    `<styleUrl>#${style.id}</styleUrl>${extendedData(rows)}${geometryXml(record.geojson!)}</Placemark>`
+  );
+}
+
+// Kept out of the municipality folders, so a point in the wrong place can't pass for a real one there.
+function locationCheckFolder(records: Intervention[], data: MapData, fields: ExportField[], styles: Map<string, MarkerStyle>): string {
+  if (records.length === 0) return '';
+  const placemarks = [...records].sort((a, b) => collator.compare(placemarkName(a, data), placemarkName(b, data))).map((record) => recordPlacemark(record, data, fields, styles));
+  return folder(NEEDS_LOCATION_CHECK, placemarks.join(''), '<p>The coordinates of these records are outside Marinduque, so they may not show where the intervention really is. Check each location.</p>');
+}
+
 function recordFolders(records: Intervention[], data: MapData, fields: ExportField[], styles: Map<string, MarkerStyle>): string {
   const municipalityOf = (record: Intervention) => data.municipalities.find((m) => m.id === record.municipality_id)?.name ?? 'No municipality';
   const barangayOf = (record: Intervention) => data.barangays.find((b) => b.id === record.barangay_id)?.name ?? NO_BARANGAY;
@@ -139,16 +156,6 @@ function recordFolders(records: Intervention[], data: MapData, fields: ExportFie
     const groups = new Map<K, Intervention[]>();
     for (const item of items) groups.set(key(item), [...(groups.get(key(item)) ?? []), item]);
     return [...groups];
-  };
-
-  const placemark = (record: Intervention) => {
-    const style = markerStyleFor(record, data, styles);
-    const rows = fields.map((field): [string, string] => [field.key, valueText(field.read(record))]);
-    return (
-      `<Placemark><name>${xml(placemarkName(record, data))}</name>` +
-      `<description>${cdata(balloon(record, fields))}</description>` +
-      `<styleUrl>#${style.id}</styleUrl>${extendedData(rows)}${geometryXml(record.geojson!)}</Placemark>`
-    );
   };
 
   return groupBy(records, municipalityOf)
@@ -161,7 +168,9 @@ function recordFolders(records: Intervention[], data: MapData, fields: ExportFie
           const types = groupBy(inBarangay, (record) => record.intervention_type_id)
             .sort(([a], [b]) => (data.types.find((t) => t.id === a)?.sort_order ?? 0) - (data.types.find((t) => t.id === b)?.sort_order ?? 0))
             .map(([, ofType]) => {
-              const placemarks = [...ofType].sort((a, b) => collator.compare(placemarkName(a, data), placemarkName(b, data))).map(placemark);
+              const placemarks = [...ofType]
+                .sort((a, b) => collator.compare(placemarkName(a, data), placemarkName(b, data)))
+                .map((record) => recordPlacemark(record, data, fields, styles));
               return folder(typeOf(ofType[0])?.name ?? 'Other', placemarks.join(''));
             });
           return folder(barangay, types.join(''));
@@ -269,6 +278,7 @@ function gapLayer(input: KmlInput): { styles: string; content: string } {
 
 function documentDescription(input: KmlInput, located: Intervention[], unlocated: Intervention[]): string {
   const { data, filterLines, exportedOn, exportedBy, layers } = input;
+  const toCheck = located.filter(needsLocationCheck).length;
   const programs = data.programs
     .filter((program) => located.some((record) => record.banner_program_id === program.id))
     .map((program) => `<tr><td bgcolor="${program.color}">&nbsp;&nbsp;&nbsp;</td><td>${escapeHtml(program.name)}</td></tr>`)
@@ -276,6 +286,7 @@ function documentDescription(input: KmlInput, located: Intervention[], unlocated
   const parts = [
     `<p><b>${input.records.length}</b> records: ${located.length} on the map, ${unlocated.length} without coordinates.</p>`,
     `<p>Exported ${escapeHtml(exportedOn)}${exportedBy ? ` by ${escapeHtml(exportedBy)}` : ''}.</p>`,
+    toCheck > 0 ? `<p><b>${toCheck} ${toCheck === 1 ? 'record has' : 'records have'} coordinates outside Marinduque.</b> See the folder "${escapeHtml(NEEDS_LOCATION_CHECK)}".</p>` : '',
     filterLines.length > 0 ? `<p>Filters:</p><ul>${filterLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : '',
     programs ? `<p>Marker color is the program:</p><table cellpadding="2">${programs}</table>` : '',
     unlocated.length > 0
@@ -300,7 +311,8 @@ export function buildKml(input: KmlInput, packaged: boolean): BuiltKml {
   const styles = new Map<string, MarkerStyle>();
 
   // Built first, as this is what finds out which marker styles are needed.
-  const recordsXml = recordFolders(located, data, fields, styles);
+  const checkXml = locationCheckFolder(located.filter(needsLocationCheck), data, fields, styles);
+  const recordsXml = recordFolders(located.filter((record) => !needsLocationCheck(record)), data, fields, styles);
   const boundaries = boundaryFolder(input);
   const gap = layers.gapMap ? gapLayer(input) : { styles: '', content: '' };
   const markerStyles = [...styles.values()];
@@ -315,6 +327,7 @@ export function buildKml(input: KmlInput, packaged: boolean): BuiltKml {
     gap.styles +
     boundaries.content +
     gap.content +
+    checkXml +
     recordsXml +
     `</Document></kml>`;
 

@@ -1,7 +1,7 @@
 // The one list of fields every format writes, so a value can't differ between a KMZ and a CSV.
 import type { FieldDefinition, Intervention, MapData, StatusEntry } from '../data/types';
 import { encodedPlace, FLAG_LABELS, statusDateLabel, statusTimeline } from '../lib/display';
-import { geometryBounds } from './records';
+import { geometryBounds, NEEDS_LOCATION_CHECK, needsLocationCheck } from './records';
 
 export type FieldValue = string | number | null;
 
@@ -96,6 +96,9 @@ export function buildFields(records: Intervention[], data: MapData): ExportField
   const fields: ExportField[] = [];
   const add = (key: string, label: string, read: ExportField['read'], numeric = false) => fields.push({ key, label, read, numeric });
 
+  // First, so these are what a person sees on opening a table.
+  add('QaLocationCheck', NEEDS_LOCATION_CHECK, (r) => (needsLocationCheck(r) ? 'Outside Marinduque' : null));
+  add('QaFlags', 'QA flags', (r) => r.qa_flags.map((flag) => FLAG_LABELS[flag] ?? flag).join('; ') || null);
   add('RecordId', 'Record ID', (r) => r.id);
   add('SourceId', 'Source ID', (r) => r.source_id ?? null);
   add('SourcePage', 'Source page', (r) => r.source_page ?? null, true);
@@ -122,7 +125,6 @@ export function buildFields(records: Intervention[], data: MapData): ExportField
     const latest = latestStatus.get(r.id);
     return latest ? statusDateLabel(latest) : null;
   });
-  add('QaFlags', 'QA flags', (r) => r.qa_flags.map((flag) => FLAG_LABELS[flag] ?? flag).join('; ') || null);
   add('DataSource', 'Data source', (r) => r.data_source);
   add('Remarks', 'Remarks', (r) => r.remarks);
   add('EncodedBy', 'Encoded by', (r) => person(r.created_by));

@@ -7,6 +7,8 @@ import {
   exportFileStem,
   filterLines,
   isLocated,
+  NEEDS_LOCATION_CHECK,
+  needsLocationCheck,
   selectExportRecords,
   selectionView,
   type ExportFormat,
@@ -86,6 +88,7 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
   const located = records.filter(isLocated).length;
   const unlocated = records.length - located;
   const nothingToPlot = leavesOutUnlocated(format) && located === 0;
+  const toCheck = records.filter((record) => isLocated(record) && needsLocationCheck(record)).length;
   const fileExtension = format === 'shp' ? 'zip' : format;
   const stem = exportFileStem(filters, manilaToday());
   const barangayName = data.barangays.find((b) => b.id === open.barangayId)?.name;
@@ -194,6 +197,11 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
             <p className="field-hint">
               {located} on the map. {plural(unlocated, 'record')} without coordinates can't be plotted, so {unlocated === 1 ? 'it is' : 'they are'} listed by name
               {format === 'shp' ? ' in a text file in the .zip' : ' in the file\'s description'}.
+            </p>
+          )}
+          {toCheck > 0 && (
+            <p className="field-hint">
+              {plural(toCheck, 'record')} with coordinates outside Marinduque {isGoogleEarth(format) ? `${toCheck === 1 ? 'goes' : 'go'} in the folder "${NEEDS_LOCATION_CHECK}"` : `${toCheck === 1 ? 'is' : 'are'} marked in the first column, "${NEEDS_LOCATION_CHECK}"`}.
             </p>
           )}
           {nothingToPlot && records.length > 0 && <p className="field-hint">None of these have coordinates, so choose CSV or GeoJSON for them.</p>}

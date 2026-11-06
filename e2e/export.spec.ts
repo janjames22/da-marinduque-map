@@ -183,6 +183,22 @@ test('a KMZ made in the browser has its folders, icons, layers and left-out list
   expect(kml).toContain('DA Interventions – Gasan, Marinduque');
 });
 
+test('points out a record outside Marinduque, and files it in the QA folder', async ({ page }) => {
+  await open(page);
+  await toolbarExport(page).click();
+  await expect(dialog(page)).toContainText('1 record with coordinates outside Marinduque goes in the folder "QA – needs location check"');
+  const zip = await JSZip.loadAsync(await bytesOf(await download(page)));
+  expect(await zip.files['doc.kml'].async('string')).toContain('<Folder><name>QA – needs location check</name>');
+
+  await toolbarExport(page).click();
+  await dialog(page).getByLabel('CSV').check();
+  await expect(dialog(page)).toContainText('marked in the first column');
+  const rows = Papa.parse<Record<string, string>>((await bytesOf(await download(page))).toString('utf8').replace(/^\ufeff/, ''), { header: true, skipEmptyLines: true });
+  expect(rows.meta.fields?.[0]).toBe('QA – needs location check');
+  expect(rows.data.filter((row) => row['QA – needs location check'])).toHaveLength(1);
+  expect(rows.data).toHaveLength(TOTAL);
+});
+
 test('a Shapefile and GeoJSON download whole', async ({ page }) => {
   await open(page);
   await toolbarExport(page).click();

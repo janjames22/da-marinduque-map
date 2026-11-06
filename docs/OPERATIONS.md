@@ -98,7 +98,7 @@ Every signed-in role can export, from the **Export** button on the map or **Expo
 | Shapefile | Listed in `records-left-out.txt` in the .zip | QGIS and ArcGIS |
 
 - **Shapefile field names:** these are limited to 10 characters, so `fields.txt` in the .zip gives each one's full name. Text over 254 bytes is cut short, and `fields.txt` says which fields that happened to.
-- **Records outside Marinduque:** these have coordinates, so they're exported where they're plotted, with their QA flag showing, even though the map leaves them off.
+- **Records outside Marinduque:** these have coordinates, so they're exported where they're plotted, even though the map leaves them off. In KML and KMZ, they go in a separate top-level folder, "QA – needs location check", not in their municipality's. In CSV, Shapefile and GeoJSON, they stay with the other records, and the first column, "QA – needs location check", marks them. The next column has all of a record's QA flags.
 - **Sample files:** `npm run export:samples` writes samples to `exports/samples/`, using the local dataset. Run `npm run build:local-seed` first.
 - **Exported files hold beneficiary names, so take care who gets them.** `exports/` is ignored by git.
 
