@@ -214,6 +214,47 @@ describe('writing', () => {
   });
 });
 
+describe('exports', () => {
+  const entry = { format: 'kmz', file_name: 'Marinduque_LiveTest_2026-11-06.kmz', filters: { municipality: 'Gasan', allTypes: true }, record_count: 33 };
+  const exportsBy = async (id: string) => {
+    const { data: rows, error } = await adminClient.from('audit_log').select('table_name, action, actor_id, context').eq('actor_id', id).eq('action', 'export');
+    expect(error).toBeNull();
+    return rows;
+  };
+  const rpcEntry = { p_format: entry.format, p_file_name: entry.file_name, p_filters: entry.filters, p_record_count: entry.record_count };
+
+  it('logs an export by every role: who, the format, the filters and the count', async () => {
+    const roles = [
+      [viewer, accounts.viewer],
+      [encoder, accounts.encoder],
+      [admin, accounts.admin],
+    ] as const;
+    for (const [store, account] of roles) {
+      await store.logExport(entry);
+      expect(await exportsBy(account.id), account.email).toEqual([{ table_name: 'exports', action: 'export', actor_id: account.id, context: entry }]);
+    }
+  });
+
+  it('refuses visitors and accounts with no role', async () => {
+    expect((await visitor.rpc('log_export', rpcEntry)).error).not.toBeNull();
+    expect((await strangerClient.rpc('log_export', rpcEntry)).error).not.toBeNull();
+    expect(await exportsBy(accounts.stranger.id)).toEqual([]);
+  });
+
+  it('refuses a format it doesn\'t know, and a missing count', async () => {
+    await expect(viewer.logExport({ ...entry, format: 'exe' })).rejects.toThrow();
+    expect((await viewerClient.rpc('log_export', { ...rpcEntry, p_record_count: null })).error).not.toBeNull();
+    expect((await viewerClient.rpc('log_export', { ...rpcEntry, p_record_count: -1 })).error).not.toBeNull();
+  });
+
+  it('can\'t be written around, or written in someone else\'s name', async () => {
+    const forged = { table_name: 'exports', action: 'export', actor_id: accounts.admin.id, context: entry };
+    expect((await viewerClient.from('audit_log').insert(forged)).error).not.toBeNull();
+    expect((await adminClient.from('audit_log').insert(forged)).error).not.toBeNull();
+    expect(await exportsBy(accounts.admin.id)).toHaveLength(1);
+  });
+});
+
 describe('photos', () => {
   it('stores a photo privately, and serves it through a signed link to any member', async () => {
     const record = await encoder.createIntervention(newValues('Live test photo'), newStatus({ photo: jpeg() }));
