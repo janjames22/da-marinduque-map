@@ -18,8 +18,30 @@ export interface TestAccount {
 
 export type TestAccounts = Record<TestRole, TestAccount>;
 
-export async function removeTestAccounts() {
-  const admin = adminClient();
+const REQUEST_TIMEOUT_MS = 20_000;
+const ATTEMPTS = 3;
+const RETRY_DELAY_MS = 5_000;
+
+// The service sometimes drops a request or never answers it. Starting over is safe, because the
+// emails identify whatever a failed attempt made, and removal runs first. Only setup and cleanup
+// retry: what the tests themselves measure still has to work the first time.
+async function retrying<T>(work: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await work();
+    } catch (failure) {
+      if (attempt === ATTEMPTS) throw failure;
+      console.warn(`Test account setup failed, trying again (${attempt} of ${ATTEMPTS - 1}): ${(failure as Error).message}`);
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    }
+  }
+}
+
+export const removeTestAccounts = () => retrying(removeAccounts);
+export const createTestAccounts = () => retrying(createAccounts);
+
+async function removeAccounts() {
+  const admin = adminClient(REQUEST_TIMEOUT_MS);
   const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (error) throw new Error(error.message);
   const users = data.users.filter((user) => user.email?.startsWith(EMAIL_PREFIX));
@@ -63,9 +85,9 @@ export async function removeTestAccounts() {
   }
 }
 
-export async function createTestAccounts(): Promise<TestAccounts> {
-  await removeTestAccounts();
-  const admin = adminClient();
+async function createAccounts(): Promise<TestAccounts> {
+  await removeAccounts();
+  const admin = adminClient(REQUEST_TIMEOUT_MS);
   const run = randomBytes(4).toString('hex');
 
   const make = async (role: TestRole): Promise<TestAccount> => {

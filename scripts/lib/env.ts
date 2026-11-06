@@ -49,8 +49,15 @@ export const publicKey = () => setting('VITE_SUPABASE_PUBLISHABLE_KEY', 'VITE_SU
 export const secretKey = () => setting('SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY');
 export const appUrl = () => process.env.APP_URL?.trim() || undefined;
 
-export function adminClient(): SupabaseClient {
-  return createClient(projectUrl(), secretKey(), { auth: { persistSession: false, autoRefreshToken: false } });
+// Without a limit, a request the service never answers waits about 5 minutes before failing. Photo
+// transfers can be slow for good reason, so only callers that want a limit set one.
+export function adminClient(requestTimeoutMs?: number): SupabaseClient {
+  return createClient(projectUrl(), secretKey(), {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: requestTimeoutMs
+      ? { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(requestTimeoutMs) }) }
+      : undefined,
+  });
 }
 
 export async function connectDb(): Promise<pg.Client> {
