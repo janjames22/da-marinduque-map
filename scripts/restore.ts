@@ -44,7 +44,10 @@ async function tableShape(db: Queryable, table: string) {
 
 async function loadRows(db: Queryable, table: string, rows: Record<string, unknown>[], onConflict: 'update' | 'nothing' | 'fail') {
   if (rows.length === 0) return;
-  const { columns, key } = await tableShape(db, table);
+  const shape = await tableShape(db, table);
+  const { key } = shape;
+  // A backup made before a column was added doesn't have it, so that column keeps its default.
+  const columns = shape.columns.filter((column) => rows.some((row) => column.name in row));
   const names = columns.map((column) => quoted(column.name)).join(', ');
   const hasIdentity = columns.some((column) => column.identity !== '');
   const others = columns.filter((column) => !key.includes(column.name));
