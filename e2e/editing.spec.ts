@@ -421,6 +421,36 @@ test.describe('moving a marker', () => {
     await expect(page.getByLabel('Change history')).not.toContainText('Location:');
   });
 
+  test('a marker dropped right beside another stays in sight until the move is decided', async ({ page }) => {
+    await openPopup(page, cleanRecord);
+    const marker = page.locator(`.intervention-marker[title="${cleanRecord.beneficiary}"]`);
+    await page.keyboard.press('Escape');
+
+    // The nearest neighbour showing as its own marker, far enough away to start apart.
+    const nearest = () =>
+      page.locator('.intervention-marker').evaluateAll((elements, title) => {
+        const box = (element: Element) => element.getBoundingClientRect();
+        const self = elements.find((element) => element.getAttribute('title') === title);
+        if (!self) return null;
+        const others = elements
+          .filter((element) => element !== self)
+          .map((element) => ({ dx: box(element).x - box(self).x, dy: box(element).y - box(self).y }))
+          .filter(({ dx, dy }) => Math.hypot(dx, dy) > 30)
+          .sort((a, b) => Math.hypot(a.dx, a.dy) - Math.hypot(b.dx, b.dy));
+        return others[0] ?? null;
+      }, cleanRecord.beneficiary);
+    await expect.poll(nearest).not.toBeNull();
+    const { dx, dy } = (await nearest())!;
+
+    await dragMarker(page, marker, dx + 4, dy + 4);
+    const confirm = page.getByRole('dialog', { name: 'Confirm move' });
+    await expect(confirm).toBeVisible();
+    await expect(marker).toBeVisible();
+
+    await confirm.getByRole('button', { name: 'Cancel' }).click();
+    await expect(confirm).toHaveCount(0);
+  });
+
   test('a confirmed move is saved, logged and kept after a reload', async ({ page }) => {
     await openPopup(page, cleanRecord);
     const [lng, lat] = cleanRecord.geojson!.coordinates;
