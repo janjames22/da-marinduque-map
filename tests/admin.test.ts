@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import type { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildLocalSeed } from '../scripts/build-local-seed';
+import { removeTestLists } from '../scripts/lib/test-accounts';
 import * as localAdmin from '../src/modules/intervention-map/data/local-admin';
 import * as engine from '../src/modules/intervention-map/data/local-engine';
 import { stateFromSeed, type LocalSeed, type LocalState } from '../src/modules/intervention-map/data/local-store';
@@ -627,6 +628,42 @@ describe('every change is in the audit log, with who made it', () => {
     await admin.saveLookup('statuses', null, { name: 'Audited', color: '#000000' });
     const { rows } = await db.query<{ actor_id: string; action: string }>(`select actor_id, action from public.audit_log where table_name = 'statuses' and new_row ->> 'name' = 'Audited'`);
     expect(rows).toEqual([{ actor_id: ADMIN, action: 'insert' }]);
+  });
+});
+
+describe('the live tests\' clean-up', () => {
+  it('removes its own list items and their log lines, and leaves a real deletion in the log', async () => {
+    await db.exec('begin');
+    try {
+      await db.exec(`
+        insert into public.programs (code, name, color) values ('e2e-test-gone', 'e2e-test-gone', '#123456'), ('real-program', 'Real program', '#123456');
+        delete from public.programs where code = 'real-program';
+        insert into public.intervention_types (code, name, geometry_kind, color, is_active) values ('e2e-test-type', 'e2e-test-type', 'point', '#123456', false), ('real-type', 'Real type', 'point', '#123456', false);
+      `);
+      await db.query(
+        `insert into public.intervention_type_statuses (intervention_type_id, status_id, sort_order, is_default)
+         select id, $1, 1, true from public.intervention_types where code in ('e2e-test-type', 'real-type')`,
+        [statusId('Proposed')],
+      );
+      const { rows: real } = await db.query<{ id: number }>(`select id from public.intervention_types where code = 'real-type'`);
+      await db.query('delete from public.intervention_type_statuses where intervention_type_id = $1', [real[0].id]);
+
+      await removeTestLists(db);
+
+      const { rows: left } = await db.query<{ code: string | null; type_id: string | null }>(
+        `select old_row ->> 'code' as code, old_row ->> 'intervention_type_id' as type_id from public.audit_log
+         where action = 'delete' and actor_id is null and table_name in ('programs', 'intervention_types', 'intervention_type_statuses')
+         order by table_name`,
+      );
+      expect(left).toEqual([
+        { code: null, type_id: String(real[0].id) },
+        { code: 'real-program', type_id: null },
+      ]);
+      const { rows: gone } = await db.query(`select code from public.programs where code like 'e2e-test-%' union all select code from public.intervention_types where code like 'e2e-test-%'`);
+      expect(gone).toEqual([]);
+    } finally {
+      await db.exec('rollback');
+    }
   });
 });
 

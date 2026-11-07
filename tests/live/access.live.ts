@@ -316,7 +316,7 @@ describe('the lists and forms', () => {
     const activated = await adminClient.from('intervention_types').update({ is_active: true }).eq('id', line.id);
     expect(activated.error?.message).toMatch(/drawing tools/);
 
-    const record = { ...newValues('Live test no shape'), intervention_type_id: line.id, category_id: null, title: 'Live test', attributes: { note: 'kept' } };
+    const record = { ...newValues('Live test no shape'), intervention_type_id: line.id, category_id: null, title: 'Live test', attributes: { note: 'kept' }, point: null };
     const created = await encoderClient.rpc('create_intervention', { p_values: record, p_status: { status_id: statusId('Proposed'), status_date: '2024-05-01', remarks: null } });
     expect(created.error?.message).toMatch(/needs its shape/);
   });
@@ -386,6 +386,9 @@ describe('live signals', () => {
   // Resolves with the channel's final state, and a way to wait for the next signal.
   async function join(client: SupabaseClient) {
     channels.push(client);
+    // A client keeps one channel per topic. Asking again returns the one already joined, which never
+    // reports back, so an earlier test's has to go first.
+    await client.removeAllChannels();
     await client.realtime.setAuth();
     let onSignal: (() => void) | null = null;
     const channel = client.channel('map-changes', { config: { private: true } });
@@ -433,7 +436,9 @@ describe('live signals', () => {
     const listener = await join(viewerClient);
     expect(listener.status).toBe('SUBSCRIBED');
     const waiting = listener.nextSignal();
-    await adminClient.from('programs').update({ sort_order: 6 }).eq('code', 'urban');
+    // A test item, as an Admin can now reorder the real ones, and this must not undo that.
+    const code = `e2e-test-signal-${Date.now()}`;
+    await admin.saveLookup('programs', null, { code, name: code, color: '#123456' });
     const elapsed = await waiting;
     console.log(`Signal after a list changed: ${elapsed} ms`);
     expect(elapsed).toBeLessThan(SIGNAL_LIMIT_MS);

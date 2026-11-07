@@ -2,6 +2,7 @@
 // from the audit log, so the real data is left as it was. Their emails all start the same way, so a
 // run that crashed gets cleaned up by the next one.
 import { randomBytes } from 'node:crypto';
+import type { Queryable } from '../seed-interventions';
 import { adminClient, connectDb } from './env';
 
 const EMAIL_PREFIX = 'e2e-test-';
@@ -40,6 +41,25 @@ async function retrying<T>(work: () => Promise<T>): Promise<T> {
 export const removeTestAccounts = () => retrying(removeAccounts);
 export const createTestAccounts = () => retrying(createAccounts);
 
+// Lists are archived, never deleted, so these are the only rows of theirs that should ever go. Only
+// their own lines leave the audit log: a real deletion is exactly what the log has to keep.
+export async function removeTestLists(db: Queryable) {
+  const { rows } = await db.query<{ id: number }>(`select id from public.intervention_types where code like 'e2e-test-%'`);
+  const types = rows.map((row) => String(row.id));
+  await db.query(`delete from public.programs where code like 'e2e-test-%'`);
+  await db.query(`delete from public.intervention_type_statuses where intervention_type_id in (select id from public.intervention_types where code like 'e2e-test-%')`);
+  await db.query(`delete from public.intervention_types where code like 'e2e-test-%'`);
+  await db.query(
+    `delete from public.audit_log
+     where action = 'delete' and actor_id is null
+       and (
+         (table_name in ('programs', 'intervention_types') and old_row ->> 'code' like 'e2e-test-%')
+         or (table_name = 'intervention_type_statuses' and old_row ->> 'intervention_type_id' = any($1::text[]))
+       )`,
+    [types],
+  );
+}
+
 async function removeAccounts() {
   const admin = adminClient(REQUEST_TIMEOUT_MS);
   const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
@@ -60,11 +80,7 @@ async function removeAccounts() {
     );
     await db.query('delete from public.interventions where id = any($1::uuid[])', [records]);
     await db.query('delete from public.saved_views where owner_id = any($1::uuid[])', [ids]);
-    // Lists are archived, never deleted, so these are the only rows of theirs that ever go.
-    await db.query(`delete from public.programs where code like 'e2e-test-%'`);
-    await db.query(`delete from public.intervention_type_statuses where intervention_type_id in (select id from public.intervention_types where code like 'e2e-test-%')`);
-    await db.query(`delete from public.intervention_types where code like 'e2e-test-%'`);
-    await db.query(`delete from public.audit_log where action = 'delete' and actor_id is null and table_name in ('programs', 'intervention_types', 'intervention_type_statuses')`);
+    await removeTestLists(db);
     await db.query('delete from public.profiles where id = any($1::uuid[])', [ids]);
     await db.query(
       `delete from public.audit_log
