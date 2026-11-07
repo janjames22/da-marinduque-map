@@ -421,6 +421,36 @@ test.describe('moving a marker', () => {
     await expect(page.getByLabel('Change history')).not.toContainText('Location:');
   });
 
+  test('a marker dropped right beside another stays in sight until the move is decided', async ({ page }) => {
+    await openPopup(page, cleanRecord);
+    const marker = page.locator(`.intervention-marker[title="${cleanRecord.beneficiary}"]`);
+    await page.keyboard.press('Escape');
+
+    // The nearest neighbour showing as its own marker, far enough away to start apart.
+    const nearest = () =>
+      page.locator('.intervention-marker').evaluateAll((elements, title) => {
+        const box = (element: Element) => element.getBoundingClientRect();
+        const self = elements.find((element) => element.getAttribute('title') === title);
+        if (!self) return null;
+        const others = elements
+          .filter((element) => element !== self)
+          .map((element) => ({ dx: box(element).x - box(self).x, dy: box(element).y - box(self).y }))
+          .filter(({ dx, dy }) => Math.hypot(dx, dy) > 30)
+          .sort((a, b) => Math.hypot(a.dx, a.dy) - Math.hypot(b.dx, b.dy));
+        return others[0] ?? null;
+      }, cleanRecord.beneficiary);
+    await expect.poll(nearest).not.toBeNull();
+    const { dx, dy } = (await nearest())!;
+
+    await dragMarker(page, marker, dx + 4, dy + 4);
+    const confirm = page.getByRole('dialog', { name: 'Confirm move' });
+    await expect(confirm).toBeVisible();
+    await expect(marker).toBeVisible();
+
+    await confirm.getByRole('button', { name: 'Cancel' }).click();
+    await expect(confirm).toHaveCount(0);
+  });
+
   test('a confirmed move is saved, logged and kept after a reload', async ({ page }) => {
     await openPopup(page, cleanRecord);
     const [lng, lat] = cleanRecord.geojson!.coordinates;
@@ -436,6 +466,109 @@ test.describe('moving a marker', () => {
     await expect(popup(page)).not.toContainText(`${lat}, ${lng}`);
     await popupAction(page, 'History').click();
     await expect(page.getByLabel('Change history')).toContainText(`Location: ${lat}, ${lng} →`);
+  });
+
+  test('setting the barangay from a move needs a reason, which goes in the log', async ({ page }) => {
+    await openPopup(page, mismatchRecord);
+    const marker = page.locator(`.intervention-marker[title="${mismatchRecord.beneficiary}"]`);
+    await dragMarker(page, marker, 30, 20);
+    const confirm = page.getByRole('dialog', { name: 'Confirm move' });
+    const reason = confirm.getByLabel('Reason or note');
+    const setBarangay = confirm.getByRole('button', { name: /^Move and set barangay to/ });
+    const asked = confirm.getByText('Give a reason.', { exact: false });
+
+    // Nothing is saved without one, and spaces don't count.
+    await setBarangay.click();
+    await expect(asked).toBeVisible();
+    await reason.fill('   ');
+    await expect(asked).toHaveCount(0);
+    await setBarangay.click();
+    await expect(asked).toBeVisible();
+    await expect(page.getByText('Marker moved.')).toHaveCount(0);
+
+    await reason.fill('Confirmed by the MAO on 2026-11-07');
+    await setBarangay.click();
+    await expect(page.getByText('Marker moved.')).toBeVisible();
+    await expect(confirm).toHaveCount(0);
+    expect((await storedRecord(page, mismatchRecord.id)).qa_flags).toEqual([]);
+
+    await marker.click();
+    await expect(popup(page)).not.toContainText('Plotted in');
+    await popupAction(page, 'History').click();
+    const history = page.getByLabel('Change history');
+    await expect(history).toContainText('Reason: Confirmed by the MAO on 2026-11-07');
+    await expect(history.getByText(/Barangay: .* → /)).toHaveCount(1);
+  });
+
+  test('a plain move needs no reason, takes a note if given, and leaves a flag in place', async ({ page }) => {
+    await openPopup(page, mismatchRecord);
+    const marker = page.locator(`.intervention-marker[title="${mismatchRecord.beneficiary}"]`);
+    await dragMarker(page, marker, 30, 20);
+    const confirm = page.getByRole('dialog', { name: 'Confirm move' });
+    await confirm.getByLabel('Reason or note').fill('Nearer the shed');
+    await confirm.getByRole('button', { name: 'Confirm move' }).click();
+    await expect(page.getByText('Marker moved.')).toBeVisible();
+    expect((await storedRecord(page, mismatchRecord.id)).qa_flags).toEqual(['barangay_mismatch']);
+
+    await marker.click();
+    await expect(popup(page)).toContainText('Plotted in');
+    await popupAction(page, 'History').click();
+    const history = page.getByLabel('Change history');
+    await expect(history).toContainText('Reason: Nearer the shed');
+    await expect(history).not.toContainText(/Barangay: .* → /);
+  });
+
+  test('cancelling drops a note, and a move within the barangay offers no barangay change', async ({ page }) => {
+    await openPopup(page, cleanRecord);
+    const marker = page.locator(`.intervention-marker[title="${cleanRecord.beneficiary}"]`);
+    await dragMarker(page, marker, 12, 8);
+    const confirm = page.getByRole('dialog', { name: 'Confirm move' });
+    const note = confirm.getByLabel('Note (optional)');
+    await expect(confirm.getByRole('button', { name: /^Move and set barangay/ })).toHaveCount(0);
+    await note.fill('Typed, then thought better of it');
+    await confirm.getByRole('button', { name: 'Cancel' }).click();
+    await expect(confirm).toHaveCount(0);
+
+    await dragMarker(page, marker, 12, 8);
+    await expect(note).toHaveValue('');
+    await confirm.getByRole('button', { name: 'Confirm move' }).click();
+    await expect(page.getByText('Marker moved.')).toBeVisible();
+
+    await marker.click();
+    await popupAction(page, 'History').click();
+    const history = page.getByLabel('Change history');
+    await expect(history).toContainText('Location:');
+    await expect(history).not.toContainText('Reason:');
+  });
+
+  test('a note stays with its record: dragging it again keeps the note, and dragging another starts afresh', async ({ page }) => {
+    await openPopup(page, cleanRecord);
+    const marker = page.locator(`.intervention-marker[title="${cleanRecord.beneficiary}"]`);
+    await page.keyboard.press('Escape');
+    await dragMarker(page, marker, 12, 8);
+    const confirm = page.getByRole('dialog', { name: 'Confirm move' });
+    const note = confirm.locator('textarea');
+    await note.fill('Typed for this record');
+
+    await dragMarker(page, marker, 12, 8);
+    await expect(note).toHaveValue('Typed for this record');
+
+    // Another marker the pointer can reach, with this dialog still open.
+    const markers = page.locator('.intervention-marker');
+    const reachable = () =>
+      markers.evaluateAll(
+        (elements, title) =>
+          elements.findIndex((element) => {
+            const box = element.getBoundingClientRect();
+            const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+            return element.getAttribute('title') !== title && hit !== null && element.contains(hit);
+          }),
+        cleanRecord.beneficiary,
+      );
+    await expect.poll(reachable).toBeGreaterThanOrEqual(0);
+    await dragMarker(page, markers.nth(await reachable()), 12, 8);
+    await expect(note).toHaveValue('');
+    await expect(confirm).toBeVisible();
   });
 
   test('a record sharing a point can be dragged out of the spider, which clears its partner\'s flag', async ({ page }) => {
@@ -491,8 +624,10 @@ test.describe('nothing covers what is being worked on', () => {
     const confirm = page.getByRole('dialog', { name: 'Confirm move' });
     await expect(confirm).toBeVisible();
     // Every button is usable, and the marker isn't under the card.
+    await expect(confirm.getByLabel('Reason or note')).toBeInViewport();
     await expect(confirm.getByRole('button', { name: 'Confirm move' })).toBeInViewport();
     await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeInViewport();
+    await expect(confirm.getByRole('button', { name: /^Move and set barangay/ })).toBeInViewport();
     expect(overlaps((await marker.boundingBox())!, (await confirm.boundingBox())!)).toBe(false);
   });
 });

@@ -14,7 +14,7 @@ import { usePermissions } from '../state/store-context';
 
 const FOCUS_WAIT_MS = 3000;
 
-// Icons load through <img>, so scripts inside an icon's SVG can't run. Phase 5 adds uploads.
+// Icons load through <img>, so even an uploaded icon couldn't run a script, and uploads are checked too.
 function iconDataUrl(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(whiteIconSvg(svg))}`;
 }
@@ -78,6 +78,15 @@ function whenSettled(map: L.Map, cluster: L.MarkerClusterGroup, run: () => void)
 interface ShownMarker {
   marker: L.Marker;
   key: string; // what the marker looks like and where it is
+  // Waiting for its move to be confirmed. It sits on the map itself, as in the cluster it could be
+  // swallowed by a neighbour, leaving the person nothing to look at while they decide.
+  held: boolean;
+}
+
+function removeHeld(markers: Map<string, ShownMarker>) {
+  for (const { marker, held } of markers.values()) {
+    if (held) marker.remove();
+  }
 }
 
 interface InterventionLayerProps {
@@ -143,6 +152,7 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
     return () => {
       map.off('popupopen', markOpen);
       map.off('popupclose', markClosed);
+      removeHeld(markers);
       cluster.remove();
       clusterRef.current = null;
       markers.clear();
@@ -159,31 +169,33 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
     // spiderfied, so everything is laid out afresh.
     if (moveNonce !== lastMoveNonce.current) {
       lastMoveNonce.current = moveNonce;
+      removeHeld(markers);
       cluster.clearLayers();
       markers.clear();
     }
 
-    const wanted = new Map<string, { record: Intervention; position: [number, number]; key: string }>();
+    const wanted = new Map<string, { record: Intervention; position: [number, number]; held: boolean; key: string }>();
     for (const record of records) {
       if (!isOnMap(record) || record.geojson?.type !== 'Point') continue;
       const [longitude, latitude] = record.geojson.coordinates;
       // A dragged marker stays where it was dropped until the move is confirmed or cancelled.
       const moving = pendingMove?.recordId === record.id ? pendingMove.to : null;
       const position: [number, number] = moving ? [moving.lat, moving.lng] : [latitude, longitude];
-      wanted.set(record.id, { record, position, key: `${position.join()}|${iconFor(record).key}|${record.beneficiary ?? ''}` });
+      wanted.set(record.id, { record, position, held: moving !== null, key: `${position.join()}|${moving ? 'held' : ''}|${iconFor(record).key}|${record.beneficiary ?? ''}` });
     }
 
     const stale: L.Marker[] = [];
-    for (const [id, { marker, key }] of markers) {
+    for (const [id, { marker, key, held }] of markers) {
       if (wanted.get(id)?.key !== key) {
-        stale.push(marker);
+        if (held) marker.remove();
+        else stale.push(marker);
         markers.delete(id);
       }
     }
     cluster.removeLayers(stale);
 
     const added: L.Marker[] = [];
-    for (const [id, { record, position, key }] of wanted) {
+    for (const [id, { record, position, held, key }] of wanted) {
       if (markers.has(id)) continue;
       const marker = L.marker(position, {
         icon: iconFor(record).divIcon,
@@ -209,8 +221,9 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
         useEditUi.getState().startMove({ recordId: id, version: current.version, to: roundPoint(marker.getLatLng()) });
       });
 
-      markers.set(id, { marker, key });
-      added.push(marker);
+      markers.set(id, { marker, key, held });
+      if (held) marker.addTo(map);
+      else added.push(marker);
     }
     cluster.addLayers(added);
 

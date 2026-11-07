@@ -1,13 +1,15 @@
 import { buildPlaceIndex, type PlaceIndex } from '../lib/qa';
+import * as admin from './local-admin';
 import * as engine from './local-engine';
 import type { EngineContext, LocalRows } from './local-engine';
-import { LocalSeedMissingError, type DataStore, type NewStatus, type PhotoMeta } from './store';
+import { LocalSeedMissingError, type DataStore, type InterventionValues, type NewStatus, type PhotoMeta } from './store';
 import type {
   AppUser,
   AuditEntry,
   Barangay,
   BeneficiaryType,
   Category,
+  CategoryGroup,
   FieldSchema,
   Icon,
   Intervention,
@@ -35,6 +37,7 @@ export interface LocalSeed {
   lookups: {
     icons: unknown[];
     programs: unknown[];
+    category_groups?: unknown[];
     categories: unknown[];
     statuses: unknown[];
     location_bases: unknown[];
@@ -56,20 +59,22 @@ const bySortOrder = <T extends { sort_order: number }>(items: T[]) => [...items]
 
 export function toMapData(seed: LocalSeed): MapData {
   const batches = seed.import_batches as { data_source: string }[];
-  const schemaRows = seed.lookups.barangay_field_schema as { field_schema: FieldSchema }[];
+  const schemaRows = seed.lookups.barangay_field_schema as { field_schema: FieldSchema; version?: number }[];
 
   return {
     icons: seed.lookups.icons as Icon[],
-    programs: seed.lookups.programs as Program[],
+    programs: bySortOrder(seed.lookups.programs as Program[]),
+    categoryGroups: bySortOrder((seed.lookups.category_groups ?? []) as CategoryGroup[]),
     categories: bySortOrder(seed.lookups.categories as Category[]),
-    statuses: seed.lookups.statuses as Status[],
+    statuses: bySortOrder(seed.lookups.statuses as Status[]),
     locationBases: bySortOrder(seed.lookups.location_bases as LocationBasis[]),
     beneficiaryTypes: bySortOrder((seed.lookups.beneficiary_types ?? []) as BeneficiaryType[]),
-    types: seed.lookups.intervention_types as InterventionType[],
+    types: bySortOrder(seed.lookups.intervention_types as InterventionType[]),
     typeStatuses: bySortOrder((seed.lookups.intervention_type_statuses ?? []) as TypeStatus[]),
     municipalities: seed.municipalities as Municipality[],
     barangays: seed.barangays as Barangay[],
     barangayFields: schemaRows[0]?.field_schema ?? { fields: [] },
+    barangayFieldsVersion: schemaRows[0]?.version ?? 1,
     interventions: seed.interventions as Intervention[],
     links: seed.intervention_barangays as InterventionBarangay[],
     statusHistory: seed.status_history as StatusEntry[],
@@ -175,7 +180,8 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
   // until the user chooses, because the rebuilt seed's record ids don't match the saved ones.
   let saved: LocalState;
   const existing = await readState();
-  if (!existing || (existing.fingerprint !== seedFingerprint && existing.rows.changeCount === 0)) {
+  // A state saved before the lists became editable can't be used, as it doesn't have them all.
+  if (!existing || !existing.fixed.categoryGroups || (existing.fingerprint !== seedFingerprint && existing.rows.changeCount === 0)) {
     saved = freshState();
     await writeState(saved);
   } else {
@@ -190,6 +196,7 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
     typeStatuses: state.fixed.typeStatuses,
     municipalities: state.fixed.municipalities,
     barangayFields: state.fixed.barangayFields,
+    lists: state.fixed,
     places,
     now: () => new Date().toISOString(),
     newId: newUuid,
@@ -231,13 +238,30 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
       const state = await readState();
       if (!state) throw new LocalSeedMissingError();
       const { interventions, links, statusHistory, barangays, photos } = state.rows;
-      return { ...state.fixed, interventions, links, statusHistory, barangays, photos, members: [] };
+      const { fixed } = state;
+      return {
+        ...fixed,
+        programs: bySortOrder(fixed.programs),
+        categoryGroups: bySortOrder(fixed.categoryGroups),
+        categories: bySortOrder(fixed.categories),
+        statuses: bySortOrder(fixed.statuses),
+        beneficiaryTypes: bySortOrder(fixed.beneficiaryTypes),
+        locationBases: bySortOrder(fixed.locationBases),
+        types: bySortOrder(fixed.types),
+        interventions,
+        links,
+        statusHistory,
+        barangays,
+        photos,
+        members: [],
+      };
     },
 
     createIntervention(values, status, note) {
-      return prepareStatus(status).then((prepared) =>
+      return Promise.all([prepareStatus(status), prepareFieldPhotos(values.field_photos)]).then(([prepared, fieldPhotos]) =>
         mutate((rows, context, photos) => {
-          const record = engine.createIntervention(rows, context, values, note);
+          const record = engine.createIntervention(rows, context, withPhotoIds(values, fieldPhotos), note);
+          addFieldPhotos(rows, context, photos, record, fieldPhotos, note);
           addStatusWithPhoto(rows, context, photos, record.id, status, prepared, note);
           return record;
         }),
@@ -245,7 +269,13 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
     },
 
     updateIntervention(id, expectedVersion, patch, note) {
-      return mutate((rows, context) => engine.updateIntervention(rows, context, id, expectedVersion, patch, note));
+      return prepareFieldPhotos(patch.field_photos).then((fieldPhotos) =>
+        mutate((rows, context, photos) => {
+          const record = engine.updateIntervention(rows, context, id, expectedVersion, withPhotoIds(patch, fieldPhotos), note);
+          addFieldPhotos(rows, context, photos, record, fieldPhotos, note);
+          return record;
+        }),
+      );
     },
 
     softDeleteIntervention(id, expectedVersion, note) {
@@ -274,6 +304,21 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
     // An export changes no data, so it doesn't stop a newer dataset replacing this one.
     async logExport(entry) {
       await mutate((rows, context) => engine.logExport(rows, context, entry), { isChange: false });
+    },
+
+    async saveLookup(table, id, values) {
+      requireAdmin(user);
+      await mutate((rows, context) => admin.saveLookup(rows, context, table, id, values));
+    },
+
+    async saveType(id, expectedVersion, values, statuses) {
+      requireAdmin(user);
+      return mutate((rows, context) => admin.saveType(rows, context, id, expectedVersion, values, statuses));
+    },
+
+    async saveBarangayFields(expectedVersion, schema) {
+      requireAdmin(user);
+      await mutate((rows, context) => admin.saveBarangayFields(rows, context, expectedVersion, schema));
     },
 
     photoUrl(photoId) {
@@ -306,7 +351,48 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
   };
 }
 
+function requireAdmin(user: AppUser) {
+  if (user.role !== 'admin') throw new Error('Your account doesn\'t have permission to do that.');
+}
+
+interface PreparedFieldPhoto {
+  key: string;
+  id: string;
+  stored: StoredPhoto;
+  meta: PhotoMeta;
+}
+
 // Reading a file takes time, so it happens before the transaction opens.
+function prepareFieldPhotos(files: Record<string, File> | undefined): Promise<PreparedFieldPhoto[]> {
+  return Promise.all(
+    Object.entries(files ?? {}).map(async ([key, file]) => {
+      const [bytes, meta] = await Promise.all([file.arrayBuffer(), readPhotoMeta(file)]);
+      return { key, id: newUuid(), stored: { type: file.type, bytes }, meta };
+    }),
+  );
+}
+
+function withPhotoIds<T extends Pick<Partial<InterventionValues>, 'attributes'>>(values: T, photos: PreparedFieldPhoto[]): T {
+  if (photos.length === 0 || !values.attributes) return values;
+  return { ...values, attributes: { ...values.attributes, ...Object.fromEntries(photos.map((photo) => [photo.key, photo.id])) } };
+}
+
+function addFieldPhotos(
+  rows: LocalRows,
+  context: EngineContext,
+  photos: IDBObjectStore,
+  record: Intervention,
+  prepared: PreparedFieldPhoto[],
+  note?: Parameters<DataStore['addStatus']>[2],
+) {
+  const schema = context.types.find((type) => type.id === record.intervention_type_id)?.field_schema;
+  for (const photo of prepared) {
+    const caption = schema?.fields.find((field) => field.key === photo.key)?.label ?? null;
+    engine.addPhoto(rows, context, record.id, photo.meta, note, { id: photo.id, caption });
+    photos.put(photo.stored, photo.id);
+  }
+}
+
 async function prepareStatus(status: NewStatus): Promise<{ stored: StoredPhoto; meta: PhotoMeta } | null> {
   if (!status.photo) return null;
   const [bytes, meta] = await Promise.all([status.photo.arrayBuffer(), readPhotoMeta(status.photo)]);

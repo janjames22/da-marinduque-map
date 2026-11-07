@@ -28,6 +28,7 @@ const type: InterventionType = {
   field_schema: schema,
   sort_order: 1,
   is_active: true,
+  version: 1,
 };
 
 function record(over: Partial<Intervention> = {}): Intervention {
@@ -280,7 +281,7 @@ describe('audit display', () => {
     locationBases: [],
     statuses: [{ id: 3, name: 'Serviceable', color: '#000000' }],
     types: [type],
-  } as Pick<MapData, 'categories' | 'programs' | 'beneficiaryTypes' | 'municipalities' | 'barangays' | 'locationBases' | 'statuses' | 'types'>;
+  } as unknown as Pick<MapData, 'categories' | 'programs' | 'beneficiaryTypes' | 'municipalities' | 'barangays' | 'locationBases' | 'statuses' | 'types'>;
 
   const entry = (over: Partial<AuditEntry>): AuditEntry => ({
     id: 1,

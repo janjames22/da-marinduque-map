@@ -17,6 +17,7 @@ import type {
   InterventionBarangay,
   InterventionPhoto,
   InterventionType,
+  MapData,
   Municipality,
   StatusEntry,
   TypeStatus,
@@ -38,6 +39,11 @@ export interface EngineContext {
   typeStatuses: TypeStatus[];
   municipalities: Municipality[];
   barangayFields: FieldSchema;
+  // The lists and forms themselves, which an Admin can change.
+  lists: Pick<
+    MapData,
+    'icons' | 'programs' | 'categoryGroups' | 'categories' | 'statuses' | 'beneficiaryTypes' | 'locationBases' | 'types' | 'typeStatuses' | 'barangayFields' | 'barangayFieldsVersion'
+  >;
   places: PlaceIndex;
   now(): string;
   newId(): string;
@@ -65,7 +71,7 @@ function rowImage(record: Intervention): Record<string, unknown> {
   return row;
 }
 
-function audit(
+export function audit(
   rows: LocalRows,
   context: EngineContext,
   table: string,
@@ -150,7 +156,7 @@ export function createIntervention(rows: LocalRows, context: EngineContext, inpu
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);
 
   const now = context.now();
-  const { point, ...columns } = values;
+  const { point, field_photos: _files, ...columns } = values;
   const record: Intervention = {
     ...columns,
     id: context.newId(),
@@ -195,7 +201,7 @@ export function updateIntervention(
   const record = findCurrent(rows, id, expectedVersion);
   if (record.deleted_at !== null) throw new ConflictError(record);
 
-  const { clear_name_check: clearNameCheck, point: patchedPoint, ...columns } = patch;
+  const { clear_name_check: clearNameCheck, point: patchedPoint, field_photos: _files, ...columns } = patch;
   const previous = valuesFromRecord(record);
   const values: InterventionValues = {
     ...previous,
@@ -254,13 +260,19 @@ export function restoreIntervention(rows: LocalRows, context: EngineContext, id:
   return setDeleted(rows, context, id, expectedVersion, null, 'restore', note);
 }
 
-export function addPhoto(rows: LocalRows, context: EngineContext, interventionId: string, meta: PhotoMeta, note?: ChangeNote): InterventionPhoto {
-  const id = context.newId();
+export function addPhoto(
+  rows: LocalRows,
+  context: EngineContext,
+  interventionId: string,
+  meta: PhotoMeta,
+  note?: ChangeNote,
+  { id = context.newId(), caption = null }: { id?: string; caption?: string | null } = {},
+): InterventionPhoto {
   const photo: InterventionPhoto = {
     id,
     intervention_id: interventionId,
     storage_path: `local/${id}`,
-    caption: null,
+    caption,
     taken_at: meta.taken_at,
     exif_location: geojsonOf(meta.exif_location),
     created_at: context.now(),

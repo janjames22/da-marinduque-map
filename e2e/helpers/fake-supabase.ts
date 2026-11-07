@@ -79,9 +79,27 @@ export interface RpcCall {
   args: Record<string, unknown>;
 }
 
+export interface RestWrite {
+  table: string;
+  method: string;
+  id: number | null;
+  values: Record<string, unknown>;
+}
+
+export interface FunctionCall {
+  name: string;
+  body: Record<string, unknown>;
+  hasLogin: boolean;
+}
+
 export interface FakeSupabase {
   rpcCalls: RpcCall[];
   restCalls: string[];
+  restWrites: RestWrite[];
+  functionCalls: FunctionCall[];
+  // Answers the admin-users Edge Function. Returning undefined falls through to the default, which
+  // keeps a small list of people.
+  onFunction(handler: (call: FunctionCall) => { status: number; body: unknown } | undefined): void;
   uploads: { path: string; contentType: string | null }[];
   passwordUpdates: string[];
   channelJoins: { topic: string; isPrivate: boolean; hasToken: boolean }[];
@@ -97,6 +115,16 @@ export interface FakeSupabase {
 export async function installFakeSupabase(page: Page, users: FakeUser[] = Object.values(USERS)): Promise<FakeSupabase> {
   let currentUser: FakeUser | null = null;
   let rpcHandler: Parameters<FakeSupabase['onRpc']>[0] = () => undefined;
+  let functionHandler: Parameters<FakeSupabase['onFunction']>[0] = () => undefined;
+  const people = users.map((user) => ({
+    id: user.id,
+    email: user.email,
+    full_name: user.profile?.full_name ?? null,
+    role: user.profile?.role ?? null,
+    status: !user.profile ? 'no_access' : user.profile.deactivated_at ? 'deactivated' : 'active',
+    invited_at: null as string | null,
+    last_sign_in_at: '2026-11-01T00:00:00Z' as string | null,
+  }));
   let refusing = false;
   let readsFail = false;
   const sockets = new Set<WebSocketRoute>();
@@ -117,6 +145,11 @@ export async function installFakeSupabase(page: Page, users: FakeUser[] = Object
   const fake: FakeSupabase = {
     rpcCalls: [],
     restCalls: [],
+    restWrites: [],
+    functionCalls: [],
+    onFunction: (handler) => {
+      functionHandler = handler;
+    },
     uploads: [],
     passwordUpdates: [],
     channelJoins: [],
@@ -197,7 +230,42 @@ export async function installFakeSupabase(page: Page, users: FakeUser[] = Object
       if (name === 'member_names') return respond(route, 200, users.map((u) => ({ id: u.id, full_name: u.profile?.full_name ?? null })));
       if (name === 'audit_for_intervention') return respond(route, 200, []);
       if (name === 'log_export') return respond(route, 200, null);
+      if (name === 'save_intervention_type') {
+        const types = tables.intervention_types as { id: number; version: number }[];
+        const { p_id: id, p_values: values, p_statuses: statuses } = call.args as { p_id: number | null; p_values: Record<string, unknown>; p_statuses: Record<string, unknown>[] };
+        const existing = types.find((type) => type.id === id);
+        const saved = existing ?? { id: Math.max(...types.map((type) => type.id)) + 1, version: 0 };
+        Object.assign(saved, values, { version: saved.version + 1 });
+        if (!existing) types.push(saved);
+        tables.intervention_type_statuses = [
+          ...(tables.intervention_type_statuses as { intervention_type_id: number }[]).filter((entry) => entry.intervention_type_id !== saved.id),
+          ...statuses.map((entry, index) => ({ ...entry, intervention_type_id: saved.id, sort_order: index + 1 })),
+        ];
+        return respond(route, 200, saved);
+      }
+      if (name === 'save_barangay_fields') {
+        const [row] = tables.barangay_field_schema as { field_schema: unknown; version: number }[];
+        row.field_schema = call.args.p_schema;
+        row.version += 1;
+        return respond(route, 200, row);
+      }
       return respond(route, 500, { code: 'XX000', message: `Not faked: ${name}` });
+    }
+
+    if (request.method() === 'POST' || request.method() === 'PATCH') {
+      if (!user) return respond(route, 401, { code: '42501', message: 'permission denied' });
+      const values = request.postDataJSON() as Record<string, unknown>;
+      const rows = (tables[name] ?? []) as { id: number }[];
+      if (request.method() === 'POST') {
+        fake.restWrites.push({ table: name, method: 'POST', id: null, values });
+        rows.push({ id: Math.max(0, ...rows.map((row) => row.id)) + 1, is_active: true, ...values } as { id: number });
+        return route.fulfill({ status: 201, headers: CORS });
+      }
+      const id = Number(url.searchParams.get('id')?.replace('eq.', ''));
+      fake.restWrites.push({ table: name, method: 'PATCH', id, values });
+      const row = rows.find((candidate) => candidate.id === id);
+      if (row) Object.assign(row, values);
+      return respond(route, 200, row ? [{ id }] : []);
     }
 
     fake.restCalls.push(name);
@@ -207,6 +275,42 @@ export async function installFakeSupabase(page: Page, users: FakeUser[] = Object
       return respond(route, 200, user.profile ? [{ id: user.id, deactivated_at: null, ...user.profile }] : []);
     }
     return respond(route, 200, tables[name] ?? []);
+  });
+
+  await page.route(`${FAKE_HOST}/functions/v1/**`, async (route) => {
+    const request = route.request();
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
+    const call: FunctionCall = {
+      name: new URL(request.url()).pathname.split('/').at(-1)!,
+      body: (request.postDataJSON() ?? {}) as Record<string, unknown>,
+      hasLogin: userFromRequest(route) !== null,
+    };
+    fake.functionCalls.push(call);
+    const answer = functionHandler(call);
+    if (answer) return respond(route, answer.status, answer.body);
+
+    const { action, id, email, full_name: fullName, role, delivery } = call.body as Record<string, string>;
+    const person = people.find((candidate) => candidate.id === id);
+    switch (action) {
+      case 'list':
+        return respond(route, 200, { people });
+      case 'invite':
+        people.push({ id: `a0000000-0000-4000-8000-${String(people.length + 100).padStart(12, '0')}`, email, full_name: fullName, role: role as 'viewer', status: 'invited', invited_at: '2026-11-07T00:00:00Z', last_sign_in_at: null });
+        return respond(route, 200, { id: 'new', link: delivery === 'link' ? 'https://fake.supabase.co/auth/v1/verify?token=invite-token' : null });
+      case 'new_link':
+        return respond(route, 200, { id, link: delivery === 'link' ? 'https://fake.supabase.co/auth/v1/verify?token=reset-token' : null });
+      case 'update':
+        Object.assign(person!, role ? { role } : {}, fullName ? { full_name: fullName } : {});
+        return respond(route, 200, { id });
+      case 'deactivate':
+        person!.status = 'deactivated';
+        return respond(route, 200, { id });
+      case 'reactivate':
+        person!.status = 'active';
+        return respond(route, 200, { id });
+      default:
+        return respond(route, 400, { message: 'Unknown action.' });
+    }
   });
 
   await page.route(`${FAKE_HOST}/storage/v1/**`, async (route) => {

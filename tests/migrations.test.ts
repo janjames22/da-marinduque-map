@@ -477,6 +477,15 @@ describe('intervention type rules', () => {
     expect(polygon.geom).not.toBeNull();
   });
 
+  it('needs a line or polygon record to have its shape, while a point record can wait for coordinates', async () => {
+    await expect(insertRecord({ type: 'fmr' })).rejects.toThrow(/needs its shape/);
+    await expect(insertRecord({ type: 'service-area' })).rejects.toThrow(/needs its shape/);
+    expect((await insertRecord({ type: 'other' })).geom).toBeNull();
+
+    const line = await insertRecord({ type: 'fmr', wkt: 'LINESTRING(121.85 13.45, 121.86 13.46)' });
+    await expect(db.query('update interventions set geom = null where id = $1', [line.id])).rejects.toThrow(/needs its shape/);
+  });
+
   it('rejects an invalid polygon', async () => {
     await expect(
       insertRecord({
@@ -495,8 +504,8 @@ describe('intervention type rules', () => {
 
   it('allows a new type to be created without code changes', async () => {
     await db.query(
-      `insert into intervention_types (code, name, geometry_kind, color, field_schema)
-       values ('greenhouse', 'Greenhouse', 'polygon', '#123456',
+      `insert into intervention_types (code, name, geometry_kind, color, is_active, field_schema)
+       values ('greenhouse', 'Greenhouse', 'polygon', '#123456', false,
          '{"fields": [{"key": "area_sqm", "label": "Area", "input": "number", "required": true}]}')`,
     );
     const row = await insertRecord({
@@ -513,7 +522,7 @@ describe('intervention type rules', () => {
     );
     await expect(insertRecord({ type: 'fmr', title: null, category: 'other' })).rejects.toThrow(/title is required/);
     // year_funded isn't required for a road.
-    const road = await insertRecord({ type: 'fmr', year: null });
+    const road = await insertRecord({ type: 'fmr', year: null, wkt: 'LINESTRING(121.85 13.45, 121.86 13.46)' });
     expect(road.id).toBeTruthy();
   });
 
@@ -528,7 +537,7 @@ describe('intervention type rules', () => {
 
   it('rejects a category from another type, and allows one for any type', async () => {
     await expect(insertRecord({ type: 'fmr', category: 'seeder' })).rejects.toThrow(/does not belong/);
-    const row = await insertRecord({ type: 'fmr', category: 'other' });
+    const row = await insertRecord({ type: 'fmr', category: 'other', wkt: 'LINESTRING(121.85 13.45, 121.86 13.46)' });
     expect(row.id).toBeTruthy();
   });
 });

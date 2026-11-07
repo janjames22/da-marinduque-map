@@ -55,6 +55,27 @@ export function createPgliteBackend(db: PGlite, userId: string): PgliteBackend {
       });
     },
 
+    insertRow(table: string, values: Record<string, unknown>) {
+      const keys = Object.keys(values);
+      return asUser(async () => {
+        await db.query(
+          `insert into public.${table} (${keys.join(', ')}) values (${keys.map((_, i) => `$${i + 1}`).join(', ')})`,
+          keys.map((key) => values[key]),
+        );
+      });
+    },
+
+    updateRow(table: string, id: number, values: Record<string, unknown>) {
+      const keys = Object.keys(values);
+      return asUser(async () => {
+        const { affectedRows } = await db.query(
+          `update public.${table} set ${keys.map((key, i) => `${key} = $${i + 1}`).join(', ')} where id = $${keys.length + 1}`,
+          [...keys.map((key) => values[key]), id],
+        );
+        if (!affectedRows) throw Object.assign(new Error('Nothing was changed.'), { code: '42501' });
+      });
+    },
+
     selectById<T>(table: string, columns: string, id: string | number) {
       return asUser(async () => {
         const { rows } = await db.query<{ row: T }>(`select to_jsonb(x) as row from (select ${columns} from public.${table} where id = $1) x`, [id]);

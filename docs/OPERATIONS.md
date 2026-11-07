@@ -2,7 +2,7 @@
 
 For the Admin who sets up and looks after the map. Commands run in the project folder, on the Admin's computer.
 
-The site has two parts: the website on Netlify, and the database, logins, photos and live updates on Supabase. Everything is controlled from this computer through `.env.local`, which holds the project's keys. Git ignores that file, so **keep your own safe copy of the keys, and never paste them into a chat or commit them.**
+The site has two parts: the website on Netlify, and the database, logins, photos, live updates and the Users page's function on Supabase. Everything is controlled from this computer through `.env.local`, which holds the project's keys. Git ignores that file, so **keep your own safe copy of the keys, and never paste them into a chat or commit them.**
 
 ## First-time setup
 
@@ -20,11 +20,16 @@ The site has two parts: the website on Netlify, and the database, logins, photos
    npm run check:supabase
    ```
    Fix any line marked `PROBLEM`. The script only reads, and prints no keys or record data. The "At least one Admin" note clears in the next step.
-6. **Add yourself as the first Admin:**
+6. **Add yourself as the first Admin.** The Users page needs an Admin, so the first one comes from here:
    ```
    npm run users -- invite you@example.com --role admin --name "Your Name"
    ```
-7. **Put the site online** (see [Deploying](#deploying)), then [prove that it works](#proving-it-works).
+7. **Put the Users page's function on Supabase.** Sign the Supabase command line in once, then deploy it:
+   ```
+   npx supabase@3 login
+   npm run deploy:functions
+   ```
+8. **Put the site online** (see [Deploying](#deploying)), then [prove that it works](#proving-it-works).
 
 ## Deploying
 
@@ -43,6 +48,8 @@ npm run deploy
 
 This builds the site here and uploads it, so Netlify never sees `.env.local`. The deploy stops if the build check finds anything private in the website files.
 
+When `supabase/functions` has changed, also run `npm run deploy:functions`. Supabase gives the function the project's keys itself, so the secret key is never sent to Netlify or built into the website.
+
 After the first deploy, do these two things so invite links go to the right place:
 
 1. Set `APP_URL` in `.env.local` to the site's address. This doesn't need a new deploy.
@@ -58,32 +65,73 @@ Accounts are by invitation only.
 |---|---|
 | Viewer | See the map and barangay profiles. Can't change anything. |
 | Encoder | Viewer, plus add, edit, move and delete records, add statuses and photos, edit barangay baseline values, and see History. |
-| Admin | Encoder, plus see deleted records and restore them. |
+| Admin | Encoder, plus see deleted records and restore them, manage people, and change the types, forms and lists. |
 
-| To | Run |
+Do all of this on the **Users** page: **Admin** in the header, then **Users**.
+
+| To | On the Users page |
 |---|---|
-| See everyone | `npm run users -- list` |
-| Add someone | `npm run users -- invite someone@example.com --role encoder --name "Full Name"` |
-| Give a new link (forgotten password, expired link) | `npm run users -- link someone@example.com` |
-| Change a role | `npm run users -- role someone@example.com viewer` |
-| Remove access | `npm run users -- deactivate someone@example.com` |
-| Give access back | `npm run users -- reactivate someone@example.com` |
+| See everyone | The list at the bottom shows each person's role, status and last sign-in |
+| Add someone | Fill in **Invite someone**, then choose to email it or get a link to send yourself |
+| Give a new link (forgotten password, expired link) | **Email a new link** or **Get a new link** on their row |
+| Change a role | The role list on their row |
+| Correct a name | **Edit name** on their row |
+| Remove access | **Deactivate** on their row |
+| Give access back | **Reactivate** on their row |
 
-- **Links:** `invite` and `link` print a link for you to send. It works once and expires, so send it privately and soon.
-- **Email instead:** add `--send-email` to `invite` to have Supabase send it. Its built-in sender allows only a few emails an hour, so see [Before inviting the MAOs](#before-inviting-the-maos).
+- **Links:** a link works once and expires, so send it privately and soon. Getting a link works even before email is set up.
 - **Role changes** apply the next time the person loads the map.
 - **People who leave:** deactivate them rather than deleting the account. Their name stays on what they encoded.
+- **There's always an Admin:** you can't change your own role or deactivate yourself, and the database refuses any change that would leave no active Admin. To step down, have another Admin do it.
+
+If the page can't reach its function, the same things can be done from this computer with `npm run users -- list`, `invite someone@example.com --role encoder --name "Full Name"`, `link`, `role`, `deactivate` and `reactivate`.
 
 ### Before inviting the MAOs
 
-**Set up a custom SMTP sender first.** Supabase's built-in email sends only a few emails an hour, so a batch of MAO invites would stall or fail.
+**Set up a custom SMTP sender first.** Supabase's built-in sender only delivers to your own Supabase team, and only 2 emails an hour, so invites to the MAOs would fail.
 
-1. Choose an email provider and verify the address the invites will come from.
-2. In Supabase, go to Authentication > Emails > SMTP Settings. Turn on custom SMTP and enter the provider's host, port, username and password, plus the sender's name and address.
-3. Check the email limit under Authentication > Rate Limits, and raise it if it's lower than the batch you plan to send.
-4. Test it by inviting one person with `--send-email` and confirming the email arrives and the link opens the map.
+The project has no email domain of its own, so use a **dedicated Gmail account with an app password**. It's free and needs no domain. Most free services need a domain you own: Resend does, and Brevo replaces a Gmail sender's address, which hurts delivery. If the office gets its own domain, Brevo's free plan (300 emails a day) is the better choice.
 
-The SMTP password stays in Supabase's settings. Don't put it in `.env.local` or anywhere in this project.
+1. **Create a new Gmail account just for this**, such as `da.marinduque.map@gmail.com`. An app password can reach the whole mailbox, so keep this separate from anyone's personal email.
+2. **Turn on 2-Step Verification** for that account, at [myaccount.google.com/security](https://myaccount.google.com/security). Google requires it for app passwords.
+3. **Create an app password**, at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords). Name it `Supabase`, and copy the 16 letters it shows.
+4. **In Supabase, go to Authentication > Emails > SMTP Settings**, turn on custom SMTP, and enter:
+
+   | Setting | Value |
+   |---|---|
+   | Sender email | The new Gmail address |
+   | Sender name | `DA Marinduque Intervention Map` |
+   | Host | `smtp.gmail.com` |
+   | Port | `587` |
+   | Username | The new Gmail address |
+   | Password | The 16 letters, without spaces |
+
+5. **Check the limit**, under Authentication > Rate Limits. It starts at 30 emails an hour, which is enough for the MAOs.
+6. **Test it.** On the Users page, invite an address that isn't on the map yet, choosing to email it. Confirm the email arrives, look in spam too, and confirm its link opens the page to set a password. Then deactivate that test account.
+
+The app password stays in Supabase's settings. Don't put it in `.env.local` or anywhere in this project, and never paste it into a chat. Changing the Gmail account's password cancels the app password, so make a new one and update Supabase if that happens.
+
+If invites land in spam, ask the MAOs to mark the first one as not spam. Google's own advice is to prefer other sign-in methods over app passwords, but Supabase's email settings only take a password. Only invites and password resets are sent, so the volume stays low.
+
+## Customizing the map
+
+An Admin can change these from **Admin** in the header. Changes reach every open map within a couple of seconds, with no code release.
+
+| Page | What it changes |
+|---|---|
+| **Intervention types** | Add a type or activate one, which adds its layer to the map. Set its name, color, icon, geometry, which standard fields are required or hidden, its status list, and its custom fields |
+| **Categories** | What a record is within its type, with its group and icon |
+| **Programs** | Banner programs. A program's color is the color of its markers everywhere, including exports |
+| **Statuses** | All the status names. Each type picks its own list on its page |
+| **Other lists** | Category groups, beneficiary types, location bases and icons |
+| **Barangay fields** | The baseline values on each barangay's profile |
+
+- **Nothing is deleted:** lists and fields are archived, so existing records keep their meaning. An archived item leaves the choices for new records, stays on records that have it, and can be restored.
+- **What can't change:** a code or field key, once made. A saved field's kind. A type's geometry once it has records. A status stays on a type's list while any record is at it.
+- **Custom field kinds:** text, number, date, dropdown, yes or no, and photo. Barangay fields can't be photos, as photos belong to a record.
+- **Icons:** upload a simple one-color SVG with a `viewBox`, up to 20 KB. Files holding scripts or links are refused.
+- **Line and polygon types:** these can be set up but **not activated until drawing them on the map is built**. Their Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses it too, so no record is saved without a shape.
+- **Two Admins at once:** if someone else saves a type or the barangay fields while you're editing them, you're told, and your save is held until you load their version.
 
 ## Exports
 
@@ -178,7 +226,7 @@ npm run test:e2e:live
 Remove-Item Env:LIVE_URL
 ```
 
-These tests create temporary `e2e-test-` accounts and test records, then remove them, including from the audit log. If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
+These tests create temporary `e2e-test-` accounts, test records and list items, then remove them, including from the audit log. They make invite links rather than sending invite emails, so test the email itself as described in [Before inviting the MAOs](#before-inviting-the-maos). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
 
 ## Working on the code
 

@@ -1,0 +1,4 @@
+# Only what deploying the Edge Function needs. The function checks the caller's login itself, so it
+# works with Supabase's newer signing keys, and answers browsers' preflight requests.
+[functions.admin-users]
+verify_jwt = false

@@ -24,7 +24,8 @@
     "export:samples": "tsx scripts/export-samples.ts",
     "backup": "tsx scripts/backup.ts",
     "restore": "tsx scripts/restore.ts",
-    "deploy": "npm run build && npx netlify-cli deploy --prod --dir=dist"
+    "deploy": "npm run build && npx netlify-cli deploy --prod --dir=dist",
+    "deploy:functions": "tsx scripts/deploy-functions.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

@@ -277,6 +277,25 @@ describe('restoring into a new, empty database', () => {
     expect(row.rows[0]).toEqual({ remarks: null, n: 200 });
   });
 
+  it('can restore a backup made before a column was added, which keeps its default', async () => {
+    const older = JSON.parse(JSON.stringify(snapshot)) as Snapshot;
+    for (const table of ['intervention_types', 'barangay_field_schema']) {
+      for (const row of older.tables[table]) delete row.version;
+    }
+    for (const row of older.tables.category_groups) delete row.icon_id;
+
+    await restoreSnapshot(fresh, older, { replace: true });
+
+    const versions = await fresh.query<{ version: number }>('select version from public.intervention_types');
+    expect(versions.rows.length).toBeGreaterThan(0);
+    expect(versions.rows.every((row) => row.version >= 1)).toBe(true);
+    expect((await fresh.query<{ version: number }>('select version from public.barangay_field_schema')).rows[0].version).toBeGreaterThanOrEqual(1);
+    const records = await fresh.query<{ n: number }>('select count(*)::int as n from public.interventions');
+    expect(records.rows[0].n).toBe(snapshot.tables.interventions.length);
+
+    await restoreSnapshot(fresh, snapshot, { replace: true });
+  });
+
   it('changes nothing if the barangay list doesn\'t match', async () => {
     const before = await fingerprint(fresh);
     const wrong = { ...snapshot, barangays: [{ ...snapshot.barangays[0], psgc_code: 'WRONG' }, ...snapshot.barangays.slice(1)] };

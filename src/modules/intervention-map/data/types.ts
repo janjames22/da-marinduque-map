@@ -37,6 +37,7 @@ export interface Icon {
   id: number;
   name: string;
   image: string;
+  is_active: boolean;
 }
 
 export interface Program {
@@ -50,22 +51,35 @@ export interface Program {
 
 export interface Category {
   id: number;
+  code: string;
   name: string;
   intervention_type_id: number | null;
+  category_group_id: number | null;
   icon_id?: number | null;
   sort_order: number;
   is_active: boolean;
+}
+
+export interface CategoryGroup {
+  id: number;
+  code: string;
+  name: string;
+  icon_id: number | null;
+  sort_order: number;
 }
 
 export interface Status {
   id: number;
   name: string;
   color: string;
+  sort_order: number;
+  is_active: boolean;
 }
 
 export interface LocationBasis {
   id: number;
   name: string;
+  color: string;
   sort_order: number;
   is_active: boolean;
 }
@@ -90,6 +104,7 @@ export interface InterventionType {
   field_schema: FieldSchema;
   sort_order: number;
   is_active: boolean;
+  version: number;
 }
 
 export interface TypeStatus {
@@ -197,6 +212,7 @@ export interface AuditEntry {
 export interface MapData {
   icons: Icon[];
   programs: Program[];
+  categoryGroups: CategoryGroup[];
   categories: Category[];
   statuses: Status[];
   locationBases: LocationBasis[];
@@ -206,6 +222,7 @@ export interface MapData {
   municipalities: Municipality[];
   barangays: Barangay[];
   barangayFields: FieldSchema;
+  barangayFieldsVersion: number;
   interventions: Intervention[];
   links: InterventionBarangay[];
   statusHistory: StatusEntry[];

@@ -60,8 +60,8 @@ export const coreFieldLabel = (key: string) => CORE_LABELS[key] ?? key;
 
 export interface ValidationContext {
   type: InterventionType;
-  categories: Category[];
-  barangays: Barangay[];
+  categories: Pick<Category, 'id' | 'intervention_type_id'>[];
+  barangays: Pick<Barangay, 'id' | 'municipality_id'>[];
   now?: Date;
 }
 
@@ -73,6 +73,12 @@ export function validateIntervention(
   { type, categories, barangays, now }: ValidationContext,
 ): FieldErrors {
   const errors: FieldErrors = {};
+
+  // Mirrors interventions_need_a_shape. A point record can wait for its coordinates, but a line or
+  // polygon record has nothing to show without its shape, and there's no way to draw one yet.
+  if (previous === null && type.geometry_kind !== 'point' && values.point === null) {
+    errors.intervention_type_id = `${type.name} needs a shape, and drawing tools aren't built yet.`;
+  }
 
   if (!values.municipality_id) errors.municipality_id = 'Choose a municipality.';
 

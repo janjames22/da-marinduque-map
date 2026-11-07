@@ -23,6 +23,10 @@ run(async () => {
     add('Reading auth settings', false, `HTTP ${settings.status}. Check the URL and publishable key.`);
   }
 
+  // A browser's preflight needs no login, and says whether the function is there at all.
+  const usersFunction = await fetch(`${projectUrl()}/functions/v1/admin-users`, { method: 'OPTIONS' }).catch(() => null);
+  add('The Users page function is deployed', usersFunction?.ok === true, usersFunction?.ok ? '' : 'Run npm run deploy:functions');
+
   const visitor = createClient(projectUrl(), publicKey(), { auth: { persistSession: false } });
   for (const table of ['interventions', 'interventions_v', 'audit_log', 'profiles', 'barangays']) {
     const { data, error } = await visitor.from(table).select('*').limit(1);
