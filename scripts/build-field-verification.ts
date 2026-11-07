@@ -52,6 +52,12 @@ const CORRECTION_LABELS: Record<string, string> = {
   beneficiary: 'Beneficiary',
 };
 
+// What the MAOs need to know that the report can't say. This sheet comes from the report, not the live
+// map, so a change on the live map doesn't reach it by itself.
+const FIELD_NOTES: Record<string, string> = {
+  'RAED-2026-10-21-183': 'Test move on 2026-11-06 — RAED source says Buliasnin, 13.4423992, 121.82795; confirm actual location with Boac MAO',
+};
+
 function plottedIn(record: FlaggedRecord): string | null {
   return record.plotted_barangay ? `${record.plotted_barangay}, ${record.plotted_municipality}` : null;
 }
@@ -119,7 +125,7 @@ export async function buildVerificationRows(db: Queryable, corrections: Correcti
     Beneficiary: record.beneficiary ?? '',
     'Municipality (encoded)': record.municipality,
     'Barangay (encoded)': record.barangay_raw ?? '',
-    Issue: describeIssues(record),
+    Issue: [describeIssues(record), FIELD_NOTES[record.source_id]].filter(Boolean).join('; '),
     'Suggested value': suggest(
       record,
       corrections.filter((c) => c.source_id === record.source_id && c.status === 'proposed'),

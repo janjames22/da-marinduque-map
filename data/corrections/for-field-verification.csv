@@ -1,6 +1,6 @@
 ﻿ID,Type,Machine / project,Beneficiary,Municipality (encoded),Barangay (encoded),Issue,Suggested value,Verified barangay,Verified latitude,Verified longitude,Location basis
 RAED-2026-10-21-192,Farm Machinery,Hand Tractor (Walking-type) - Rotary-Tilling type,Balimbing Farmers Association,Boac,,No coordinates; No barangay encoded,,,,,
-RAED-2026-10-21-183,Farm Machinery,Hand Tractor (Walking-type) - Pull type,Buliasnin Agricultural Services and Livelihood Association,Boac,Buliasnin,"Plotted in Bangbangalon, Boac, encoded as Buliasnin, Boac","Point is in Bangbangalon, Boac",,,,
+RAED-2026-10-21-183,Farm Machinery,Hand Tractor (Walking-type) - Pull type,Buliasnin Agricultural Services and Livelihood Association,Boac,Buliasnin,"Plotted in Bangbangalon, Boac, encoded as Buliasnin, Boac; Test move on 2026-11-06 — RAED source says Buliasnin, 13.4423992, 121.82795; confirm actual location with Boac MAO","Point is in Bangbangalon, Boac",,,,
 RAED-2026-10-21-178,Farm Machinery,Hand Tractor (Walking-type) - Pull type,Jrc-Mandama Farmers Association,Boac,Ihatub,No coordinates,,,,,
 RAED-2026-10-21-197,SSIP,Installation Of Solar Power Irrigation System,Gintong Butil Organic Farm Association,Boac,Ihatub,No coordinates,,,,,
 RAED-2026-10-21-012,Farm Machinery,Corn Mill,Provincial Government Unit of Boac,Boac,Santol,"Plotted in Ihatub, Boac, encoded as Santol, Boac","Point is in Ihatub, Boac",,,,

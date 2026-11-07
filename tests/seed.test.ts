@@ -786,6 +786,13 @@ describe('field verification sheet', () => {
     expect(parsed.data).toHaveLength(sheet.length);
   });
 
+  it('carries a note the report can\'t give, after the record\'s own issue', () => {
+    expect(rowFor('183').Issue).toBe(
+      'Plotted in Bangbangalon, Boac, encoded as Buliasnin, Boac; Test move on 2026-11-06 — RAED source says Buliasnin, 13.4423992, 121.82795; confirm actual location with Boac MAO',
+    );
+    expect(sheet.filter((row) => row.Issue.includes('Test move'))).toHaveLength(1);
+  });
+
   it('leaves out proposals that were rejected', async () => {
     const rejected = correctionsFile.map((c) => ({ ...c, status: 'rejected' }));
     const without = await buildVerificationRows(db, rejected);
