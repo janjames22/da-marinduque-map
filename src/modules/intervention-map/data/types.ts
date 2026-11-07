@@ -209,6 +209,17 @@ export interface AuditEntry {
   at: string;
 }
 
+export interface SavedView {
+  id: string;
+  name: string;
+  owner_id: string;
+  config: unknown; // read through readViewConfig, as it can outlive what it points at
+  is_shared: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MapData {
   icons: Icon[];
   programs: Program[];
@@ -229,4 +240,5 @@ export interface MapData {
   photos: InterventionPhoto[];
   dataSources: string[];
   members: Member[];
+  savedViews: SavedView[];
 }

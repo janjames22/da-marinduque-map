@@ -213,7 +213,7 @@ test.describe('choropleth modes', () => {
     expect(await legendCount(page, 'None encoded yet')).toBeGreaterThan(125);
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
 
-    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await page.getByLabel('Layers and filters').getByRole('button', { name: 'Clear filters' }).click();
     expect(await legendCount(page, 'None encoded yet')).toBe(125);
   });
 
@@ -260,8 +260,9 @@ test.describe('layer panel', () => {
     const panel = page.getByLabel('Layers and filters');
     await expect(panel.getByLabel(/Farm Machinery/)).toBeChecked();
     await expect(panel.getByLabel(/SSIP/)).toBeChecked();
+    // Only the switches: SSIP's own "Service area (ha)" field is rightly offered in the field filters.
     for (const hidden of ['Farm-to-Market Road', 'Postharvest Facility', 'Irrigation Canal', 'Service Area']) {
-      await expect(panel.getByText(hidden)).toHaveCount(0);
+      await expect(panel.getByRole('checkbox', { name: hidden })).toHaveCount(0);
     }
   });
 

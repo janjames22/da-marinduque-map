@@ -2,6 +2,7 @@
 // the dialog can count records without loading any of it.
 import type { Intervention, InterventionBarangay, MapData } from '../data/types';
 import { visibleRecords, type ViewFilters } from '../lib/choropleth';
+import { describeFieldFilter, viewFields } from '../lib/view-fields';
 
 export type ExportFormat = 'kmz' | 'kml' | 'csv' | 'geojson' | 'shp';
 
@@ -18,6 +19,9 @@ export interface ExportSelection {
   barangayId?: number | null;
   // Only what's in the current map view.
   mapBounds?: GeoBounds | null;
+  // From the records table: exactly its rows, in its order, and what it was searched for.
+  recordIds?: string[] | null;
+  search?: string | null;
 }
 
 function eachPosition(geometry: GeoJSON.Geometry, visit: (position: number[]) => void) {
@@ -43,7 +47,7 @@ export function geometryBounds(geometry: GeoJSON.Geometry): GeoBounds {
   return bounds;
 }
 
-const overlaps = (a: GeoBounds, b: GeoBounds) => a.west <= b.east && a.east >= b.west && a.south <= b.north && a.north >= b.south;
+export const overlaps = (a: GeoBounds, b: GeoBounds) => a.west <= b.east && a.east >= b.west && a.south <= b.north && a.north >= b.south;
 
 export function selectionView({ view, barangayId }: ExportSelection, data: Pick<MapData, 'barangays'>): ViewFilters {
   if (barangayId == null) return view;
@@ -60,9 +64,12 @@ export function selectExportRecords(
   data: Pick<MapData, 'barangays'>,
 ): Intervention[] {
   const chosen = visibleRecords(records, selectionView(selection, data), links);
-  const { mapBounds } = selection;
-  if (!mapBounds) return chosen;
-  return chosen.filter((record) => record.geojson !== null && overlaps(geometryBounds(record.geojson), mapBounds));
+  const { mapBounds, recordIds } = selection;
+  const inView = mapBounds ? chosen.filter((record) => record.geojson !== null && overlaps(geometryBounds(record.geojson), mapBounds)) : chosen;
+  if (!recordIds) return inView;
+  // A record changed since the table was read may have left the filters, and doesn't come back here.
+  const byId = new Map(inView.map((record) => [record.id, record]));
+  return recordIds.map((id) => byId.get(id)).filter((record): record is Intervention => record !== undefined);
 }
 
 // A record with no coordinates has nowhere to go in a map file.
@@ -82,6 +89,8 @@ export interface ExportFilters {
   municipality: string | null;
   barangay: string | null;
   mapView: boolean;
+  fields: string[];
+  search: string | null;
 }
 
 export function describeFilters(selection: ExportSelection, data: MapData): ExportFilters {
@@ -89,6 +98,7 @@ export function describeFilters(selection: ExportSelection, data: MapData): Expo
   const activeTypes = data.types.filter((t) => t.is_active).sort((a, b) => a.sort_order - b.sort_order);
   const shownTypes = activeTypes.filter((t) => (view.mode === 'type' ? t.id === view.pickedTypeId : true) && !view.hiddenTypeIds.includes(t.id));
   const programId = view.mode === 'program' ? view.pickedProgramId : view.programId;
+  const fields = view.fieldFilters?.length ? viewFields(data) : [];
   return {
     types: shownTypes.map((t) => t.name),
     allTypes: shownTypes.length === activeTypes.length,
@@ -98,6 +108,8 @@ export function describeFilters(selection: ExportSelection, data: MapData): Expo
     municipality: data.municipalities.find((m) => m.id === view.municipalityId)?.name ?? null,
     barangay: data.barangays.find((b) => b.id === view.barangayId)?.name ?? null,
     mapView: Boolean(selection.mapBounds),
+    fields: (view.fieldFilters ?? []).map((filter) => describeFieldFilter(filter, fields)).filter((line): line is string => line !== null),
+    search: selection.search?.trim() || null,
   };
 }
 
@@ -115,6 +127,8 @@ export function filterLines(filters: ExportFilters): string[] {
     filters.allTypes ? null : `Type: ${filters.types.join(', ') || 'none'}`,
     filters.program ? `Program: ${filters.program}` : null,
     years ? `Year funded: ${years}` : null,
+    ...filters.fields,
+    filters.search ? `Search: "${filters.search}"` : null,
     filters.mapView ? 'Only the current map view' : null,
   ].filter((line): line is string => line !== null);
 }
@@ -138,6 +152,8 @@ export function exportFileStem(filters: ExportFilters, date: string): string {
       .filter((part): part is string => Boolean(part))
       .map(namePart),
     years?.replace(' ', ''), // the hyphen in 2020-2024 stays
+    // Too long to spell out, and a search can be someone's name. The dialog, the audit log and a KML's Read me list them.
+    filters.fields.length > 0 || filters.search ? 'Filtered' : null,
     filters.mapView ? 'MapView' : null,
   ].filter(Boolean);
   return `Marinduque_${scope.join('_') || 'Province'}_${date}`;

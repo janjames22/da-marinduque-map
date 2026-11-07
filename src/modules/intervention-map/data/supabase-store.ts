@@ -2,13 +2,16 @@
 // tests can run this file against the real database functions. The database makes every decision;
 // the checks here only let a form point at the exact field instead of showing a database message.
 import { fieldSchemaChangeProblem, fieldSchemaProblem, validateLookup, validateTypeChange, type LookupRules } from '../lib/admin-rules';
+import { manilaDayEnd, manilaDayStart } from '../lib/dates';
 import { valuesFromRecord } from '../lib/form-values';
 import { readPhotoMeta } from '../lib/photo-meta';
+import { savedViewProblems } from '../lib/saved-views';
 import { newUuid } from '../lib/uuid';
 import { validateAttributes, validateIntervention, validateStatus } from '../lib/validation';
 import {
   ConflictError,
   ValidationError,
+  type AuditPage,
   type ChangeNote,
   type ConnectionListener,
   type DataStore,
@@ -35,6 +38,7 @@ import type {
   Member,
   Municipality,
   Program,
+  SavedView,
   Status,
   StatusEntry,
   TypeStatus,
@@ -56,7 +60,8 @@ export interface SupabaseBackend {
   selectAll<T>(table: string, columns: string, orderBy: string[]): Promise<T[]>;
   selectById<T>(table: string, columns: string, id: string | number): Promise<T | null>;
   insertRow(table: string, values: Record<string, unknown>): Promise<void>;
-  updateRow(table: string, id: number, values: Record<string, unknown>): Promise<void>;
+  updateRow(table: string, id: number | string, values: Record<string, unknown>): Promise<void>;
+  deleteRow(table: string, id: string): Promise<void>;
   // Things only a server can do, as they take the project's secret key.
   invokeFunction?<T>(name: string, body: Record<string, unknown>): Promise<T>;
   uploadPhoto(path: string, file: Blob, contentType: string): Promise<void>;
@@ -241,6 +246,7 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         photos,
         batches,
         members,
+        savedViews,
       ] = await Promise.all([
         all<Icon>('icons'),
         all<Program>('programs', '*', ['sort_order', 'id']),
@@ -264,6 +270,7 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         all<InterventionPhoto>('intervention_photos', 'id,intervention_id,storage_path,caption,taken_at,exif_location,created_at'),
         all<{ data_source: string }>('import_batches', 'data_source', ['imported_at', 'id']),
         backend.rpc<Member[]>('member_names', {}),
+        all<SavedView>('saved_views', 'id,name,owner_id,config,is_shared,is_default,created_at,updated_at', ['name', 'id']),
       ]);
 
       loaded = {
@@ -286,6 +293,7 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         photos,
         dataSources: [...new Set(batches.map((batch) => batch.data_source))],
         members,
+        savedViews,
       };
       return loaded;
     },
@@ -457,6 +465,47 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
       if (problem) throw new ValidationError({ field_schema: problem });
       await call('save_barangay_fields', { p_expected_version: expectedVersion, p_schema: schema, p_note: { kind: 'admin' } });
       notify();
+    },
+
+    async saveView(id, values) {
+      if (loaded) {
+        const errors = savedViewProblems(values, loaded.savedViews, user.id, id);
+        if (Object.keys(errors).length > 0) throw new ValidationError(errors);
+      }
+      try {
+        if (id === null) await backend.insertRow('saved_views', { ...values });
+        else await backend.updateRow('saved_views', id, { ...values });
+      } catch (error) {
+        throw friendlyError(error);
+      }
+      notify();
+    },
+
+    async deleteView(id) {
+      try {
+        await backend.deleteRow('saved_views', id);
+      } catch (error) {
+        throw friendlyError(error);
+      }
+      notify();
+    },
+
+    async setDefaultView(id) {
+      await call('set_default_view', { p_id: id });
+      notify();
+    },
+
+    auditLog({ actorId, noActor, recordIds, action, from, to, page, pageSize }) {
+      return call<AuditPage>('audit_log_page', {
+        p_actor: actorId ?? null,
+        p_no_actor: noActor ?? false,
+        p_records: recordIds ?? null,
+        p_action: action ?? null,
+        p_from: from ? manilaDayStart(from) : null,
+        p_to: to ? manilaDayEnd(to) : null,
+        p_limit: pageSize,
+        p_offset: page * pageSize,
+      });
     },
 
     people: createPeopleApi(backend),

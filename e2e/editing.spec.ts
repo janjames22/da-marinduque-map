@@ -846,6 +846,77 @@ test.describe('editing a record', () => {
     const history = page.getByLabel('Change history');
     await expect(history).toContainText('Serial No.: (none) → SN-001');
     await expect(history).toContainText('Remarks: (none) → Checked on site');
+    // Only a change of barangay asks for a reason.
+    await expect(history).not.toContainText('Reason:');
+  });
+
+  test('changing the barangay needs a reason, which goes in the log', async ({ page }) => {
+    await openPopup(page, cleanRecord);
+    const before = await storedRecord(page, cleanRecord.id);
+    await popupAction(page, 'Edit').click();
+    const edit = form(page, 'Edit record');
+    const reason = edit.getByLabel(/^Reason for changing the barangay/);
+    const asked = edit.getByText('Give a reason. It goes in the audit log.');
+    const save = edit.getByRole('button', { name: 'Save changes' });
+    await expect(reason).toHaveCount(0);
+
+    const other = seed.barangays.find((b) => b.municipality_id === cleanRecord.municipality_id && b.id !== cleanRecord.barangay_id)!;
+    await select(edit, 'Barangay').selectOption(String(other.id));
+    await expect(reason).toBeVisible();
+
+    // Nothing is saved without one, and spaces don't count.
+    await save.click();
+    await expect(asked).toBeVisible();
+    await reason.fill('   ');
+    await save.click();
+    await expect(asked).toBeVisible();
+    expect((await storedRecord(page, cleanRecord.id)).version).toBe(before.version);
+
+    await reason.fill('  Checked with the MAO  ');
+    await save.click();
+    await expect(edit).toHaveCount(0);
+    expect((await storedRecord(page, cleanRecord.id)).version).toBe(before.version + 1);
+
+    await popupAction(page, 'History').click();
+    const history = page.getByLabel('Change history');
+    await expect(history).toContainText('Reason: Checked with the MAO');
+    await expect(history).toContainText(`→ ${other.name}`);
+  });
+
+  test('putting the barangay back drops the question', async ({ page }) => {
+    await openPopup(page, cleanRecord);
+    await popupAction(page, 'Edit').click();
+    const edit = form(page, 'Edit record');
+    const barangay = select(edit, 'Barangay');
+    const reason = edit.getByLabel(/^Reason for changing the barangay/);
+    const other = seed.barangays.find((b) => b.municipality_id === cleanRecord.municipality_id && b.id !== cleanRecord.barangay_id)!;
+
+    await barangay.selectOption(String(other.id));
+    await edit.getByRole('button', { name: 'Save changes' }).click();
+    await expect(edit.getByText('Give a reason. It goes in the audit log.')).toBeVisible();
+
+    await barangay.selectOption(String(cleanRecord.barangay_id));
+    await expect(reason).toHaveCount(0);
+    await edit.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByText('No changes to save.')).toBeVisible();
+  });
+
+  test('the one-click barangay fix asks too, as it clears a flag', async ({ page }) => {
+    await openPopup(page, mismatchRecord);
+    await popupAction(page, 'Edit').click();
+    const edit = form(page, 'Edit record');
+    await edit.getByRole('button', { name: /^Set barangay to/ }).click();
+    await edit.getByRole('button', { name: 'Save changes' }).click();
+    await expect(edit.getByText('Give a reason. It goes in the audit log.')).toBeVisible();
+    expect((await storedRecord(page, mismatchRecord.id)).qa_flags).toEqual(['barangay_mismatch']);
+
+    await edit.getByLabel(/^Reason for changing the barangay/).fill('Plotted spot is right');
+    await edit.getByRole('button', { name: 'Save changes' }).click();
+    await expect(edit).toHaveCount(0);
+    expect((await storedRecord(page, mismatchRecord.id)).qa_flags).toEqual([]);
+
+    await popupAction(page, 'History').click();
+    await expect(page.getByLabel('Change history')).toContainText('Reason: Plotted spot is right');
   });
 
   test('saving with no changes writes nothing', async ({ page }) => {

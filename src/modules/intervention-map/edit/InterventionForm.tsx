@@ -54,6 +54,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<Record<string, File>>({});
+  const [reason, setReason] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
 
   // A long form can hide the problem off screen, especially on a phone.
@@ -137,10 +138,15 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     }
   };
 
+  // It can clear a flag and moves a record between barangays' counts, so it needs a reason, as
+  // resolving a flag and moving a marker do.
+  const barangayChanged = base !== null && form.barangay_id !== (base.barangay_id === null ? '' : String(base.barangay_id));
+
   const save = async (expectedVersion: number) => {
     if (!type || !values) return;
     const previous = base ? valuesFromRecord(base) : null;
     const found = validateIntervention(values, previous, { type, categories: data.categories, barangays: data.barangays });
+    if (barangayChanged && reason.trim() === '') found.reason = 'Give a reason. It goes in the audit log.';
     if (!record) {
       Object.assign(
         found,
@@ -168,7 +174,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
           setNotice('No changes to save.');
           return;
         }
-        finish(await store.updateIntervention(record.id, expectedVersion, patch, { kind: 'edit' }), 'Saved.');
+        finish(await store.updateIntervention(record.id, expectedVersion, patch, barangayChanged ? { kind: 'edit', reason: reason.trim() } : { kind: 'edit' }), 'Saved.');
       } else {
         const saved = await store.createIntervention(
           values,
@@ -346,6 +352,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
             update({ municipality_id, barangay_id });
           }}
         />
+        {barangayChanged && <TextField label="Reason for changing the barangay" required multiline value={reason} onChange={setReason} error={errors.reason} />}
         <SelectField
           label="Location basis"
           value={form.location_basis_id}

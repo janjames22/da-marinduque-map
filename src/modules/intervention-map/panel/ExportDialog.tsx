@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Intervention, MapData } from '../data/types';
-import { barangaysInScope, type ViewFilters } from '../lib/choropleth';
+import { barangaysInScope, pickViewFilters } from '../lib/choropleth';
 import { manilaToday } from '../lib/dates';
 import {
   describeFilters,
@@ -31,10 +31,7 @@ const isGoogleEarth = (format: ExportFormat) => format === 'kmz' || format === '
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
-function viewFilters(ui: ViewFilters): ViewFilters {
-  const { mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId } = ui;
-  return { mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId };
-}
+const MAP_VIEW_LINE = 'Only the current map view';
 
 function download(bytes: Uint8Array, fileName: string, mimeType: string) {
   const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: mimeType }));
@@ -73,11 +70,14 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
     closeButton.current?.focus();
   }, [open]);
 
-  const view = viewFilters(ui);
+  const view = pickViewFilters(ui);
+  // The records table has already decided, so its rows are what goes.
+  const table = open?.table ?? null;
+  const limitToMap = table ? table.onlyMapView : onlyMapView;
   const selection = useMemo(
-    () => ({ view, barangayId: open?.barangayId ?? null, mapBounds: onlyMapView ? mapBounds : null }),
+    () => ({ view, barangayId: open?.barangayId ?? null, mapBounds: limitToMap ? mapBounds : null, recordIds: table?.recordIds ?? null, search: table?.search ?? null }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(view), open?.barangayId, onlyMapView, mapBounds],
+    [JSON.stringify(view), open?.barangayId, limitToMap, mapBounds, table],
   );
   const records = useMemo(() => selectExportRecords(allRecords, data.links, selection, data), [allRecords, data, selection]);
 
@@ -92,6 +92,7 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
   const fileExtension = format === 'shp' ? 'zip' : format;
   const stem = exportFileStem(filters, manilaToday());
   const barangayName = data.barangays.find((b) => b.id === open.barangayId)?.name;
+  const shownLines = table ? lines : lines.filter((line) => line !== MAP_VIEW_LINE);
 
   const runExport = async () => {
     setBusy(true);
@@ -134,7 +135,7 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
     <div className="export-dialog-backdrop">
       <div className="export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-title">
         <header className="panel-header">
-          <h2 id="export-title">{barangayName ? `Export ${barangayName}` : 'Export'}</h2>
+          <h2 id="export-title">{barangayName ? `Export ${barangayName}` : table ? 'Export the records table' : 'Export'}</h2>
           <button type="button" ref={closeButton} className="close-button" onClick={closeExport} aria-label="Close export">
             ×
           </button>
@@ -154,21 +155,22 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
 
         <fieldset>
           <legend className="section-title">What to include</legend>
-          {lines.filter((line) => line !== 'Only the current map view').length > 0 ? (
+          {table && <p className="field-hint">The table's rows, in its order.</p>}
+          {shownLines.length > 0 ? (
             <ul className="export-filters" aria-label="Filters in force">
-              {lines
-                .filter((line) => line !== 'Only the current map view')
-                .map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
+              {shownLines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
             </ul>
           ) : (
             <p className="field-hint">The whole province. No filters are on.</p>
           )}
-          <label className="choice">
-            <input type="checkbox" checked={onlyMapView} onChange={(event) => setOnlyMapView(event.target.checked)} />
-            Only what's in the current map view
-          </label>
+          {!table && (
+            <label className="choice">
+              <input type="checkbox" checked={onlyMapView} onChange={(event) => setOnlyMapView(event.target.checked)} />
+              Only what's in the current map view
+            </label>
+          )}
         </fieldset>
 
         {isGoogleEarth(format) && (

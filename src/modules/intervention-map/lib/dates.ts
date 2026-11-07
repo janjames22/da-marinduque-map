@@ -7,6 +7,10 @@ export function manilaYear(now: Date = new Date()): number {
   return Number(manilaToday(now).slice(0, 4));
 }
 
+// The first and last moments of a Philippine calendar day, whatever the device's clock says.
+export const manilaDayStart = (day: string) => `${day}T00:00:00.000+08:00`;
+export const manilaDayEnd = (day: string) => `${day}T23:59:59.999+08:00`;
+
 export function isValidDate(text: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
   const parsed = new Date(`${text}T00:00:00Z`);
