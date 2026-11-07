@@ -478,15 +478,22 @@ describe('saved views', () => {
     expect(await attempt('no profile', `insert into saved_views (name) values ('Mine')`)).toMatchObject({ ok: false, code: '42501' });
   });
 
-  it('lets owners edit and delete their views, and nobody else', async () => {
+  it('lets owners edit and delete their views, and an Admin take down a shared one', async () => {
     const edit = `update saved_views set name = 'x' where id = 'd0000000-0000-4000-8000-000000000002'`;
     const remove = `delete from saved_views where id = 'd0000000-0000-4000-8000-000000000002'`;
+    const removePersonal = `delete from saved_views where id = 'd0000000-0000-4000-8000-000000000001'`;
     expect((await attempt('encoder', edit)).affected).toBe(1);
     expect((await attempt('encoder', remove)).affected).toBe(1);
-    for (const account of ['admin', 'viewer'] as const) {
-      expect((await attempt(account, edit)).affected, account).toBe(0);
-      expect((await attempt(account, remove)).affected, account).toBe(0);
-    }
+    expect((await attempt('encoder', removePersonal)).affected).toBe(1);
+
+    expect((await attempt('viewer', edit)).affected).toBe(0);
+    expect((await attempt('viewer', remove)).affected).toBe(0);
+    expect((await attempt('viewer', removePersonal)).affected).toBe(0);
+
+    // Such as one left by someone who has moved on. It stays theirs to edit, and a personal one stays out of reach.
+    expect((await attempt('admin', edit)).affected).toBe(0);
+    expect((await attempt('admin', remove)).affected).toBe(1);
+    expect((await attempt('admin', removePersonal)).affected).toBe(0);
   });
 });
 

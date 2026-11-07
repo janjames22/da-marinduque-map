@@ -56,13 +56,19 @@ function KeepSizeInSync() {
   return null;
 }
 
-// An export can be limited to what's on screen.
-function ReportBounds() {
+// An export or the dashboard can be limited to what's on screen, and a saved view keeps where it is.
+function ReportPosition() {
   const map = useMap();
   useEffect(() => {
     const report = () => {
       const bounds = map.getBounds();
-      useExportUi.getState().setMapBounds({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() });
+      const center = map.getCenter();
+      useExportUi
+        .getState()
+        .setMapPosition(
+          { west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() },
+          { center: [center.lat, center.lng], zoom: map.getZoom() },
+        );
     };
     report();
     map.on('moveend', report);
@@ -73,22 +79,33 @@ function ReportBounds() {
   return null;
 }
 
+// Comes after the barangays, as they fit the map to the island when they first draw.
+function GoToSavedExtent() {
+  const map = useMap();
+  const focusExtent = useMapUi((state) => state.focusExtent);
+  useEffect(() => {
+    if (focusExtent) map.setView(focusExtent.center, focusExtent.zoom, { animate: false });
+  }, [focusExtent, map]);
+  return null;
+}
+
 interface MapViewProps {
   data: MapData;
   boundaries: Boundaries;
   shading: Shading;
   counts: Map<number, number>;
   markers: Intervention[];
+  colorOf(record: Intervention): string;
   selectedBarangayId: number | null;
   onSelectBarangay(id: number): void;
 }
 
-export function MapView({ data, boundaries, shading, counts, markers, selectedBarangayId, onSelectBarangay }: MapViewProps) {
+export function MapView({ data, boundaries, shading, counts, markers, colorOf, selectedBarangayId, onSelectBarangay }: MapViewProps) {
   return (
     <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} maxZoom={MAX_ZOOM} className="map" zoomSnap={0.5}>
       <Basemap />
       <KeepSizeInSync />
-      <ReportBounds />
+      <ReportPosition />
       <BarangayLayer
         data={data}
         geojson={boundaries.barangays}
@@ -97,8 +114,9 @@ export function MapView({ data, boundaries, shading, counts, markers, selectedBa
         selectedId={selectedBarangayId}
         onSelect={onSelectBarangay}
       />
+      <GoToSavedExtent />
       <BoundaryLines province={boundaries.province} municipalities={boundaries.municipalities} />
-      <InterventionLayer data={data} records={markers} />
+      <InterventionLayer data={data} records={markers} colorOf={colorOf} />
       <DraftLayer />
     </MapContainer>
   );

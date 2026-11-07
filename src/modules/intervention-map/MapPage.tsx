@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from 'react';
-import { useMatch, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { LocalSeedMissingError } from './data/store';
 import type { AppUser, MapData } from './data/types';
 import {
@@ -7,13 +7,18 @@ import {
   buildShading,
   countByBarangay,
   liveRecords,
+  pickViewFilters,
   recordsInView,
   unassignedRecords,
   visibleRecords,
   type ChoroplethMode,
 } from './lib/choropleth';
+import { isOnMap } from './lib/display';
+import { readViewConfig } from './lib/saved-views';
+import { buildColorScale, viewFields } from './lib/view-fields';
 import { EditPanelHost } from './edit/EditPanelHost';
 import { MoveConfirm } from './edit/MoveConfirm';
+import { openRecordPanel } from './edit/open-panel';
 import { ConnectionNotice, Notice, PhotoDialog } from './edit/RecordPanels';
 import { MapView } from './map/MapView';
 import { BarangayProfile } from './panel/BarangayProfile';
@@ -27,6 +32,9 @@ import { useMapUi } from './state/map-ui';
 import { StoreContext, usePermissions } from './state/store-context';
 import { useMapData, type Boundaries } from './state/use-map-data';
 
+// Only loaded when opened, so the map doesn't carry the chart library.
+const InsightsPanel = lazy(() => import('./dashboard/InsightsPanel'));
+
 function shadingTitle(mode: ChoroplethMode, data: MapData, programId: number | null, typeId: number | null) {
   if (mode === 'gap') return 'No intervention yet';
   if (mode === 'program') return data.programs.find((p) => p.id === programId)?.name ?? 'By program';
@@ -36,6 +44,8 @@ function shadingTitle(mode: ChoroplethMode, data: MapData, programId: number | n
 
 function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundaries }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const recordLink = useMatch('/records/:id');
   const match = useMatch('/barangays/:id');
   const selectedId = match ? Number(match.params.id) : null;
   const selected = data.barangays.find((b) => b.id === selectedId) ?? null;
@@ -46,7 +56,45 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   const setPicking = useEditUi((state) => state.setPicking);
   const openPanel = useEditUi((state) => state.openPanel);
   const closePanel = useEditUi((state) => state.closePanel);
-  const { canEdit } = usePermissions();
+  const { canEdit, canSeeHistory } = usePermissions();
+
+  // Before the first paint, so the map doesn't flash up as something else. A link to a particular
+  // place or record is asking for that instead.
+  useLayoutEffect(() => {
+    const state = useMapUi.getState();
+    if (state.defaultViewHandled) return;
+    state.markDefaultViewHandled();
+    const view = data.savedViews.find((candidate) => candidate.is_default);
+    if (view && location.pathname === '/') {
+      state.applyView(readViewConfig(view.config, data));
+      useEditUi.getState().setNotice(`Opened on the shared view "${view.name}".`);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A link to one record, such as from the audit log, shows it whatever filters were on.
+  useEffect(() => {
+    const id = recordLink?.params.id;
+    if (!id) return;
+    navigate('/', { replace: true });
+    const state = useMapUi.getState();
+    const edit = useEditUi.getState();
+    const record = data.interventions.find((candidate) => candidate.id === id);
+    if (!record) {
+      edit.setNotice('That record wasn\'t found. It may have been removed.');
+      return;
+    }
+    const isActive = data.types.some((type) => type.id === record.intervention_type_id && type.is_active);
+    if (record.deleted_at === null && isActive && isOnMap(record)) {
+      state.showEverything();
+      if (globalThis.matchMedia?.('(max-width: 800px)').matches) state.setInsights(null);
+      state.zoomToRecord(id);
+    } else if (canSeeHistory) {
+      openRecordPanel('history', record);
+      edit.setNotice(record.deleted_at ? 'This record was deleted, so it isn\'t on the map. Here\'s its history.' : 'This record isn\'t on the map. Here\'s its history.');
+    } else {
+      edit.setNotice('This record isn\'t on the map.');
+    }
+  }, [recordLink?.params.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const firstProgram = data.programs.filter((p) => p.is_active).sort((a, b) => a.sort_order - b.sort_order)[0];
@@ -63,10 +111,10 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
 
   const allRecords = useMemo(() => liveRecords(data.interventions, data.types), [data.interventions, data.types]);
 
-  const { mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId } = ui;
+  const { mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId, fieldFilters, colorBy } = ui;
   const view = useMemo(
-    () => ({ mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId }),
-    [mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId],
+    () => pickViewFilters({ mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId, fieldFilters }),
+    [mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId, fieldFilters],
   );
   const inView = useMemo(() => recordsInView(allRecords, view, data.links), [allRecords, view, data.links]);
   const scoped = useMemo(() => barangaysInScope(data.barangays, view), [data.barangays, view]);
@@ -79,6 +127,9 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   );
 
   const markers = useMemo(() => visibleRecords(allRecords, view, data.links), [allRecords, view, data.links]);
+  const fields = useMemo(() => viewFields(data), [data]);
+  // Over all records, not the filtered ones, so a filter can't change what a color means.
+  const scale = useMemo(() => buildColorScale(colorBy, allRecords, data, fields), [colorBy, allRecords, data, fields]);
 
   const openBarangay = (id: number) => {
     ui.setShowUnassigned(false);
@@ -94,8 +145,27 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
     openBarangay(id);
   };
 
+  const otherPanel = Boolean(selected || ui.showUnassigned || panel);
+  // Once opened it stays mounted, so the table keeps its place while the map has a turn.
+  const insightsOpened = useRef(false);
+  if (ui.insights) insightsOpened.current = true;
+
+  const layout = otherPanel ? ' has-right-panel' : ui.insights ? ` has-insights${ui.insightsWide ? ' insights-wide' : ''}` : '';
+
   return (
-    <main className={`workspace${selected || ui.showUnassigned || panel ? ' has-right-panel' : ''}`}>
+    <main className={`workspace${layout}`}>
+      <nav className="phone-tabs" aria-label="Views">
+        <button type="button" aria-pressed={!ui.insights} onClick={() => ui.setInsights(null)}>
+          Map
+        </button>
+        <button type="button" aria-pressed={ui.insights === 'dashboard'} onClick={() => ui.setInsights('dashboard')}>
+          Dashboard
+        </button>
+        <button type="button" aria-pressed={ui.insights === 'records'} onClick={() => ui.setInsights('records')}>
+          List
+        </button>
+      </nav>
+
       <LayerPanel
         data={data}
         records={allRecords}
@@ -117,6 +187,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
           shading={shading}
           counts={counts}
           markers={markers}
+          colorOf={scale.colorOf}
           selectedBarangayId={selectedId}
           onSelectBarangay={onMapSelectBarangay}
         />
@@ -155,6 +226,11 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
               </svg>
               Export
             </button>
+            {!ui.insights && !otherPanel && (
+              <button type="button" className="export-button insights-open-button" onClick={() => ui.setInsights('dashboard')}>
+                Dashboard
+              </button>
+            )}
           </div>
         )}
         {picking && (
@@ -173,6 +249,8 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
           shading={shading}
           totalBarangays={scoped.length}
           unassigned={unassigned.length}
+          scale={scale}
+          markers={markers}
           onShowUnassigned={() => {
             closeProfile();
             ui.setShowUnassigned(true);
@@ -191,6 +269,11 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
             <UnassignedPanel records={unassigned} data={data} onClose={() => ui.setShowUnassigned(false)} />
           )}
         </>
+      )}
+      {insightsOpened.current && (
+        <Suspense fallback={ui.insights && !otherPanel ? <aside className="panel panel-right insights-panel">Loading the dashboard…</aside> : null}>
+          <InsightsPanel data={data} boundaries={boundaries} allRecords={allRecords} covered={otherPanel} />
+        </Suspense>
       )}
       <PhotoDialog />
       <ExportDialog data={data} boundaries={boundaries} allRecords={allRecords} />

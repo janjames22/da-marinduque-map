@@ -65,7 +65,14 @@ export function createPgliteBackend(db: PGlite, userId: string): PgliteBackend {
       });
     },
 
-    updateRow(table: string, id: number, values: Record<string, unknown>) {
+    deleteRow(table: string, id: string) {
+      return asUser(async () => {
+        const { affectedRows } = await db.query(`delete from public.${table} where id = $1`, [id]);
+        if (!affectedRows) throw Object.assign(new Error('Nothing was changed.'), { code: '42501' });
+      });
+    },
+
+    updateRow(table: string, id: number | string, values: Record<string, unknown>) {
       const keys = Object.keys(values);
       return asUser(async () => {
         const { affectedRows } = await db.query(

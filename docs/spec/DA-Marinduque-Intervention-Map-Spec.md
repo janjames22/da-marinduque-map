@@ -175,7 +175,7 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 | `icons` | id, name, image. KML/KMZ exports use a PNG version |
 | `municipalities` | id, name, psgc_code, boundary |
 | `intervention_photos` | id, intervention_id, storage_path, caption, taken_at, exif_location |
-| `saved_views` | id, name, owner_id, config (layers, filters, style, extent, basemap), is_shared |
+| `saved_views` | id, name, owner_id, config (layers, filters, style, extent, basemap), is_shared, is_default. One person's names don't repeat, and at most one view is the default |
 | `import_batches` | id, file_name, data_source, intervention_type_id, column_mapping, counts, imported_by, imported_at |
 | `profiles` | id, full_name, role |
 | `audit_log` | id, table_name, record_id, action, old_row, new_row, actor_id, context, at. Covers every create, edit and delete, including admin changes. `context` holds extra detail, such as the evidence behind a correction |
@@ -239,13 +239,14 @@ Admins can edit these lists per type.
 
 - **Layer panel:** each active intervention type is its own toggleable layer, plus boundaries (province, municipal, barangay) and basemaps. Activating a type adds its layer automatically.
 - **Basemaps:** OpenStreetMap, Esri World Imagery, topographic, and hybrid (Esri imagery + labels).
-- **Color by:** program, status, year, type, location basis, or any dropdown field, including custom fields.
-- **Filter by:** any field, including custom fields. Also municipality, barangay, year range and data source.
-- **Saved views:** name and save the current layers, filters, style and extent. Views are private by default and can be shared with other users. A field later removed from a type is ignored, not treated as an error.
+- **Color by:** any field, including custom fields, except text that belongs to one record (beneficiary, title, remarks, source ID). Numbers and dates go in up to 5 ranges on one color, darker for higher. A list with more than 8 values shows its 7 commonest and Other. Colors are worked out from all records, so a filter can't change what a color means. The legend shows how many of each are on the map. Exports keep program colors.
+- **Filter by:** any field, including custom fields: choices for dropdowns and yes/no, a range for numbers and dates, and "contains" for text. "Not set" finds records with no value. A custom field belongs to its type, so filtering by it leaves out other types' records. Also municipality, barangay and year range.
+- **Saved views:** name and save the current layers, filters, style, basemap and extent. Views are private by default and can be shared with everyone. A field later removed from a type is ignored, not treated as an error.
+- **Default view:** an Admin can choose one shared view for the map to open on, for everyone. It applies when opening the map itself, not a link to a barangay or record. It has to stay shared while it's the default. An Admin can also take down anyone's shared view, but can't see personal ones.
 - **Markers:** icon by category or type. Cluster at low zoom; spiderfy shared coordinates. Lines and polygons are styled with the same colors.
 - **Popup:** details, custom fields, photos, status timeline, location basis, coordinates (copy button), "Open in Google Maps", "Edit" (if permitted). A flagged point says "Plotted in [X], encoded as [Y]".
 - **Other views and tools:** heatmap, search, locate-me, measure, draw a polygon to select, coordinate readout, scale bar, fullscreen.
-- **Map ↔ dashboard sync:** filters apply to both. "Filter by map extent" optionally limits dashboard numbers to the visible area.
+- **Map ↔ dashboard sync:** filters apply to both. "Limit to map view" optionally limits the dashboard and table to the visible area, leaving out records with no coordinates.
 
 ### 5.3 Real-time editing on the map
 
@@ -264,7 +265,7 @@ This is the main use of the system. Phase 3 builds point editing only, since bot
 - **Simultaneous edits:** if two users edit the same record, the second is told it changed and sees the latest version. Neither edit is silently lost.
 - **Status history:** changing a status adds an entry (status, date, remarks, photo, user). The popup shows the timeline, e.g. Turned-over → Serviceable → Needs Repair. An imported status with no known change date shows as "as of [date] ([source])", not as the date it changed.
 - **Resolving a flag:** from the popup or the record's row, correct the barangay or coordinates, set the location basis, or clear a name check. A reason is required and goes in the audit log. Flags still clear only when the data agrees. The corrections file (§5.6) still handles bulk fixes.
-- **Not built yet: a reason in the Edit form** (phase 6 in §9). The Edit form can still change a barangay, which can clear a flag, with no reason. Resolve flag and the move dialog already need one.
+- **A reason in the Edit form:** changing a record's barangay there needs a reason, as Resolve flag and the move dialog do, because it can clear a flag and moves a record between barangays' counts. The screens ask for these reasons. The database logs them but doesn't insist, so a correction by script doesn't need one.
 - **Audit log:** every create, edit and delete is recorded, and each record shows its own change history. Deleted records can be restored by an Admin.
 
 ### 5.4 Admin customization
@@ -276,28 +277,31 @@ This is the main use of the system. Phase 3 builds point editing only, since bot
 - **Users:** invite by email or by link, set a role, correct a name, deactivate and reactivate, all from `/admin`. A Supabase Edge Function holds the secret key this needs, and the database refuses any change that would leave no active Admin.
 - Changes appear on open maps without a code release.
 - **Not built yet: drawing lines and polygons** (§5.3). A line or polygon type can be set up but not activated. Its Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses both activating it and any line or polygon record without a shape.
-- **Not built yet: the audit log page** (phase 6 in §9). Admin only: who changed what and when, with filters by user, record and date. Changes are already logged, and each record shows its own history.
+- **Audit log page:** Admin only, in the database as well as on screen. Who changed what and when, with filters by person, record, action and date (whole days, Philippine time), one page at a time. Each line links to its record, or to where the item is managed. A record's lines include its status entries and photos. The raw source row is left out.
 
 ### 5.5 Dashboard
 
+It sits beside the map on a computer, and takes turns with the map and the list on a phone (§7). It opens by itself on a screen at least 1100 pixels wide, and closing it is remembered. It's loaded only when opened, so the map doesn't carry the chart library. Everything comes from the same records the map and exports use, so they can't disagree.
+
 KPI cards:
 - Total interventions
-- Total units
-- Barangays with at least one intervention, out of 218
-- Beneficiaries served
-- % operational, using each type's own `counts_as_operational` statuses. For Farm Machinery this is "% turned-over or serviceable". Records with `Unknown` status are left out
-- Records needing geotag or QA
+- Units of each active type, such as machinery units and SSIPs
+- Beneficiary FCAs served: different beneficiary names, ignoring case and spacing. No RAED record has a beneficiary type yet, so this counts every beneficiary named, not only FCAs
+- % operational, by units, using each type's own `counts_as_operational` statuses. For Farm Machinery this is "% turned-over or serviceable". Records with `Unknown` status or no status are left out
+- Barangays with no intervention yet, out of those the filters cover
+- Records needing QA: any flag except a shared point, which is often correct
 
-Charts:
-- Units per **municipality** (bar)
-- Units per **banner program** (bar or donut)
-- Units per **year funded** (line or column)
-- Units by **type** and **category** (horizontal bar, top 15)
-- **Status** breakdown (stacked bar per municipality)
+Charts (bars, each with a table view of the same numbers):
+- Units per **municipality**
+- Units per **banner program**, in each program's own color
+- Units per **year funded**, showing every year from first to last. Records with no year are counted in a note
+- Units by **category**, top 15, with a note of what's left out
+- **Status** breakdown, stacked per municipality, in each status's own color
 
-Data table:
-- Sortable, searchable, paginated
-- Clicking a row zooms the map to that record
+Records table:
+- Sortable, searchable and paginated. The search ignores case and marks such as the tilde in Kiñaman
+- Clicking a row zooms the map to that record. A record with no usable coordinates says so and goes to its barangay
+- "Export this table" uses the Export dialog, with all the rows found, in their order. The dialog, the audit log and a KML or KMZ's Read me list the search. The file name only says "Filtered", as a search can be someone's name
 
 ### 5.6 Import
 
@@ -395,8 +399,8 @@ Chosen so a solo developer can build and host it cheaply.
 | On-map drawing and editing | Leaflet's own marker dragging for points. **Leaflet-Geoman** (free version) when line and polygon types are activated | Geoman handles draw, drag, vertex editing and delete for all three geometry kinds, but nothing active needs it yet |
 | Forms | Plain React forms, generated from `core_field_rules` and `field_schema`, with the validation rules in one module shared with local mode | The rules are needed outside the form too, so a form library would add little |
 | Photo location | `exifr` (lite build) | Reads GPS and date from JPEG and HEIC in the browser |
-| Charts | Recharts | |
-| Table | TanStack Table | |
+| Charts | Recharts 3 | Loaded only when the dashboard opens |
+| Table | TanStack Table 8 | Loaded with the dashboard. Stays on version 8 for now, as version 9 changes its API |
 | Backend / DB | **Supabase** (PostgreSQL + **PostGIS** + Auth + Storage + **Realtime**) | Realtime gives live map updates; PostGIS handles spatial checks |
 | Data access | A `DataStore` interface with two implementations: local (IndexedDB) and Supabase | The app can switch without changing screens |
 | KML/KMZ export | Custom builder (for folders and styles) + **JSZip** | Runs in the browser, no server needed |
@@ -416,16 +420,16 @@ Chosen so a solo developer can build and host it cheaply.
 |---|---|
 | `/` | Map + layer panel + dashboard (split view; map full-screen toggle) |
 | `/barangays/:id` | Barangay profile (also opens as a panel on the map) |
-| `/records` | Data table with filters and bulk actions |
+| `/records/:id` | A link to one record, such as from the audit log. Clears the filters and zooms to it, or opens its history if it isn't on the map |
 | `/records/new`, `/records/:id/edit` | Full form, for when the map isn't convenient |
 | `/import` | CSV / XLSX / KML / KMZ import wizard |
 | `/qa` | Data-quality queue (flags in §4.6, including Unassigned and Needs geotag) |
 | `/export` | Export options (also reachable from the map toolbar) |
 | `/reports` | Municipal, barangay and beneficiary profiles (later phase) |
-| `/admin` | Users, intervention types, form builder, lookups; the audit log page comes in phase 6 (§9) |
+| `/admin` | Users, intervention types, form builder, lookups, audit log (`/admin/audit`) |
 | `/login` | Auth |
 
-Layout: left panel for layers and filters, center map, right or bottom panel for profile and dashboard. On mobile, tabs switch between Map, Dashboard and List.
+Layout: left panel for layers and filters, center map, right panel for the dashboard and records table, which a profile or form takes over for a while. On mobile, tabs switch between Map, Dashboard and List. They give way to a profile or form, which have their own way out, so the map beside them keeps its room.
 
 ---
 
@@ -456,10 +460,12 @@ Layout: left panel for layers and filters, center map, right or bottom panel for
 | **3. On-map editing** (local data) | `DataStore` interface; add by clicking, drag to move, soft delete, for points only; generated form; status history; audit log | Create, edit and delete work for Farm Machinery and SSIP, and show in a second tab at once |
 | **4. Supabase switch** | Auth, roles, row-level security, Realtime, Storage, server-side audit | An edit in one browser appears on another device within about 2 s |
 | **5. Admin customization** | Type manager, form builder, lookups, baseline fields | A new type with custom fields can be created and used with no code change |
-| **6. Custom views, dashboard and audit log page** | Color by and filter by any field; saved views; KPIs, charts and table; an Admin-only audit log page in `/admin`, for accountability in a government office: who changed what and when, with filters by user, record and date; the Edit form asks for a reason when a barangay changes, as Resolve flag and the move dialog do | A saved view restores layers, filters, style and extent; totals match the data; an Admin can find any change by user, record or date, and nobody else can open the page; changing a barangay in the Edit form needs a reason, which goes in the audit log |
+| **6. Custom views, dashboard and audit log page** (built) | Color by and filter by any field; saved views; KPIs, charts and table; an Admin-only audit log page in `/admin`, for accountability in a government office: who changed what and when, with filters by user, record and date; the Edit form asks for a reason when a barangay changes, as Resolve flag and the move dialog do | A saved view restores layers, filters, style and extent; totals match the data; an Admin can find any change by user, record or date, and nobody else can open the page; changing a barangay in the Edit form needs a reason, which goes in the audit log |
 | **7. Export** | KML, KMZ, GeoJSON, CSV, XLSX, PNG/PDF for all geometries | KMZ opens in Google Earth Pro and Web with folders, styles and attributes |
 | **8. Import and QA** | Import wizard for any type, QA queue | An ABEMIS export imports without manual editing, and a new dataset of another type imports the same way |
 | **9. Reports and ABE PDCS** | Profiles, print layouts, merge into ABE PDCS | |
+
+These were built in a different order: Export went first, then Admin customization, then Custom views. The project's history calls those phases 5, 6 and 7.
 
 ---
 

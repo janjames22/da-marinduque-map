@@ -133,6 +133,39 @@ An Admin can change these from **Admin** in the header. Changes reach every open
 - **Line and polygon types:** these can be set up but **not activated until drawing them on the map is built**. Their Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses it too, so no record is saved without a shape.
 - **Two Admins at once:** if someone else saves a type or the barangay fields while you're editing them, you're told, and your save is held until you load their version.
 
+## The dashboard and records table
+
+On a computer these sit beside the map, and on a phone the **Map**, **Dashboard** and **List** tabs take turns. Everything follows the map's filters, so the map, the numbers, the table and an export can't disagree. **Limit to map view** narrows them to what's on screen, and leaves out records with no coordinates while it's on.
+
+| Figure | How it's counted |
+|---|---|
+| Total interventions | Records, whatever their quantity |
+| Machinery units, SSIPs and other types' units | The quantity on each record |
+| Beneficiary FCAs served | Different beneficiary names, ignoring case and spacing. No record has a beneficiary type yet, so this counts everyone named, not only FCAs |
+| % operational | Units at a status marked as operational on that type's page in Admin, out of all units with a known status. Unknown and no status are left out |
+| Barangays with no intervention yet | Out of the barangays the filters cover |
+| Records needing QA | Any QA flag except a shared point, which is often correct |
+
+**Show table** on each chart gives the same numbers as a table. **Export this table** exports all the rows found, on every page, in their order, and is logged like any other export. The search shows in the dialog, the audit log and a KML or KMZ's "Read me". It's left out of the file name, as it can be someone's name.
+
+## Coloring, filtering and saved views
+
+- **Color markers by** and **Filter by another field**, in the layers panel, offer every field, including each type's custom fields. Text that belongs to one record, such as a beneficiary's name, can be filtered but not used for color.
+- **Exports keep program colors**, even while the map is colored by something else.
+- **Saved views** keep the layers, filters, colors, basemap and map position. Anyone signed in can save their own. A view is personal until shared with everyone, and only its owner can change it.
+- **The default view:** an Admin can pick **Open on this** on a shared view, and everyone's map then opens on it, with a notice saying so. It doesn't apply to a link to a barangay or record. To retire it, choose **Stop opening on this**.
+- **Removing a shared view:** an Admin can delete anyone's shared view, such as one left by someone who has moved on. Nobody can see another person's personal views, including Admins.
+- **Something removed later:** a view that uses a field, program or type that has since gone still opens, and ignores it.
+
+## The audit log
+
+**Admin**, then **Audit log**, shows who changed what and when, for Admins only. Filter by person, record, action and date. Times and dates are Philippine time. Each line links to its record, or to the page where that item is managed. A record that's been deleted opens on its history.
+
+- **"No login (a script or Supabase's dashboard)"** means the change didn't come through the website, such as a seed, a correction by script or an edit in Supabase's table editor.
+- **"An account since removed"** means that person's account no longer exists. The line stays.
+- **Nothing here can be edited**, even by an Admin. The only lines that ever leave are the temporary ones from the live tests in [Proving it works](#proving-it-works).
+- **Reasons:** changing a barangay needs a reason everywhere on the website: Resolve flag, **Move and set barangay**, and the Edit form. The reason shows on the line. A script can still change a barangay without one, and the log then shows no login.
+
 ## Exports
 
 Every signed-in role can export, from the **Export** button on the map or **Export this barangay** in a profile. An export takes what the map's filters show, and each one is recorded in the audit log: who, the format, the filters and the record count. If the log can't be written, nothing is downloaded.
@@ -226,7 +259,9 @@ npm run test:e2e:live
 Remove-Item Env:LIVE_URL
 ```
 
-These tests create temporary `e2e-test-` accounts, test records and list items, then remove them, including from the audit log. They make invite links rather than sending invite emails, so test the email itself as described in [Before inviting the MAOs](#before-inviting-the-maos). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
+These tests create temporary `e2e-test-` accounts, test records, list items and saved views, then remove them, including from the audit log. They make invite links rather than sending invite emails, so test the email itself as described in [Before inviting the MAOs](#before-inviting-the-maos). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
+
+**If a default view is set,** choose **Stop opening on this** before running `test:e2e:live`, and set it again afterwards. The tests never change a real default, but several of them expect the map to open on everything.
 
 ## Working on the code
 

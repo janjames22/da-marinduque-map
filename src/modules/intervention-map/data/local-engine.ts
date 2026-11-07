@@ -2,11 +2,12 @@
 // the audit log. Every function changes the given rows in place and throws if the write isn't
 // allowed, so the caller can abandon the whole change. tests/qa-parity.test.ts checks this against
 // the real triggers.
+import { manilaDayEnd, manilaDayStart } from '../lib/dates';
 import { valuesFromRecord } from '../lib/form-values';
 import { pointOf, computeFlags, locatePoint, samePoint, type PlaceIndex } from '../lib/qa';
 import type { LatLng } from '../lib/coordinates';
 import { validateAttributes, validateIntervention, validateStatus } from '../lib/validation';
-import { ConflictError, ValidationError, type ChangeNote, type ExportLogEntry, type InterventionPatch, type InterventionValues, type PhotoMeta } from './store';
+import { ConflictError, ValidationError, type AuditPage, type AuditQuery, type ChangeNote, type ExportLogEntry, type InterventionPatch, type InterventionValues, type PhotoMeta } from './store';
 import type {
   AuditAction,
   AuditEntry,
@@ -19,6 +20,7 @@ import type {
   InterventionType,
   MapData,
   Municipality,
+  SavedView,
   StatusEntry,
   TypeStatus,
 } from './types';
@@ -30,6 +32,8 @@ export interface LocalRows {
   barangays: Barangay[];
   photos: InterventionPhoto[];
   auditLog: AuditEntry[];
+  // A browser's saved state from before views existed doesn't have this.
+  savedViews?: SavedView[];
   changeCount: number;
 }
 
@@ -359,4 +363,27 @@ export function auditForRecord(auditLog: AuditEntry[], interventionId: string): 
       ((entry.table_name === 'status_history' || entry.table_name === 'intervention_photos') &&
         (entry.new_row ?? entry.old_row)?.intervention_id === interventionId),
   );
+}
+
+// Mirrors audit_log_page.
+export function auditPage(auditLog: AuditEntry[], { actorId, noActor, recordIds, action, from, to, page, pageSize }: AuditQuery): AuditPage {
+  const records = recordIds ? new Set(recordIds) : null;
+  const start = from ? Date.parse(manilaDayStart(from)) : null;
+  const end = to ? Date.parse(manilaDayEnd(to)) : null;
+
+  const chosen = auditLog.filter((entry) => {
+    if (actorId && entry.actor_id !== actorId) return false;
+    if (noActor && entry.actor_id !== null) return false;
+    if (action && entry.action !== action) return false;
+    const at = Date.parse(entry.at);
+    if (start !== null && at < start) return false;
+    if (end !== null && at > end) return false;
+    if (records) {
+      const owner = entry.table_name === 'interventions' ? entry.record_id : entry.table_name === 'status_history' || entry.table_name === 'intervention_photos' ? (entry.new_row ?? entry.old_row)?.intervention_id : null;
+      if (typeof owner !== 'string' || !records.has(owner)) return false;
+    }
+    return true;
+  });
+  chosen.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || b.id - a.id);
+  return { total: chosen.length, entries: chosen.slice(page * pageSize, (page + 1) * pageSize) };
 }

@@ -1,6 +1,6 @@
-import type { AuditEntry, FieldSchema, MapData } from '../data/types';
+import type { AuditAction, AuditEntry, FieldSchema, MapData } from '../data/types';
 import { formatPoint } from './coordinates';
-import { fieldValue } from './display';
+import { fieldValue, recordName } from './display';
 
 export interface AuditChange {
   field: string;
@@ -67,6 +67,97 @@ export function auditChanges(entry: AuditEntry, lookups: Lookups, schema?: Field
   }
   changes.push(...attributeChanges(schema, (before.attributes ?? {}) as Record<string, unknown>, (after.attributes ?? {}) as Record<string, unknown>));
   return changes;
+}
+
+export const ACTION_LABELS: Record<AuditAction, string> = {
+  insert: 'Created',
+  update: 'Edited',
+  soft_delete: 'Deleted',
+  restore: 'Restored',
+  delete: 'Removed for good',
+  export: 'Exported',
+};
+
+// Where each kind of change is managed, for the audit log page's links.
+const LIST_PAGES: Record<string, { label: string; link: string }> = {
+  programs: { label: 'Program', link: '/admin/programs' },
+  categories: { label: 'Category', link: '/admin/categories' },
+  statuses: { label: 'Status', link: '/admin/statuses' },
+  category_groups: { label: 'Category group', link: '/admin/lists' },
+  beneficiary_types: { label: 'Beneficiary type', link: '/admin/lists' },
+  location_bases: { label: 'Location basis', link: '/admin/lists' },
+  icons: { label: 'Icon', link: '/admin/lists' },
+  barangay_field_schema: { label: 'Barangay fields', link: '/admin/barangay-fields' },
+  intervention_type_statuses: { label: 'A type\'s status list', link: '/admin/types' },
+  profiles: { label: 'Person', link: '/admin/users' },
+};
+
+export interface AuditTarget {
+  label: string;
+  link: string | null;
+}
+
+const textOf = (value: unknown) => (typeof value === 'string' && value !== '' ? value : null);
+
+// What a line of the log is about, and where to go to see it.
+export function auditTarget(entry: AuditEntry, data: Pick<MapData, 'interventions' | 'categories' | 'barangays' | 'types'>): AuditTarget {
+  const row = entry.new_row ?? entry.old_row ?? {};
+  const name = textOf(row.name) ?? textOf(row.full_name);
+
+  if (entry.table_name === 'interventions' || entry.table_name === 'status_history' || entry.table_name === 'intervention_photos') {
+    const id = entry.table_name === 'interventions' ? entry.record_id : textOf(row.intervention_id);
+    const record = data.interventions.find((candidate) => candidate.id === id);
+    const recordLabel = record ? [recordName(record, data), record.beneficiary].filter(Boolean).join(' – ') : (textOf(row.title) ?? textOf(row.beneficiary) ?? 'A record no longer here');
+    return { label: recordLabel, link: id ? `/records/${id}` : null };
+  }
+  if (entry.table_name === 'barangays') {
+    const barangay = data.barangays.find((candidate) => String(candidate.id) === entry.record_id);
+    return { label: `Barangay ${barangay?.name ?? name ?? entry.record_id}`, link: entry.record_id ? `/barangays/${entry.record_id}` : null };
+  }
+  if (entry.table_name === 'intervention_types') {
+    return { label: `Type: ${name ?? entry.record_id}`, link: entry.record_id ? `/admin/types/${entry.record_id}` : null };
+  }
+  if (entry.table_name === 'saved_views') return { label: `Saved view: ${name ?? entry.record_id}`, link: null };
+  if (entry.table_name === 'exports') return { label: `Export: ${textOf(entry.context?.file_name) ?? 'a file'}`, link: null };
+  if (entry.table_name === 'import_batches') return { label: `Import: ${textOf(row.file_name) ?? 'a file'}`, link: null };
+
+  const list = LIST_PAGES[entry.table_name];
+  if (list) return { label: name ? `${list.label}: ${name}` : list.label, link: list.link };
+  return { label: entry.table_name.replace(/_/g, ' '), link: null };
+}
+
+const BOOKKEEPING = new Set(['id', 'version', 'created_at', 'updated_at', 'created_by', 'updated_by', 'owner_id']);
+
+// Anything other than a record: what changed, in plain field names.
+function rowChanges(entry: AuditEntry): string[] {
+  const before = entry.old_row;
+  const after = entry.new_row;
+  if (!before || !after) return [];
+  const lines: string[] = [];
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (BOOKKEEPING.has(key) || JSON.stringify(before[key]) === JSON.stringify(after[key])) continue;
+    const show = (value: unknown) => (value === null || value === undefined ? EMPTY : typeof value === 'object' ? null : String(value));
+    const from = show(before[key]);
+    const to = show(after[key]);
+    const field = key.replace(/_/g, ' ');
+    lines.push(from === null || to === null ? `${field} changed` : `${field}: ${from} → ${to}`);
+  }
+  return lines;
+}
+
+// A line of the log in words, for the audit log page.
+export function auditDetails(entry: AuditEntry, data: Lookups): string[] {
+  const row = entry.new_row ?? entry.old_row;
+  if (entry.table_name === 'status_history' || entry.table_name === 'intervention_photos') return [auditHeadline(entry, data)];
+  if (entry.table_name === 'exports') {
+    const count = entry.context?.record_count;
+    return [[textOf(entry.context?.format)?.toUpperCase(), typeof count === 'number' ? `${count} record${count === 1 ? '' : 's'}` : null].filter(Boolean).join(', ')];
+  }
+  if (entry.table_name === 'interventions') {
+    const schema = data.types.find((type) => type.id === row?.intervention_type_id)?.field_schema;
+    return auditChanges(entry, data, schema).map((change) => `${change.field}: ${change.from} → ${change.to}`);
+  }
+  return rowChanges(entry);
 }
 
 export function auditHeadline(entry: AuditEntry, lookups: Pick<Lookups, 'statuses'>): string {

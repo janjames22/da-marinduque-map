@@ -7,6 +7,7 @@ export interface Permissions {
   canEdit: boolean;
   canSeeHistory: boolean;
   canRestore: boolean;
+  canManageSharedViews: boolean;
 }
 
 export function permissionsFor(role: UserRole): Permissions {
@@ -14,6 +15,7 @@ export function permissionsFor(role: UserRole): Permissions {
     canEdit: role === 'admin' || role === 'encoder',
     canSeeHistory: role === 'admin' || role === 'encoder',
     canRestore: role === 'admin',
+    canManageSharedViews: role === 'admin',
   };
 }
 

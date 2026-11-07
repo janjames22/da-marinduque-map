@@ -376,6 +376,126 @@ describe('photos', () => {
   });
 });
 
+describe('saved views', () => {
+  const config = { layers: {}, filters: {}, style: {}, basemap: 'osm', extent: null };
+  const viewId = async (client: SupabaseClient, name: string) => (await client.from('saved_views').select('id').eq('name', name).single()).data!.id as string;
+  // Someone may have chosen a real default by now, and these tests must leave that alone.
+  const realDefault = async () => (await adminClient.from('saved_views').select('id').eq('is_default', true)).data?.[0]?.id as string | undefined;
+
+  it('stays private until shared, and only its owner can change it', async () => {
+    await viewer.saveView(null, { name: 'E2E test private', config, is_shared: false });
+    const id = await viewId(viewerClient, 'E2E test private');
+    const { data: saved } = await viewerClient.from('saved_views').select('owner_id, is_shared, is_default').eq('id', id).single();
+    expect(saved).toEqual({ owner_id: accounts.viewer.id, is_shared: false, is_default: false });
+    expect((await encoderClient.from('saved_views').select('id').eq('id', id)).data).toEqual([]);
+    expect((await adminClient.from('saved_views').select('id').eq('id', id)).data).toEqual([]);
+
+    await viewer.saveView(id, { is_shared: true });
+    expect((await encoderClient.from('saved_views').select('id').eq('id', id)).data).toHaveLength(1);
+
+    expect((await encoderClient.from('saved_views').update({ name: 'Taken over' }).eq('id', id).select('id')).data).toEqual([]);
+    expect((await encoderClient.from('saved_views').delete().eq('id', id).select('id')).data).toEqual([]);
+    expect((await viewerClient.from('saved_views').select('name').eq('id', id).single()).data?.name).toBe('E2E test private');
+  });
+
+  it('can\'t be made in someone else\'s name, by a stranger or by a visitor', async () => {
+    expect((await viewerClient.from('saved_views').insert({ name: 'E2E test forged', config, owner_id: accounts.admin.id })).error).not.toBeNull();
+    expect((await strangerClient.from('saved_views').insert({ name: 'E2E test stranger', config })).error).not.toBeNull();
+    expect((await visitor.from('saved_views').insert({ name: 'E2E test visitor', config })).error).not.toBeNull();
+    expect((await visitor.from('saved_views').select('id').limit(1)).error).not.toBeNull();
+    expect((await strangerClient.from('saved_views').select('id').limit(1)).data).toEqual([]);
+  });
+
+  it('needs a name, which one person can use only once', async () => {
+    expect((await viewerClient.from('saved_views').insert({ name: '   ', config })).error).not.toBeNull();
+    expect((await viewerClient.from('saved_views').insert({ name: 'E2E TEST private', config })).error?.code).toBe('23505');
+    expect((await encoderClient.from('saved_views').insert({ name: 'E2E TEST private', config })).error).toBeNull();
+  });
+
+  it('can be taken down by an Admin once it\'s shared', async () => {
+    await viewer.saveView(null, { name: 'E2E test left behind', config, is_shared: true });
+    const id = await viewId(viewerClient, 'E2E test left behind');
+    expect((await adminClient.from('saved_views').delete().eq('id', id).select('id')).data).toHaveLength(1);
+    expect((await viewerClient.from('saved_views').select('id').eq('id', id)).data).toEqual([]);
+  });
+
+  it('becomes the default only by an Admin\'s choice, and has to be shared', async () => {
+    await encoder.saveView(null, { name: 'E2E test default', config, is_shared: true });
+    await admin.saveView(null, { name: 'E2E test admin personal', config, is_shared: false });
+    const id = await viewId(encoderClient, 'E2E test default');
+    const personal = await viewId(adminClient, 'E2E test admin personal');
+    const before = await realDefault();
+
+    // Each of these changes nothing, so a real default is safe.
+    for (const client of [viewerClient, encoderClient]) {
+      expect((await client.rpc('set_default_view', { p_id: id })).error?.code).toBe('42501');
+      expect((await client.from('saved_views').update({ is_default: true }).eq('id', id)).error?.code).toBe('42501');
+    }
+    expect((await strangerClient.rpc('set_default_view', { p_id: id })).error).not.toBeNull();
+    expect((await visitor.rpc('set_default_view', { p_id: id })).error).not.toBeNull();
+    expect((await adminClient.rpc('set_default_view', { p_id: personal })).error?.message).toMatch(/shared/);
+    expect(await realDefault()).toBe(before);
+    if (before) {
+      console.log('A real default view is set, so the rest of this test was left out.');
+      return;
+    }
+
+    await admin.setDefaultView(id);
+    expect((await viewerClient.from('saved_views').select('is_default').eq('id', id).single()).data?.is_default).toBe(true);
+    expect((await encoderClient.from('saved_views').update({ is_shared: false }).eq('id', id)).error?.message).toMatch(/stay shared/);
+
+    await admin.setDefaultView(null);
+    expect(await realDefault()).toBeUndefined();
+  });
+});
+
+describe('the audit log page', () => {
+  it('is for Admins alone', async () => {
+    for (const client of [viewerClient, encoderClient, strangerClient]) {
+      expect((await client.rpc('audit_log_page', {})).error?.code).toBe('42501');
+    }
+    expect((await visitor.rpc('audit_log_page', {})).error).not.toBeNull();
+  });
+
+  it('finds a record\'s changes, with the person and the reason, and shows no raw source row', async () => {
+    const created = await encoder.createIntervention(newValues('Live test audit page'), newStatus());
+    const before = data.barangays.find((b) => b.id === created.barangay_id)!;
+    const after = data.barangays.find((b) => b.municipality_id === before.municipality_id && b.id !== before.id)!;
+    await encoder.updateIntervention(created.id, created.version, { barangay_id: after.id }, { kind: 'edit', reason: 'Live test reason' });
+
+    const { entries, total } = await admin.auditLog({ recordIds: [created.id], page: 0, pageSize: 50 });
+    expect(total).toBe(3);
+    expect(entries.map((entry) => [entry.table_name, entry.action, entry.actor_name])).toEqual([
+      ['interventions', 'update', 'Test encoder'],
+      ['status_history', 'insert', 'Test encoder'],
+      ['interventions', 'insert', 'Test encoder'],
+    ]);
+    expect(entries[0].context).toMatchObject({ kind: 'edit', reason: 'Live test reason' });
+    expect(entries[0].new_row).toMatchObject({ barangay_id: after.id });
+    expect(entries[0].old_row).toMatchObject({ barangay_id: before.id });
+    expect(JSON.stringify(entries)).not.toContain('source_raw');
+  });
+
+  it('filters by person, action and date, in Philippine time', async () => {
+    const mine = await admin.auditLog({ actorId: accounts.encoder.id, page: 0, pageSize: 200 });
+    expect(mine.entries.length).toBeGreaterThan(0);
+    expect(new Set(mine.entries.map((entry) => entry.actor_id))).toEqual(new Set([accounts.encoder.id]));
+
+    const exported = await admin.auditLog({ action: 'export', actorId: accounts.viewer.id, page: 0, pageSize: 50 });
+    expect(exported.entries.map((entry) => entry.table_name)).toEqual(['exports']);
+
+    const day = (offset: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date(Date.now() + offset * 86_400_000));
+    expect((await admin.auditLog({ actorId: accounts.encoder.id, from: day(0), to: day(0), page: 0, pageSize: 1 })).total).toBe(mine.total);
+    expect((await admin.auditLog({ actorId: accounts.encoder.id, to: day(-1), page: 0, pageSize: 1 })).total).toBe(0);
+  });
+
+  it('keeps one request from taking the whole log', async () => {
+    const { data: answer, error } = await adminClient.rpc('audit_log_page', { p_limit: 100_000 });
+    expect(error).toBeNull();
+    expect((answer as { entries: unknown[] }).entries.length).toBeLessThanOrEqual(200);
+  });
+});
+
 describe('live signals', () => {
   const channels: SupabaseClient[] = [];
 
@@ -441,6 +561,16 @@ describe('live signals', () => {
     await admin.saveLookup('programs', null, { code, name: code, color: '#123456' });
     const elapsed = await waiting;
     console.log(`Signal after a list changed: ${elapsed} ms`);
+    expect(elapsed).toBeLessThan(SIGNAL_LIMIT_MS);
+  });
+
+  it('reaches another person within about 2 s when a view is shared', async () => {
+    const listener = await join(viewerClient);
+    expect(listener.status).toBe('SUBSCRIBED');
+    const waiting = listener.nextSignal();
+    await encoder.saveView(null, { name: `E2E test signal ${Date.now()}`, config: { basemap: 'osm' }, is_shared: true });
+    const elapsed = await waiting;
+    console.log(`Signal after a view was shared: ${elapsed} ms`);
     expect(elapsed).toBeLessThan(SIGNAL_LIMIT_MS);
   });
 

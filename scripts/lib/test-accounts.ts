@@ -79,7 +79,7 @@ async function removeAccounts() {
       [records],
     );
     await db.query('delete from public.interventions where id = any($1::uuid[])', [records]);
-    await db.query('delete from public.saved_views where owner_id = any($1::uuid[])', [ids]);
+    const { rows: views } = await db.query<{ id: string }>('delete from public.saved_views where owner_id = any($1::uuid[]) returning id', [ids]);
     await removeTestLists(db);
     await db.query('delete from public.profiles where id = any($1::uuid[])', [ids]);
     await db.query(
@@ -87,8 +87,9 @@ async function removeAccounts() {
        where actor_id = any($1::uuid[])
           or record_id = any($2::text[])
           or record_id = any($3::text[])
-          or coalesce(new_row, old_row) ->> 'intervention_id' = any($2::text[])`,
-      [ids, records, ids],
+          or coalesce(new_row, old_row) ->> 'intervention_id' = any($2::text[])
+          or (table_name = 'saved_views' and record_id = any($4::text[]))`,
+      [ids, records, ids, views.map((view) => view.id)],
     );
     await db.query('commit');
 

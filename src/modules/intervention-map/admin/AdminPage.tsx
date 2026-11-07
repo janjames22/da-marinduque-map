@@ -4,6 +4,7 @@ import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import type { AppUser, MapData } from '../data/types';
 import { StoreContext } from '../state/store-context';
 import { useMapData } from '../state/use-map-data';
+import { AuditSection } from './AuditSection';
 import { BarangayFieldsSection } from './BarangayFieldsSection';
 import { LookupSection, type LookupRow } from './LookupSection';
 import { TypeEditorRoute, TypesList } from './TypesSection';
@@ -17,6 +18,7 @@ const SECTIONS = [
   { path: 'statuses', label: 'Statuses' },
   { path: 'lists', label: 'Other lists' },
   { path: 'barangay-fields', label: 'Barangay fields' },
+  { path: 'audit', label: 'Audit log' },
 ];
 
 function OtherLists({ data }: { data: MapData }) {
@@ -138,6 +140,7 @@ function AdminWorkspace({ data }: { data: MapData }) {
           />
           <Route path="/admin/lists" element={<OtherLists data={data} />} />
           <Route path="/admin/barangay-fields" element={<BarangayFieldsSection data={data} />} />
+          <Route path="/admin/audit" element={<AuditSection data={data} />} />
           <Route path="*" element={<Navigate to="/admin/users" replace />} />
         </Routes>
       </div>

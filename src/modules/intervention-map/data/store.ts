@@ -1,5 +1,5 @@
 import type { LatLng } from '../lib/coordinates';
-import type { AppUser, AuditEntry, Barangay, CoreFieldRule, FieldSchema, Intervention, InterventionType, MapData, StatusEntry, UserRole } from './types';
+import type { AppUser, AuditAction, AuditEntry, Barangay, CoreFieldRule, FieldSchema, Intervention, InterventionType, MapData, StatusEntry, UserRole } from './types';
 
 // Everything a person enters for a record. Location is a point for now, as both active types are.
 export interface InterventionValues {
@@ -114,6 +114,29 @@ export interface TypeStatusValues {
   counts_as_operational: boolean;
 }
 
+export interface SavedViewValues {
+  name: string;
+  config: unknown;
+  is_shared: boolean;
+}
+
+// One page of the audit log, newest first. Dates are Philippine calendar days.
+export interface AuditQuery {
+  actorId?: string | null;
+  noActor?: boolean; // changes with no login behind them, from a script or Supabase's dashboard
+  recordIds?: string[] | null; // a record's own changes, and its status entries and photos
+  action?: AuditAction | null;
+  from?: string | null;
+  to?: string | null;
+  page: number;
+  pageSize: number;
+}
+
+export interface AuditPage {
+  total: number;
+  entries: AuditEntry[];
+}
+
 export type PersonStatus = 'active' | 'invited' | 'deactivated' | 'no_access';
 export type InviteDelivery = 'email' | 'link';
 
@@ -165,6 +188,12 @@ export interface DataStore {
   saveLookup(table: LookupTable, id: number | null, values: LookupValues): Promise<void>;
   saveType(id: number | null, expectedVersion: number | null, values: TypeValues, statuses: TypeStatusValues[]): Promise<InterventionType>;
   saveBarangayFields(expectedVersion: number, schema: FieldSchema): Promise<void>;
+  // Anyone can keep views of their own, and share them. Only an Admin chooses the one everyone opens on.
+  saveView(id: string | null, values: Partial<SavedViewValues>): Promise<void>;
+  deleteView(id: string): Promise<void>;
+  setDefaultView(id: string | null): Promise<void>;
+  // Admins only, and the database refuses anyone else.
+  auditLog(query: AuditQuery): Promise<AuditPage>;
   people?: PeopleApi;
   photoUrl(photoId: string): Promise<string | null>;
   // Fires on any change, from this tab or another. Screens reload through load().

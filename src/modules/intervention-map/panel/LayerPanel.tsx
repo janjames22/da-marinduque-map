@@ -4,7 +4,10 @@ import type { ChoroplethMode } from '../lib/choropleth';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi, type BasemapId } from '../state/map-ui';
 import { usePermissions } from '../state/store-context';
+import { viewFields } from '../lib/view-fields';
+import { FieldFilters, FieldOptions } from './FieldFilters';
 import { LocalDataSection } from './LocalDataSection';
+import { SavedViews } from './SavedViews';
 
 const BASEMAP_OPTIONS: { id: BasemapId; label: string }[] = [
   { id: 'osm', label: 'OpenStreetMap' },
@@ -57,6 +60,8 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
     [data.municipalities, data.barangays],
   );
 
+  const colorFields = useMemo(() => viewFields(data).filter((field) => field.colorable && (!field.archived || field.id === ui.colorBy)), [data, ui.colorBy]);
+
   const recordsOfType = (id: number) => records.filter((r) => r.intervention_type_id === id).length;
   const numberOrNull = (value: string) => (value === '' ? null : Number(value));
   const deletedCount = data.interventions.filter((r) => r.deleted_at !== null).length;
@@ -85,6 +90,8 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
           </select>
         </label>
       </section>
+
+      <SavedViews data={data} />
 
       <section>
         <h2 className="section-title">Shade barangays by</h2>
@@ -126,6 +133,15 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
             </select>
           </label>
         )}
+      </section>
+
+      <section>
+        <label className="field">
+          <span className="section-title">Color markers by</span>
+          <select value={ui.colorBy} onChange={(event) => ui.setColorBy(event.target.value)}>
+            <FieldOptions fields={colorFields} />
+          </select>
+        </label>
       </section>
 
       <section>
@@ -217,7 +233,8 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
               ))}
           </select>
         </label>
-        {(ui.programId !== null || ui.yearFrom !== null || ui.yearTo !== null || ui.municipalityId !== null) && (
+        <FieldFilters data={data} />
+        {(ui.programId !== null || ui.yearFrom !== null || ui.yearTo !== null || ui.municipalityId !== null || ui.fieldFilters.length > 0) && (
           <button type="button" className="link-button" onClick={ui.clearFilters}>
             Clear filters
           </button>

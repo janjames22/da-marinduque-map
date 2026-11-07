@@ -6,7 +6,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import type { Intervention, MapData } from '../data/types';
 import { roundPoint } from '../lib/coordinates';
 import { copyText } from '../lib/copy-text';
-import { isOnMap, popupHtml, recordColor, recordIcon, whiteIconSvg, type PopupAction } from '../lib/display';
+import { isOnMap, popupHtml, recordIcon, whiteIconSvg, type PopupAction } from '../lib/display';
 import { openRecordPanel } from '../edit/open-panel';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
@@ -92,9 +92,10 @@ function removeHeld(markers: Map<string, ShownMarker>) {
 interface InterventionLayerProps {
   data: MapData;
   records: Intervention[];
+  colorOf(record: Intervention): string;
 }
 
-export function InterventionLayer({ data, records }: InterventionLayerProps) {
+export function InterventionLayer({ data, records, colorOf }: InterventionLayerProps) {
   const map = useMap();
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const shown = useRef(new Map<string, ShownMarker>());
@@ -115,7 +116,7 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
   const iconFor = useMemo(() => {
     const cache = new Map<string, L.DivIcon>();
     return (record: Intervention) => {
-      const color = recordColor(record, data);
+      const color = colorOf(record);
       const icon = recordIcon(record, data);
       const key = `${color}-${icon?.id}`;
 
@@ -131,7 +132,7 @@ export function InterventionLayer({ data, records }: InterventionLayerProps) {
       }
       return { divIcon, key };
     };
-  }, [data.types, data.programs, data.icons, data.categories]);
+  }, [colorOf, data.types, data.icons, data.categories]);
 
   useEffect(() => {
     const cluster = L.markerClusterGroup({

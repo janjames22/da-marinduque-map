@@ -1461,3 +1461,608 @@ form.admin-form[aria-label='Barangay fields'] {
     flex-direction: column;
   }
 }
+
+/* The dashboard and records table, beside the map */
+
+/* The map keeps room for its buttons and a record's popup, so the panel is the one to give way. */
+.workspace.has-insights {
+  grid-template-columns: 280px minmax(320px, 1fr) minmax(0, 440px);
+}
+
+.workspace.has-insights.insights-wide {
+  grid-template-columns: 280px minmax(320px, 1fr) minmax(0, 62%);
+}
+
+/* A column, so the records table can shrink to what's left, with its pager still in view. */
+.insights-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.insights-panel > * {
+  flex-shrink: 0;
+}
+
+.phone-tabs {
+  display: none;
+}
+
+.insights-header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.insights-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.insights-tabs button,
+.phone-tabs button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 5px 12px;
+}
+
+.insights-tabs button[aria-pressed='true'],
+.phone-tabs button[aria-pressed='true'] {
+  background: var(--da-green);
+  border-color: var(--da-green);
+  color: #ffffff;
+}
+
+.insights-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.insights-scope {
+  background: var(--surface-muted);
+  border-radius: 4px;
+  font-size: 13px;
+  margin-top: 10px;
+  padding: 6px 10px;
+}
+
+.insights-scope ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.insights-scope p {
+  margin: 0;
+}
+
+.insights-scope-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin-top: 2px;
+}
+
+/* The filters are always in view beside it on a computer. */
+.insights-filters-button {
+  display: none;
+}
+
+.kpi-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin: 10px 0 0;
+}
+
+.kpi {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.kpi dt {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.kpi dd {
+  margin: 0;
+}
+
+.kpi-value {
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.kpi-note {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.chart-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 10px 0 0;
+  padding: 8px 10px;
+}
+
+.chart-card figcaption {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.chart-card h3 {
+  font-size: 13px;
+  font-weight: 650;
+  margin: 0;
+}
+
+.chart-card .field-hint {
+  margin: 0 0 4px;
+}
+
+.chart-card .link-button {
+  flex: none;
+  font-size: 12px;
+}
+
+.chart-table-scroll {
+  overflow-x: auto;
+}
+
+.chart-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
+.chart-table th,
+.chart-table td {
+  border-top: 1px solid var(--border);
+  font-weight: 400;
+  padding: 3px 6px;
+  text-align: right;
+}
+
+.chart-table thead th {
+  border-top: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.chart-table th:first-child {
+  text-align: left;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 2px 12px;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.chart-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 20%);
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.chart-tooltip-title {
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.chart-tooltip-row {
+  align-items: center;
+  display: flex;
+  gap: 5px;
+}
+
+.chart-tooltip-key {
+  border-radius: 1px;
+  flex: none;
+  height: 2px;
+  width: 12px;
+}
+
+/* The records table */
+
+.insights-panel > .records-table-section {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 1;
+  margin-top: 10px;
+  min-height: 260px;
+}
+
+.records-toolbar,
+.records-pages {
+  flex-shrink: 0;
+}
+
+.records-toolbar {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.records-search {
+  flex: 1 1 180px;
+  margin-top: 0;
+}
+
+.records-search input {
+  width: 100%;
+}
+
+.records-scroll {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-top: 8px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.records-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+}
+
+.records-table th,
+.records-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 5px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.records-table thead th {
+  background: var(--surface-muted);
+  position: sticky;
+  top: 0;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.records-table thead button {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  padding: 0;
+}
+
+/* The record's name stays in view while the other columns scroll past it. */
+.records-table th:first-child,
+.records-table td:first-child {
+  background: var(--surface);
+  left: 0;
+  position: sticky;
+  z-index: 1;
+}
+
+.records-table thead th:first-child {
+  background: var(--surface-muted);
+  z-index: 3;
+}
+
+.records-table td:first-child {
+  min-width: 130px;
+}
+
+/* One line each, so rows stay even and a long value scrolls rather than stretching its row. */
+.records-table td:not(:first-child) {
+  white-space: nowrap;
+}
+
+.records-table tbody tr {
+  cursor: pointer;
+}
+
+.records-table tbody tr:hover td {
+  background: var(--surface-muted);
+}
+
+.records-pages {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+
+.records-pages .secondary-button {
+  margin: 0;
+  padding: 4px 10px;
+  width: auto;
+}
+
+.records-count {
+  font-variant-numeric: tabular-nums;
+  margin-right: auto;
+}
+
+.records-page-size {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+}
+
+/* Filter by any field, and saved views */
+
+.field input {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  min-width: 0;
+  padding: 4px 6px;
+  width: 100%;
+}
+
+.field-filter {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-top: 8px;
+  padding: 4px 8px 6px;
+}
+
+.field-filter .field {
+  margin-top: 2px;
+}
+
+.field-filter-header {
+  align-items: baseline;
+  display: flex;
+  font-weight: 600;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.field-filter-header .link-button {
+  flex: none;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.filter-choices {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.saved-views {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.saved-views li {
+  border-top: 1px solid var(--border);
+  padding: 4px 0;
+}
+
+.saved-views li:first-child {
+  border-top: 0;
+}
+
+.saved-view-name {
+  font-weight: 600;
+  text-align: left;
+}
+
+.saved-view-actions {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 0 10px;
+}
+
+.saved-view-form {
+  margin-top: 4px;
+}
+
+.saved-view-form .primary-button,
+.saved-view-form .secondary-button {
+  margin: 0;
+  width: auto;
+}
+
+.legend-markers {
+  margin-top: 4px;
+}
+
+.legend-markers summary {
+  cursor: pointer;
+}
+
+.legend-markers ul {
+  max-height: 170px;
+  overflow-y: auto;
+}
+
+/* The audit log */
+
+.audit-section {
+  max-width: 1200px;
+}
+
+.audit-filters {
+  align-items: flex-end;
+  display: grid;
+  gap: 8px 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.audit-filters .field {
+  margin-top: 0;
+}
+
+/* The same height, so their labels line up. */
+.audit-filters input,
+.audit-filters select {
+  box-sizing: border-box;
+  height: 34px;
+}
+
+.audit-scroll {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.audit-scroll[aria-busy='true'] {
+  opacity: 0.6;
+}
+
+.audit-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+}
+
+.audit-table th,
+.audit-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.audit-table th {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.audit-table ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.audit-when {
+  white-space: nowrap;
+}
+
+/* In a narrow window these scroll sideways, rather than squeezing to a word a line. */
+.audit-table td:nth-child(4) {
+  min-width: 170px;
+}
+
+.audit-table td:nth-child(5) {
+  min-width: 240px;
+}
+
+/* Phones: the map, dashboard and list take turns on the whole screen. */
+
+@media (max-width: 800px) {
+  .workspace,
+  .workspace.has-insights,
+  .workspace.has-insights.insights-wide {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  /* A profile or form has its own way out, and the map beside it needs the room. */
+  .has-right-panel .phone-tabs {
+    display: none;
+  }
+
+  .phone-tabs {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  .phone-tabs button {
+    flex: 1;
+    padding: 6px 4px;
+  }
+
+  .has-insights .map-area,
+  .has-insights .insights-panel {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  /* Over the map's own buttons, and under the layers drawer. */
+  .insights-panel {
+    border: 0;
+    box-shadow: none;
+    z-index: 1050;
+  }
+
+  .insights-header,
+  .insights-open-button {
+    display: none;
+  }
+
+  .insights-scope {
+    margin-top: 0;
+  }
+
+  .insights-filters-button {
+    display: inline;
+  }
+
+  .field input {
+    font-size: 16px;
+  }
+
+  .records-search input {
+    font-size: 16px;
+  }
+
+  /* Each line of the log is a small card, so the reason can't hide off to the side. */
+  .audit-table,
+  .audit-table tbody,
+  .audit-table tr,
+  .audit-table td {
+    display: block;
+  }
+
+  .audit-table thead {
+    display: none;
+  }
+
+  .audit-table tr {
+    border-bottom: 1px solid var(--border);
+    padding: 8px 0;
+  }
+
+  .audit-table td,
+  .audit-table td:nth-child(n) {
+    border: 0;
+    min-width: 0;
+    padding: 1px 0;
+  }
+
+  .audit-when {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .audit-table td:nth-child(3) {
+    font-weight: 600;
+  }
+}

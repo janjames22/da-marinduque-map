@@ -11,8 +11,9 @@ const seed = JSON.parse(readFileSync('data/local/local-seed.json', 'utf8')) as R
 };
 
 export const seedData = seed as unknown as {
+  municipalities: { id: number; name: string }[];
   barangays: { id: number; name: string; municipality_id: number; attributes: Record<string, unknown>; version: number }[];
-  interventions: { id: string; beneficiary: string; barangay_id: number | null; qa_flags: string[]; geojson: unknown; version: number; intervention_type_id: number; status_id: number }[];
+  interventions: { id: string; source_id: string; beneficiary: string; municipality_id: number; barangay_id: number | null; qa_flags: string[]; geojson: unknown; version: number; intervention_type_id: number; status_id: number }[];
   status_history: { id: string; intervention_id: string; status_id: number }[];
   intervention_barangays: { barangay_id: number; intervention_id: string }[];
 };
@@ -82,7 +83,7 @@ export interface RpcCall {
 export interface RestWrite {
   table: string;
   method: string;
-  id: number | null;
+  id: number | string | null;
   values: Record<string, unknown>;
 }
 
@@ -140,6 +141,8 @@ export async function installFakeSupabase(page: Page, users: FakeUser[] = Object
     status_history: clone(seed.status_history),
     intervention_photos: [],
     import_batches: clone(seed.import_batches),
+    saved_views: [],
+    audit_log: [],
   };
 
   const fake: FakeSupabase = {
@@ -230,6 +233,16 @@ export async function installFakeSupabase(page: Page, users: FakeUser[] = Object
       if (name === 'member_names') return respond(route, 200, users.map((u) => ({ id: u.id, full_name: u.profile?.full_name ?? null })));
       if (name === 'audit_for_intervention') return respond(route, 200, []);
       if (name === 'log_export') return respond(route, 200, null);
+      if (name === 'set_default_view') {
+        for (const view of tables.saved_views as { id: string; is_default: boolean }[]) view.is_default = view.id === call.args.p_id;
+        return respond(route, 200, null);
+      }
+      if (name === 'audit_log_page') {
+        const entries = tables.audit_log as { actor_id: string | null; action: string }[];
+        const chosen = entries.filter((entry) => (!call.args.p_actor || entry.actor_id === call.args.p_actor) && (!call.args.p_action || entry.action === call.args.p_action));
+        const offset = call.args.p_offset as number;
+        return respond(route, 200, { total: chosen.length, entries: chosen.slice(offset, offset + (call.args.p_limit as number)) });
+      }
       if (name === 'save_intervention_type') {
         const types = tables.intervention_types as { id: number; version: number }[];
         const { p_id: id, p_values: values, p_statuses: statuses } = call.args as { p_id: number | null; p_values: Record<string, unknown>; p_statuses: Record<string, unknown>[] };
@@ -252,16 +265,37 @@ export async function installFakeSupabase(page: Page, users: FakeUser[] = Object
       return respond(route, 500, { code: 'XX000', message: `Not faked: ${name}` });
     }
 
+    // Saved views are the one table here with text ids, and they keep an owner.
+    const rowId = (): number | string => {
+      const text = url.searchParams.get('id')?.replace('eq.', '') ?? '';
+      return name === 'saved_views' ? text : Number(text);
+    };
+
+    if (request.method() === 'DELETE') {
+      if (!user) return respond(route, 401, { code: '42501', message: 'permission denied' });
+      const id = rowId();
+      fake.restWrites.push({ table: name, method: 'DELETE', id, values: {} });
+      const rows = (tables[name] ?? []) as { id: number | string }[];
+      const found = rows.some((row) => row.id === id);
+      tables[name] = rows.filter((row) => row.id !== id);
+      return respond(route, 200, found ? [{ id }] : []);
+    }
+
     if (request.method() === 'POST' || request.method() === 'PATCH') {
       if (!user) return respond(route, 401, { code: '42501', message: 'permission denied' });
       const values = request.postDataJSON() as Record<string, unknown>;
-      const rows = (tables[name] ?? []) as { id: number }[];
+      const rows = (tables[name] ?? []) as { id: number | string }[];
       if (request.method() === 'POST') {
         fake.restWrites.push({ table: name, method: 'POST', id: null, values });
-        rows.push({ id: Math.max(0, ...rows.map((row) => row.id)) + 1, is_active: true, ...values } as { id: number });
+        if (name === 'saved_views') {
+          const now = new Date().toISOString();
+          rows.push({ id: `b0000000-0000-4000-8000-${String(rows.length + 1).padStart(12, '0')}`, owner_id: user.id, is_shared: false, is_default: false, created_at: now, updated_at: now, ...values } as { id: string });
+        } else {
+          rows.push({ id: Math.max(0, ...rows.map((row) => row.id as number)) + 1, is_active: true, ...values } as { id: number });
+        }
         return route.fulfill({ status: 201, headers: CORS });
       }
-      const id = Number(url.searchParams.get('id')?.replace('eq.', ''));
+      const id = rowId();
       fake.restWrites.push({ table: name, method: 'PATCH', id, values });
       const row = rows.find((candidate) => candidate.id === id);
       if (row) Object.assign(row, values);

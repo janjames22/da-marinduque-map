@@ -11,6 +11,7 @@ import {
   unassignedRecords,
   type ViewFilters,
 } from '../src/modules/intervention-map/lib/choropleth';
+import { buildDashboard } from '../src/modules/intervention-map/lib/dashboard';
 import { isOnMap, statusDateLabel } from '../src/modules/intervention-map/lib/display';
 import { buildVerificationRows, verificationCsv, type VerificationRow } from '../scripts/build-field-verification';
 import { buildLocalSeed } from '../scripts/build-local-seed';
@@ -824,6 +825,43 @@ describe('local dataset through the map logic', () => {
     expect(shading.barangaysWithRecords).toBe(93);
     expect(shading.barangaysWithout).toBe(125);
     expect(unassignedRecords(records, data.links)).toHaveLength(9);
+  });
+
+  it('gives the dashboard the same numbers as the database, with every chart adding up', async () => {
+    const data = await mapData();
+    const numbers = buildDashboard(recordsInView(liveRecords(data.interventions, data.types), defaultView), data, data.barangays);
+
+    expect(numbers.records).toBe(199);
+    expect(numbers.types.map((tile) => [tile.label, tile.units])).toEqual([
+      ['Machinery units', 195],
+      ['SSIPs', 4],
+    ]);
+    expect(numbers.barangaysTotal).toBe(218);
+    expect(numbers.barangaysWithout).toBe(125);
+
+    const [{ n: needingQa }] = await rows<{ n: number }>(`select count(*)::int n from interventions where exists (select 1 from unnest(qa_flags) flag where flag <> 'duplicate_point')`);
+    expect(numbers.needingQa).toBe(needingQa);
+
+    const [{ n: beneficiaries }] = await rows<{ n: number }>(`select count(distinct lower(regexp_replace(btrim(beneficiary), '\\s+', ' ', 'g')))::int n from interventions where beneficiary is not null and btrim(beneficiary) <> ''`);
+    expect(numbers.beneficiaries).toBe(beneficiaries);
+
+    // By each type's own list of what counts: Turned-over and Serviceable machinery, and no SSIP yet.
+    const [{ units, known }] = await rows<{ units: number; known: number }>(
+      `select coalesce(sum(i.quantity) filter (where ts.counts_as_operational), 0)::int units, sum(i.quantity)::int known
+       from interventions i
+       join statuses s on s.id = i.status_id and s.name <> 'Unknown'
+       left join intervention_type_statuses ts on ts.intervention_type_id = i.intervention_type_id and ts.status_id = i.status_id`,
+    );
+    expect(numbers.operational).toEqual({ percent: Math.round((units / known) * 100), units, known });
+
+    const total = (chartRows: { value: number }[]) => chartRows.reduce((sum, row) => sum + row.value, 0);
+    expect(total(numbers.byMunicipality)).toBe(199);
+    expect(total(numbers.byProgram)).toBe(199);
+    expect(total(numbers.byYear) + numbers.noYearUnits).toBe(199);
+    expect(total(numbers.byCategory) + numbers.unitsLeftOut).toBe(199);
+    expect(numbers.byCategory).toHaveLength(15);
+    expect(numbers.byStatus.reduce((sum, row) => sum + row.total, 0)).toBe(199);
+    expect(numbers.byStatus).toHaveLength(6);
   });
 
   it('leaves 26 unlocated and 1 out-of-province record off the map', async () => {

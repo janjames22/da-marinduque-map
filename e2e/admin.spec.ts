@@ -1,6 +1,7 @@
 // The /admin screens in local mode, at desktop and phone sizes: an Admin changes the lists and forms,
 // and the map and its forms follow with no code change. tests/admin.test.ts covers the rules against
 // the real database, and e2e/auth.spec.ts covers the Users page under the site's real security headers.
+import { readFileSync } from 'node:fs';
 import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
 
 const BUTTON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>';
@@ -605,7 +606,7 @@ test.describe('another Admin at the same time', () => {
 });
 
 test.describe('on any screen', () => {
-  for (const path of ['/admin/users', '/admin/types', '/admin/types/1', '/admin/categories', '/admin/programs', '/admin/statuses', '/admin/lists', '/admin/barangay-fields']) {
+  for (const path of ['/admin/users', '/admin/types', '/admin/types/1', '/admin/categories', '/admin/programs', '/admin/statuses', '/admin/lists', '/admin/barangay-fields', '/admin/audit']) {
     test(`${path} fits the screen, with no stray scrolling of the page`, async ({ page }) => {
       await openAdmin(page, path);
       await expect(page.locator('.admin-section').first()).toBeVisible();
@@ -622,10 +623,269 @@ test.describe('on any screen', () => {
       ['Statuses', 'Statuses'],
       ['Other lists', 'Category groups'],
       ['Barangay fields', 'Barangay fields'],
+      ['Audit log', 'Audit log'],
       ['Users', 'Users'],
     ]) {
       await goToSection(page, name);
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
     }
+  });
+});
+
+test.describe('the audit log', () => {
+  const seed = JSON.parse(readFileSync('data/local/local-seed.json', 'utf8')) as {
+    interventions: { id: string; source_id: string; beneficiary: string; municipality_id: number; barangay_id: number | null; geojson: unknown; qa_flags: string[] }[];
+    barangays: { id: number; name: string }[];
+    municipalities: { id: number; name: string }[];
+    lookups: { statuses: { id: number; name: string }[] };
+  };
+  const counted = new Map<string, number>();
+  for (const r of seed.interventions) counted.set(r.beneficiary, (counted.get(r.beneficiary) ?? 0) + 1);
+  const [first, second] = seed.interventions.filter((r) => r.geojson && r.barangay_id !== null && r.qa_flags.length === 0 && counted.get(r.beneficiary) === 1);
+  const barangay = seed.barangays[0];
+  const turnedOver = seed.lookups.statuses.find((status) => status.name === 'Turned-over')!;
+
+  const log = (page: Page) => page.getByRole('region', { name: 'Audit log' });
+  const filters = (page: Page) => log(page).getByRole('form', { name: 'Filter the audit log' });
+  const lines = (page: Page) => log(page).locator('.audit-table tbody tr');
+  const count = (page: Page) => log(page).locator('.records-count');
+  const line = (page: Page, id: number) => log(page).locator(`tr[data-audit-entry="${id}"]`);
+  const cell = (page: Page, id: number, column: number) => line(page, id).locator('td').nth(column);
+
+  interface Entry {
+    id: number;
+    table_name: string;
+    record_id: string | null;
+    action: string;
+    old_row?: Record<string, unknown> | null;
+    new_row?: Record<string, unknown> | null;
+    actor_id?: string | null;
+    context?: Record<string, unknown> | null;
+    at: string;
+  }
+
+  // Lines of every kind, on days of the test's choosing, straight into the browser's stored data.
+  async function withLog(page: Page, entries: Entry[]) {
+    await openAdmin(page, '/admin/audit');
+    await expect(log(page)).toBeVisible();
+    await page.evaluate(
+      async (rows) => {
+        const database = await new Promise<IDBDatabase>((resolve) => {
+          const open = indexedDB.open('da-intervention-map-local');
+          open.onsuccess = () => resolve(open.result);
+        });
+        const store = database.transaction('state', 'readwrite').objectStore('state');
+        const state = await new Promise<{ rows: { auditLog: unknown[] } }>((resolve) => {
+          const get = store.get('current');
+          get.onsuccess = () => resolve(get.result);
+        });
+        state.rows.auditLog = rows;
+        await new Promise((resolve) => {
+          const put = store.put(state, 'current');
+          put.onsuccess = resolve;
+        });
+      },
+      entries.map((entry) => ({ old_row: null, new_row: null, actor_id: null, context: null, ...entry })),
+    );
+    await page.reload();
+    await expect(log(page)).toBeVisible();
+  }
+
+  const ENTRIES: Entry[] = [
+    { id: 1, table_name: 'interventions', record_id: first.id, action: 'update', old_row: { remarks: 'Old note' }, new_row: { remarks: 'New note' }, context: { kind: 'edit', reason: 'Asked by the MAO' }, at: '2026-01-15T00:30:00Z' },
+    { id: 2, table_name: 'interventions', record_id: second.id, action: 'soft_delete', old_row: {}, new_row: {}, at: '2026-03-10T02:00:00Z' },
+    // 1:30 in the morning of March 11 in Manila, though the stored time still says March 10.
+    { id: 3, table_name: 'status_history', record_id: '900', action: 'insert', new_row: { intervention_id: first.id, status_id: turnedOver.id }, at: '2026-03-10T17:30:00Z' },
+    { id: 4, table_name: 'exports', record_id: null, action: 'export', context: { format: 'csv', record_count: 5, file_name: 'Marinduque_Province.csv' }, at: '2026-04-01T03:00:00Z' },
+    { id: 5, table_name: 'programs', record_id: '1', action: 'update', old_row: { id: 1, name: 'Old name' }, new_row: { id: 1, name: 'New name' }, at: '2026-04-02T03:00:00Z' },
+    { id: 6, table_name: 'barangays', record_id: String(barangay.id), action: 'update', old_row: {}, new_row: {}, at: '2026-04-03T03:00:00Z' },
+    { id: 7, table_name: 'interventions', record_id: first.id, action: 'update', old_row: {}, new_row: {}, actor_id: 'f0000000-0000-4000-8000-000000000009', at: '2026-04-04T03:00:00Z' },
+  ];
+
+  test('is for an Admin only, even by going straight to the address', async ({ page }) => {
+    await tilesOff(page);
+    await page.addInitScript(() => localStorage.setItem('da-local-role', 'encoder'));
+    await page.goto('/admin/audit');
+    await expect(page.getByRole('alert')).toContainText('This page is for Admins');
+    await expect(log(page)).toHaveCount(0);
+  });
+
+  test('says who did what and when, newest first', async ({ page }) => {
+    await withLog(page, ENTRIES);
+    await expect(lines(page)).toHaveCount(ENTRIES.length);
+    await expect(count(page)).toHaveText(`1–${ENTRIES.length} of ${ENTRIES.length}`);
+    expect(await lines(page).evaluateAll((rows) => rows.map((row) => row.getAttribute('data-audit-entry')))).toEqual(['7', '6', '5', '4', '3', '2', '1']);
+
+    // In Philippine time, eight hours ahead of the stored one.
+    await expect(cell(page, 1, 0)).toContainText('8:30');
+    await expect(cell(page, 1, 1)).toHaveText('This browser');
+    await expect(cell(page, 1, 2)).toHaveText('Edited');
+    await expect(cell(page, 1, 4)).toContainText('Reason: Asked by the MAO');
+    await expect(cell(page, 1, 4)).toContainText('Remarks: Old note → New note');
+
+    await expect(cell(page, 2, 2)).toHaveText('Deleted');
+    await expect(cell(page, 3, 4)).toContainText('Status set to Turned-over');
+    await expect(cell(page, 4, 2)).toHaveText('Exported');
+    await expect(cell(page, 4, 3)).toContainText('Export: Marinduque_Province.csv');
+    await expect(cell(page, 4, 4)).toContainText('CSV, 5 records');
+    await expect(cell(page, 5, 3)).toContainText('Program: New name');
+    await expect(cell(page, 5, 4)).toContainText('name: Old name → New name');
+    await expect(cell(page, 6, 3)).toContainText(`Barangay ${barangay.name}`);
+    await expect(cell(page, 7, 1)).toHaveText('An account since removed');
+
+    // Readable on any screen: the details aren't squeezed, and nothing sits off to the side.
+    const details = (await cell(page, 1, 4).boundingBox())!;
+    expect(details.width).toBeGreaterThanOrEqual(240);
+    expect(details.x + details.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    expect(await fitsTheScreen(page)).toBe(true);
+
+    // The filters' labels line up, as their boxes are the same height.
+    const heights = await filters(page).locator('input, select').evaluateAll((controls) => controls.map((control) => control.getBoundingClientRect().height));
+    expect(new Set(heights).size).toBe(1);
+  });
+
+  test('filters by record, including its status changes', async ({ page }) => {
+    await withLog(page, ENTRIES);
+    const search = filters(page).getByLabel('Record');
+
+    await search.fill(first.source_id);
+    await expect(lines(page)).toHaveCount(3);
+    await expect(line(page, 3)).toBeVisible();
+    await expect(line(page, 2)).toHaveCount(0);
+    await expect(count(page)).toHaveText('1–3 of 3');
+
+    await search.fill(second.beneficiary.toUpperCase());
+    await expect(lines(page)).toHaveCount(1);
+    await expect(line(page, 2)).toBeVisible();
+
+    await search.fill('zz nothing like this zz');
+    await expect(log(page)).toContainText('Nothing in the log matches these filters.');
+    await expect(lines(page)).toHaveCount(0);
+    await expect(count(page)).toHaveText('0–0 of 0');
+  });
+
+  test('filters by action and by person', async ({ page }) => {
+    await withLog(page, ENTRIES);
+    await filters(page).getByLabel('Action').selectOption({ label: 'Exported' });
+    await expect(lines(page)).toHaveCount(1);
+    await expect(line(page, 4)).toBeVisible();
+    await filters(page).getByRole('button', { name: 'Clear filters' }).click();
+    await expect(lines(page)).toHaveCount(ENTRIES.length);
+
+    await filters(page).getByLabel('Action').selectOption({ label: 'Edited' });
+    await expect(lines(page)).toHaveCount(4);
+
+    // The removed account isn't "this browser".
+    await filters(page).getByLabel('Person').selectOption({ label: 'This browser' });
+    await expect(lines(page)).toHaveCount(3);
+    await expect(line(page, 7)).toHaveCount(0);
+  });
+
+  test('filters by date, by the day in Philippine time', async ({ page }) => {
+    await withLog(page, ENTRIES);
+    const from = filters(page).getByLabel('From', { exact: true });
+    const to = filters(page).getByLabel('To', { exact: true });
+
+    await from.fill('2026-03-01');
+    await to.fill('2026-03-31');
+    await expect(lines(page)).toHaveCount(2);
+
+    await from.fill('2026-03-11');
+    await to.fill('2026-03-11');
+    await expect(lines(page)).toHaveCount(1);
+    await expect(line(page, 3)).toBeVisible();
+
+    await from.fill('2026-03-10');
+    await to.fill('2026-03-10');
+    await expect(lines(page)).toHaveCount(1);
+    await expect(line(page, 2)).toBeVisible();
+  });
+
+  test('links to what each line is about', async ({ page }) => {
+    await withLog(page, ENTRIES);
+    await expect(line(page, 5).getByRole('link')).toHaveAttribute('href', '/admin/programs');
+    await expect(line(page, 6).getByRole('link')).toHaveAttribute('href', `/barangays/${barangay.id}`);
+    await expect(line(page, 4).getByRole('link')).toHaveCount(0);
+    await expect(line(page, 3).getByRole('link')).toHaveAttribute('href', `/records/${first.id}`);
+
+    await line(page, 1).getByRole('link').click();
+    await expect(page.locator('.barangay-shape')).toHaveCount(218);
+    await expect(page.locator('.record-popup').filter({ hasText: first.beneficiary })).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('a link shows its record, even if the map\'s filters were hiding it', async ({ page }) => {
+    await withLog(page, ENTRIES);
+    await goToMap(page);
+    const elsewhere = seed.municipalities.find((municipality) => municipality.id !== first.municipality_id)!;
+    await withLayerPanel(page, (panel) => select(panel, 'Municipality').selectOption(String(elsewhere.id)));
+    await expect(page.locator(`.intervention-marker[title="${first.beneficiary}"]`)).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Admin' }).click();
+    await goToSection(page, 'Audit log');
+    await line(page, 1).getByRole('link').click();
+    await expect(page.locator('.record-popup').filter({ hasText: first.beneficiary })).toBeVisible({ timeout: 15_000 });
+    await withLayerPanel(page, (panel) => expect(select(panel, 'Municipality')).toHaveValue(''));
+  });
+
+  test('a link to a deleted record shows its history, reason and all', async ({ page }) => {
+    await tilesOff(page);
+    await page.goto(`/barangays/${second.barangay_id}`);
+    const row = page.getByLabel(/^Profile of barangay/).locator('.record-row').filter({ hasText: second.beneficiary });
+    await row.locator('.record-name').click();
+    await page.locator('.leaflet-popup-content').getByRole('button', { name: 'Delete', exact: true }).click();
+    const deleting = form(page, 'Delete record');
+    await deleting.getByLabel('Reason (optional)').fill('Entered twice');
+    await deleting.getByRole('button', { name: 'Delete record' }).click();
+    await expect(page.getByText(/Record deleted/)).toBeVisible();
+
+    await page.goto('/admin/audit');
+    const deleted = lines(page).filter({ hasText: 'Deleted' }).first();
+    await expect(deleted).toContainText('Reason: Entered twice');
+    await expect(deleted).toContainText('This browser');
+    await deleted.getByRole('link').click();
+
+    await expect(page.getByLabel('Change history')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByLabel('Change history')).toContainText('Reason: Entered twice');
+    await expect(page.getByText(/This record was deleted/)).toBeVisible();
+  });
+
+  test('goes a page at a time, and a new filter starts again from the first', async ({ page }) => {
+    const many = Array.from({ length: 120 }, (_, index) => ({
+      id: index + 1,
+      table_name: 'interventions',
+      record_id: index % 2 === 0 ? first.id : second.id,
+      action: 'update',
+      old_row: {},
+      new_row: {},
+      at: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+    }));
+    await withLog(page, many);
+    const newer = log(page).getByRole('button', { name: 'Newer' });
+    const older = log(page).getByRole('button', { name: 'Older' });
+
+    await expect(lines(page)).toHaveCount(50);
+    await expect(count(page)).toHaveText('1–50 of 120');
+    await expect(lines(page).first()).toHaveAttribute('data-audit-entry', '120');
+    await expect(newer).toBeDisabled();
+
+    await older.click();
+    await expect(count(page)).toHaveText('51–100 of 120');
+    await expect(lines(page).first()).toHaveAttribute('data-audit-entry', '70');
+
+    await older.click();
+    await expect(count(page)).toHaveText('101–120 of 120');
+    await expect(lines(page)).toHaveCount(20);
+    await expect(older).toBeDisabled();
+    expect(await fitsTheScreen(page)).toBe(true);
+
+    await filters(page).getByLabel('Record').fill(first.source_id);
+    await expect(count(page)).toHaveText('1–50 of 60');
+
+    await filters(page).getByRole('button', { name: 'Clear filters' }).click();
+    await expect(count(page)).toHaveText('1–50 of 120');
+    await older.click();
+    await newer.click();
+    await expect(count(page)).toHaveText('1–50 of 120');
   });
 });

@@ -81,11 +81,12 @@ export function toMapData(seed: LocalSeed): MapData {
     photos: [],
     dataSources: [...new Set(batches.map((b) => b.data_source))],
     members: [],
+    savedViews: [],
   };
 }
 
 // The parts of a saved state that never change while the app runs, and the rows that do.
-type FixedData = Omit<MapData, 'interventions' | 'links' | 'statusHistory' | 'barangays' | 'photos' | 'members'>;
+type FixedData = Omit<MapData, 'interventions' | 'links' | 'statusHistory' | 'barangays' | 'photos' | 'members' | 'savedViews'>;
 
 export interface LocalState {
   fingerprint: string;
@@ -94,7 +95,7 @@ export interface LocalState {
 }
 
 export function stateFromSeed(seed: LocalSeed, fingerprint: string): LocalState {
-  const { interventions, links, statusHistory, barangays, photos, members: _members, ...fixed } = toMapData(seed);
+  const { interventions, links, statusHistory, barangays, photos, members: _members, savedViews, ...fixed } = toMapData(seed);
   return {
     fingerprint,
     fixed,
@@ -105,6 +106,7 @@ export function stateFromSeed(seed: LocalSeed, fingerprint: string): LocalState 
       barangays,
       photos,
       auditLog: (seed.audit_log ?? []) as AuditEntry[],
+      savedViews,
       changeCount: 0,
     },
   };
@@ -254,6 +256,7 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
         barangays,
         photos,
         members: [],
+        savedViews: state.rows.savedViews ?? [],
       };
     },
 
@@ -319,6 +322,25 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
     async saveBarangayFields(expectedVersion, schema) {
       requireAdmin(user);
       await mutate((rows, context) => admin.saveBarangayFields(rows, context, expectedVersion, schema));
+    },
+
+    async saveView(id, values) {
+      await mutate((rows, context) => admin.saveView(rows, context, user.id, id, values));
+    },
+
+    async deleteView(id) {
+      await mutate((rows, context) => admin.deleteView(rows, context, id));
+    },
+
+    async setDefaultView(id) {
+      requireAdmin(user);
+      await mutate((rows, context) => admin.setDefaultView(rows, context, id));
+    },
+
+    async auditLog(query) {
+      requireAdmin(user);
+      const state = await readState();
+      return engine.auditPage(state?.rows.auditLog ?? [], query);
     },
 
     photoUrl(photoId) {

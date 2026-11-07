@@ -50,6 +50,12 @@ export function createSupabaseBackend(client: SupabaseClient): SupabaseBackend {
       if (data.length === 0) throw new BackendError('42501', 'Nothing was changed.');
     },
 
+    async deleteRow(table, id) {
+      const { data, error } = await client.from(table).delete().eq('id', id).select('id');
+      if (error) throw toBackendError(error);
+      if (data.length === 0) throw new BackendError('42501', 'Nothing was changed.');
+    },
+
     async invokeFunction<T>(name: string, body: Record<string, unknown>) {
       const { data, error } = await client.functions.invoke(name, { body });
       if (!error) return data as T;

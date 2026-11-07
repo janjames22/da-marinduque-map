@@ -250,6 +250,29 @@ test.describe('saving', () => {
     });
   });
 
+  test('a new barangay goes with its reason', async ({ page }) => {
+    const other = seedData.barangays.find((b) => b.municipality_id === record.municipality_id && b.id !== record.barangay_id)!;
+    const fake = await signedIn(page, USERS.encoder, `/barangays/${barangay.id}`);
+    fake.onRpc(({ name, args }) => (name === 'update_intervention' ? { status: 200, body: { ...record, version: (args.p_expected_version as number) + 1, barangay_id: other.id } } : undefined));
+
+    await openRecordPopup(page);
+    await popupAction(page, 'Edit').click();
+    const form = page.getByRole('form', { name: 'Edit record' });
+    await form.getByRole('combobox', { name: /^Barangay/ }).selectOption(String(other.id));
+    await form.getByRole('button', { name: 'Save changes' }).click();
+    await expect(form.getByText('Give a reason. It goes in the audit log.')).toBeVisible();
+    expect(fake.rpcCalls.find((call) => call.name === 'update_intervention')).toBeUndefined();
+
+    await form.getByLabel(/^Reason for changing the barangay/).fill('Checked with the MAO');
+    await form.getByRole('button', { name: 'Save changes' }).click();
+    await expect.poll(() => fake.rpcCalls.find((call) => call.name === 'update_intervention')?.args).toEqual({
+      p_id: record.id,
+      p_expected_version: record.version,
+      p_patch: { barangay_id: other.id },
+      p_note: { kind: 'edit', reason: 'Checked with the MAO' },
+    });
+  });
+
   test('a version conflict tells the person, and keeps what they typed', async ({ page }) => {
     const fake = await signedIn(page, USERS.encoder, `/barangays/${barangay.id}`);
     fake.onRpc(({ name }) => (name === 'update_intervention' ? { status: 400, body: { code: 'DA409', message: 'This record was changed by someone else.' } } : undefined));
@@ -574,6 +597,256 @@ test.describe('the admin screens', () => {
     });
     await expect.poll(() => add.getByRole('img', { name: 'Preview' }).evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   });
+});
+
+test.describe('the dashboard and records table', () => {
+  const panel = (page: Page) => page.getByRole('complementary', { name: 'Dashboard and records' });
+  const tabs = (page: Page) => page.getByRole('navigation', { name: 'Views' });
+
+  async function showDashboard(page: Page, isMobile: boolean) {
+    if (isMobile) await tabs(page).getByRole('button', { name: 'Dashboard' }).click();
+    await expect(page.locator('[data-kpi="records"] .kpi-value')).toBeVisible({ timeout: 30_000 });
+  }
+
+  async function showRecords(page: Page, isMobile: boolean) {
+    if (isMobile) await tabs(page).getByRole('button', { name: 'List' }).click();
+    else await panel(page).getByRole('button', { name: 'Records', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Records table' })).toBeVisible({ timeout: 30_000 });
+  }
+
+  test('the chart library loads and draws under the site\'s real security rules', async ({ page, isMobile }) => {
+    await signedIn(page, USERS.viewer);
+    await showDashboard(page, isMobile);
+    await expect(page.locator('[data-kpi="records"] .kpi-value')).toHaveText(String(seedData.interventions.length));
+    for (const name of ['Units by municipality', 'Units by program', 'Units by year funded', 'Units by category (top 15)', 'Status by municipality']) {
+      await expect(page.getByRole('figure', { name }).locator('.recharts-bar-rectangle').first()).toBeVisible();
+    }
+    await page.getByRole('figure', { name: 'Units by municipality' }).getByRole('button', { name: /Show table/ }).click();
+    await expect(page.getByRole('figure', { name: 'Units by municipality' }).locator('tbody tr')).toHaveCount(seedData.municipalities.length);
+  });
+
+  test('a row opens its record, whatever the login', async ({ page, isMobile }) => {
+    await signedIn(page, USERS.viewer);
+    await showRecords(page, isMobile);
+    await page.getByRole('searchbox', { name: 'Search these records' }).fill(record.source_id);
+    await page.locator(`tr[data-record="${record.id}"]`).click();
+    await expect(page.locator('.record-popup').filter({ hasText: record.beneficiary })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('exporting the table logs what it was: the count, the filters and the search', async ({ page, isMobile }) => {
+    const fake = await signedIn(page, USERS.viewer);
+    await showRecords(page, isMobile);
+    await page.getByRole('searchbox', { name: 'Search these records' }).fill(record.source_id);
+    await expect(page.locator('.records-table tbody tr')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Export this table' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('radio', { name: /^CSV/ }).check();
+    const started = page.waitForEvent('download');
+    await dialog.getByRole('button', { name: 'Download' }).click();
+    const file = await started;
+
+    const call = fake.rpcCalls.find(({ name }) => name === 'log_export')!;
+    expect(call.args).toMatchObject({ p_format: 'csv', p_file_name: file.suggestedFilename(), p_record_count: 1, p_filters: { search: record.source_id } });
+    expect(file.suggestedFilename()).not.toContain(record.source_id);
+  });
+
+  test('a link straight to a record still opens it after signing in', async ({ page }) => {
+    await signedIn(page, USERS.viewer, `/records/${record.id}`);
+    await expect(page.locator('.record-popup').filter({ hasText: record.beneficiary })).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/$/);
+  });
+});
+
+test.describe('saved views', () => {
+  const layers = (page: Page) => page.getByRole('complementary', { name: 'Layers and filters' });
+  const savedView = (page: Page, name: string) => layers(page).locator(`[data-view="${name}"]`);
+  const viewWrites = (fake: FakeSupabase) => fake.restWrites.filter(({ table }) => table === 'saved_views');
+  const gasan = seedData.municipalities.find((m) => m.name === 'Gasan')!;
+  const inGasan = seedData.barangays.filter((b) => b.municipality_id === gasan.id).length;
+
+  async function openLayers(page: Page, isMobile: boolean) {
+    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await expect(layers(page)).toBeVisible();
+  }
+
+  const sharedView = (changes: Record<string, unknown> = {}) => ({
+    id: 'b0000000-0000-4000-8000-000000000099',
+    name: 'Gasan first',
+    owner_id: USERS.encoder.id,
+    is_shared: true,
+    is_default: false,
+    config: { layers: {}, filters: { municipalityId: gasan.id }, style: {}, basemap: 'osm', extent: null },
+    created_at: '2026-11-01T00:00:00Z',
+    updated_at: '2026-11-01T00:00:00Z',
+    ...changes,
+  });
+
+  test('saving sends only the name, settings and sharing, and the login makes it theirs', async ({ page, isMobile }) => {
+    const fake = await signedIn(page, USERS.viewer);
+    await openLayers(page, isMobile);
+    await layers(page).getByRole('button', { name: 'Save this view' }).click();
+    const form = layers(page).getByRole('form', { name: 'Save this view' });
+    await form.getByLabel('Name').fill('My view');
+    await form.getByRole('button', { name: 'Save view' }).click();
+    await expect(savedView(page, 'My view')).toContainText('Personal');
+
+    const [added] = viewWrites(fake);
+    expect(added.method).toBe('POST');
+    expect(Object.keys(added.values).sort()).toEqual(['config', 'is_shared', 'name']);
+    expect(added.values).toMatchObject({ name: 'My view', is_shared: false });
+    expect(JSON.stringify(added.values)).not.toContain(USERS.viewer.id);
+
+    // Each change sends just what changed, and a Viewer can do all of it to their own view.
+    await savedView(page, 'My view').getByRole('button', { name: /^Share/ }).click();
+    await expect(savedView(page, 'My view')).toContainText('Shared by you');
+    expect(viewWrites(fake).at(-1)).toMatchObject({ method: 'PATCH', values: { is_shared: true } });
+    expect(Object.keys(viewWrites(fake).at(-1)!.values)).toEqual(['is_shared']);
+
+    await savedView(page, 'My view').getByRole('button', { name: /^Update/ }).click();
+    await expect.poll(() => Object.keys(viewWrites(fake).at(-1)!.values)).toEqual(['config']);
+
+    // Choosing what everyone opens on is an Admin's job.
+    await expect(savedView(page, 'My view').getByRole('button', { name: /Open on this/ })).toHaveCount(0);
+
+    page.once('dialog', (dialog) => void dialog.accept());
+    await savedView(page, 'My view').getByRole('button', { name: /^Delete/ }).click();
+    await expect(savedView(page, 'My view')).toHaveCount(0);
+    expect(viewWrites(fake).at(-1)).toMatchObject({ method: 'DELETE' });
+  });
+
+  test('a view someone else shares arrives on an open map, with no reload', async ({ page, isMobile }) => {
+    const fake = await signedIn(page, USERS.viewer);
+    await expect.poll(() => fake.channelJoins.length).toBeGreaterThan(0);
+    await openLayers(page, isMobile);
+    fake.tables.saved_views.push(sharedView());
+    fake.sendSignal();
+    await expect(savedView(page, 'Gasan first')).toContainText('Shared by Enzo Encoder', { timeout: 15_000 });
+    // It's not theirs, so there's nothing to change.
+    await expect(savedView(page, 'Gasan first').getByRole('button')).toHaveCount(1);
+  });
+
+  test('an Admin makes one the default, through the database function', async ({ page, isMobile }) => {
+    const fake = await signedIn(page, USERS.admin);
+    fake.tables.saved_views.push(sharedView());
+    await page.reload();
+    await expect(shapes(page)).toHaveCount(SHAPES);
+    await openLayers(page, isMobile);
+
+    await savedView(page, 'Gasan first').getByRole('button', { name: /Open on this/ }).click();
+    await expect(savedView(page, 'Gasan first')).toContainText('Opens by default');
+    expect(fake.rpcCalls.find(({ name }) => name === 'set_default_view')?.args).toEqual({ p_id: sharedView().id });
+    expect(viewWrites(fake).filter(({ values }) => 'is_default' in values)).toEqual([]);
+
+    await savedView(page, 'Gasan first').getByRole('button', { name: /Stop opening on this/ }).click();
+    await expect(savedView(page, 'Gasan first')).not.toContainText('Opens by default');
+    expect(fake.rpcCalls.filter(({ name }) => name === 'set_default_view').at(-1)?.args).toEqual({ p_id: null });
+  });
+
+  test('everyone opens on the default, after signing in too', async ({ page }) => {
+    const fake = await installFakeSupabase(page);
+    fake.tables.saved_views.push(sharedView({ is_default: true }));
+    await page.goto('/');
+    await signIn(page, USERS.viewer);
+    await expect(shapes(page)).toHaveCount(SHAPES);
+    await expect(page.getByText('Opened on the shared view "Gasan first".')).toBeVisible();
+    await expect(page.getByLabel('Map legend').locator('.legend-summary')).toContainText(`of ${inGasan} barangays`);
+  });
+
+  test('a refusal from the database is explained', async ({ page, isMobile }) => {
+    const fake = await signedIn(page, USERS.admin);
+    fake.tables.saved_views.push(sharedView());
+    await page.reload();
+    await expect(shapes(page)).toHaveCount(SHAPES);
+    fake.onRpc(({ name }) => (name === 'set_default_view' ? { status: 400, body: { code: '23514', message: 'only a shared view can be the default' } } : undefined));
+    await openLayers(page, isMobile);
+    await savedView(page, 'Gasan first').getByRole('button', { name: /Open on this/ }).click();
+    await expect(layers(page).getByRole('alert')).toContainText('only a shared view can be the default');
+    await expect(savedView(page, 'Gasan first')).not.toContainText('Opens by default');
+  });
+});
+
+test.describe('the audit log page', () => {
+  const log = (page: Page) => page.getByRole('region', { name: 'Audit log' });
+  const pageCalls = (fake: FakeSupabase) => fake.rpcCalls.filter(({ name }) => name === 'audit_log_page').map(({ args }) => args);
+  const filters = (page: Page) => log(page).getByRole('form', { name: 'Filter the audit log' });
+
+  async function openLog(page: Page) {
+    const fake = await signedIn(page, USERS.admin);
+    fake.tables.audit_log.push(
+      { id: 1, table_name: 'interventions', record_id: record.id, action: 'update', old_row: { remarks: 'Old note' }, new_row: { remarks: 'New note' }, actor_id: USERS.encoder.id, actor_name: 'Enzo Encoder', context: { kind: 'edit', reason: 'Asked by the MAO' }, at: '2026-11-01T01:00:00Z' },
+      { id: 2, table_name: 'exports', record_id: null, action: 'export', old_row: null, new_row: null, actor_id: USERS.viewer.id, actor_name: 'Vera Viewer', context: { format: 'kmz', record_count: 199, file_name: 'Marinduque.kmz' }, at: '2026-11-02T01:00:00Z' },
+      { id: 3, table_name: 'interventions', record_id: record.id, action: 'update', old_row: {}, new_row: {}, actor_id: null, actor_name: null, context: null, at: '2026-11-03T01:00:00Z' },
+    );
+    await page.goto('/admin/audit');
+    await expect(log(page)).toBeVisible();
+    return fake;
+  }
+
+  test('asks the database for a page at a time, and names people', async ({ page }) => {
+    const fake = await openLog(page);
+    await expect(log(page).locator('tr[data-audit-entry]')).toHaveCount(3);
+    expect(pageCalls(fake)[0]).toEqual({ p_actor: null, p_no_actor: false, p_records: null, p_action: null, p_from: null, p_to: null, p_limit: 50, p_offset: 0 });
+    await expect(log(page).locator('tr[data-audit-entry="1"]')).toContainText('Enzo Encoder');
+    await expect(log(page).locator('tr[data-audit-entry="1"]')).toContainText('Reason: Asked by the MAO');
+    await expect(log(page).locator('tr[data-audit-entry="2"]')).toContainText('Vera Viewer');
+    await expect(log(page).locator('tr[data-audit-entry="3"]')).toContainText('No login (a script or Supabase\'s dashboard)');
+  });
+
+  test('sends each filter to the database', async ({ page }) => {
+    const fake = await openLog(page);
+    await expect(log(page).locator('tr[data-audit-entry]')).toHaveCount(3);
+
+    await filters(page).getByLabel('Person').selectOption({ label: 'Enzo Encoder' });
+    await expect.poll(() => pageCalls(fake).at(-1)?.p_actor).toBe(USERS.encoder.id);
+    await expect(log(page).locator('tr[data-audit-entry]')).toHaveCount(1);
+
+    await filters(page).getByLabel('Person').selectOption({ label: 'No login (a script or Supabase\'s dashboard)' });
+    await expect.poll(() => pageCalls(fake).at(-1)).toMatchObject({ p_actor: null, p_no_actor: true });
+
+    await filters(page).getByRole('button', { name: 'Clear filters' }).click();
+    await filters(page).getByLabel('Action').selectOption({ label: 'Exported' });
+    await expect.poll(() => pageCalls(fake).at(-1)?.p_action).toBe('export');
+
+    await filters(page).getByRole('button', { name: 'Clear filters' }).click();
+    await filters(page).getByLabel('Record').fill(record.source_id);
+    await expect.poll(() => pageCalls(fake).at(-1)?.p_records).toEqual([record.id]);
+
+    // The whole of each day, in Philippine time.
+    await filters(page).getByRole('button', { name: 'Clear filters' }).click();
+    await filters(page).getByLabel('From', { exact: true }).fill('2026-11-01');
+    await filters(page).getByLabel('To', { exact: true }).fill('2026-11-02');
+    await expect.poll(() => pageCalls(fake).at(-1)).toMatchObject({ p_from: '2026-11-01T00:00:00.000+08:00', p_to: '2026-11-02T23:59:59.999+08:00' });
+
+    // A record that matches nothing needs no question at all.
+    const asked = pageCalls(fake).length;
+    await filters(page).getByRole('button', { name: 'Clear filters' }).click();
+    await expect.poll(() => pageCalls(fake).length).toBe(asked + 1);
+    await filters(page).getByLabel('Record').fill('zz nothing like this zz');
+    await expect(log(page)).toContainText('Nothing in the log matches these filters.');
+    expect(pageCalls(fake).length).toBe(asked + 1);
+  });
+
+  test('a line links to its record', async ({ page }) => {
+    await openLog(page);
+    await log(page).locator('tr[data-audit-entry="1"]').getByRole('link').click();
+    await expect(page.locator('.record-popup').filter({ hasText: record.beneficiary })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('says so if the log can\'t be read', async ({ page }) => {
+    const fake = await signedIn(page, USERS.admin);
+    fake.onRpc(({ name }) => (name === 'audit_log_page' ? { status: 403, body: { code: '42501', message: 'Only Admins can do this.' } } : undefined));
+    await page.goto('/admin/audit');
+    await expect(log(page).getByRole('alert')).toContainText('The log could not be read.');
+  });
+
+  for (const role of ['encoder', 'viewer'] as const) {
+    test(`a ${role} is refused, and their browser never asks`, async ({ page }) => {
+      const fake = await signedIn(page, USERS[role]);
+      await page.goto('/admin/audit');
+      await expect(page.getByRole('alert')).toContainText('This page is for Admins');
+      expect(pageCalls(fake)).toEqual([]);
+    });
+  }
 });
 
 test.describe('live updates', () => {

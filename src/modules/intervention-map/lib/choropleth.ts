@@ -1,4 +1,5 @@
 import type { Barangay, Intervention, InterventionBarangay, InterventionType } from '../data/types';
+import { matchesFilter, type FieldFilter } from './view-fields';
 
 export type ChoroplethMode = 'off' | 'count' | 'program' | 'type' | 'gap';
 
@@ -12,6 +13,13 @@ export interface ViewFilters {
   yearTo: number | null;
   municipalityId?: number | null;
   barangayId?: number | null;
+  // Any field, including custom ones.
+  fieldFilters?: FieldFilter[];
+}
+
+// Just the filters from the map's state. Everything that shows records starts from these.
+export function pickViewFilters({ mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId, fieldFilters }: ViewFilters): ViewFilters {
+  return { mode, pickedProgramId, pickedTypeId, hiddenTypeIds, programId, yearFrom, yearTo, municipalityId, barangayId, fieldFilters };
 }
 
 // A single blue ramp for magnitude, more is darker. Zero has its own neutral so that
@@ -67,6 +75,7 @@ export function recordsInView(records: Intervention[], view: ViewFilters, links:
     if (view.yearTo !== null && (r.year_funded === null || r.year_funded > view.yearTo)) return false;
     if (view.municipalityId != null && r.municipality_id !== view.municipalityId) return false;
     if (inBarangay && !inBarangay.has(r.id)) return false;
+    if (view.fieldFilters && !view.fieldFilters.every((filter) => matchesFilter(r, filter))) return false;
     return true;
   });
 }
