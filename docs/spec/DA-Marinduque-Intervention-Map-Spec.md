@@ -93,7 +93,7 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 
 **Active types:** Farm Machinery (point) and SSIP (point, marking the pump or intake location).
 
-**Inactive types:** Farm-to-Market Road (line), Postharvest Facility (point), Irrigation Canal (line), Service Area (polygon) and Other (point). These have `is_active = false` and are hidden in the UI. The framework stays in place, so an admin can activate them from `/admin`.
+**Inactive types:** Farm-to-Market Road (line), Postharvest Facility (point), Irrigation Canal (line), Service Area (polygon) and Other (point). These have `is_active = false` and are hidden in the UI. The framework stays in place, so an admin can activate the point types from `/admin`. The line and polygon types wait for drawing tools (§5.4).
 
 `geom` stays generic so SSIP service-area polygons can be added later. SSIP is a point type for now, and a type's geometry kind can't change once it has records, so that change will need its own design: a separate polygon on the record, or a linked Service Area record.
 
@@ -252,7 +252,7 @@ Admins can edit these lists per type.
 This is the main use of the system. Phase 3 builds point editing only, since both active types are points. Line and polygon drawing and vertex editing follow when those types are activated.
 
 - **Add:** click the map (point) or draw (line/polygon). Starting from a barangay profile preselects that barangay.
-- **Edit:** drag to move, edit vertices, and delete (soft), all directly on the map. A dragged marker doesn't move until the move is confirmed, so a slip of the finger changes nothing.
+- **Edit:** drag to move, edit vertices, and delete (soft), all directly on the map. A dragged marker doesn't move until the move is confirmed, so a slip of the finger changes nothing. The confirmation takes an optional note. Its "Move and set barangay" choice needs a reason, as resolving a flag does, because it can clear a flag. Either goes in the audit log.
 - **Location fill:** municipality and barangay are suggested from where the shape was placed, and can be changed.
 - **Generated form:** the form comes from the type's `core_field_rules` and `field_schema`.
 - **Other ways to set a location:** type DD or DMS, paste from Google Maps ("13.4671, 122.0686", or a full link), use device GPS (needs https), or use EXIF GPS from a geotagged photo.
@@ -274,7 +274,8 @@ This is the main use of the system. Phase 3 builds point editing only, since bot
 - **Barangay baseline fields:** the same form builder, without photo fields, as photos belong to a record.
 - **Users:** invite by email or by link, set a role, correct a name, deactivate and reactivate, all from `/admin`. A Supabase Edge Function holds the secret key this needs, and the database refuses any change that would leave no active Admin.
 - Changes appear on open maps without a code release.
-- **Not built yet:** drawing lines and polygons (§5.3). A line or polygon type can be made and activated, but until drawing is built its records are saved without a shape, and the screens say so.
+- **Not built yet: drawing lines and polygons** (§5.3). A line or polygon type can be set up but not activated. Its Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses both activating it and any line or polygon record without a shape.
+- **Not built yet: the audit log page** (phase 6 in §9). Admin only: who changed what and when, with filters by user, record and date. Changes are already logged, and each record shows its own history.
 
 ### 5.5 Dashboard
 
@@ -420,7 +421,7 @@ Chosen so a solo developer can build and host it cheaply.
 | `/qa` | Data-quality queue (flags in §4.6, including Unassigned and Needs geotag) |
 | `/export` | Export options (also reachable from the map toolbar) |
 | `/reports` | Municipal, barangay and beneficiary profiles (later phase) |
-| `/admin` | Users, intervention types, form builder, lookups, audit log |
+| `/admin` | Users, intervention types, form builder, lookups; the audit log page comes in phase 6 (§9) |
 | `/login` | Auth |
 
 Layout: left panel for layers and filters, center map, right or bottom panel for profile and dashboard. On mobile, tabs switch between Map, Dashboard and List.
@@ -454,7 +455,7 @@ Layout: left panel for layers and filters, center map, right or bottom panel for
 | **3. On-map editing** (local data) | `DataStore` interface; add by clicking, drag to move, soft delete, for points only; generated form; status history; audit log | Create, edit and delete work for Farm Machinery and SSIP, and show in a second tab at once |
 | **4. Supabase switch** | Auth, roles, row-level security, Realtime, Storage, server-side audit | An edit in one browser appears on another device within about 2 s |
 | **5. Admin customization** | Type manager, form builder, lookups, baseline fields | A new type with custom fields can be created and used with no code change |
-| **6. Custom views and dashboard** | Color by and filter by any field; saved views; KPIs, charts and table | A saved view restores layers, filters, style and extent; totals match the data |
+| **6. Custom views, dashboard and audit log page** | Color by and filter by any field; saved views; KPIs, charts and table; an Admin-only audit log page in `/admin`, for accountability in a government office: who changed what and when, with filters by user, record and date | A saved view restores layers, filters, style and extent; totals match the data; an Admin can find any change by user, record or date, and nobody else can open the page |
 | **7. Export** | KML, KMZ, GeoJSON, CSV, XLSX, PNG/PDF for all geometries | KMZ opens in Google Earth Pro and Web with folders, styles and attributes |
 | **8. Import and QA** | Import wizard for any type, QA queue | An ABEMIS export imports without manual editing, and a new dataset of another type imports the same way |
 | **9. Reports and ABE PDCS** | Profiles, print layouts, merge into ABE PDCS | |
@@ -475,7 +476,7 @@ Layout: left panel for layers and filters, center map, right or bottom panel for
 - [ ] Records with no linked barangay are visible as "Unassigned".
 
 **Customization**
-- [ ] An Admin can create a new type with its geometry, icon, color, statuses and custom fields, then encode records of it, with no code change.
+- [ ] An Admin can create a new type with its geometry, icon, color, statuses and custom fields, then encode records of it, with no code change. Line and polygon types can be encoded once drawing is built.
 - [ ] Programs, categories, statuses, beneficiary types, icons and colors can be edited in `/admin`.
 - [ ] Custom field values are validated against the type's schema in the form and in the database.
 - [ ] Users can color by and filter by any field, including custom fields.
@@ -488,6 +489,7 @@ Layout: left panel for layers and filters, center map, right or bottom panel for
 - [ ] Simultaneous edits to one record don't silently overwrite each other.
 - [ ] A status change adds a history entry, and the popup shows the timeline.
 - [ ] Only logged-in Encoders/Admins can edit; every create, edit and delete is in the audit log.
+- [ ] An Admin, and nobody else, can open an audit log page showing who changed what and when, filtered by user, record and date.
 - [ ] A coordinate outside Marinduque, or outside the selected municipality or barangay, triggers a warning.
 - [ ] A point outside its encoded barangay counts under the encoded barangay, and its popup says "Plotted in [X], encoded as [Y]".
 - [ ] Only confirmed corrections are applied; each keeps the raw value and appears in the audit log.
