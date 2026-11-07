@@ -264,6 +264,7 @@ This is the main use of the system. Phase 3 builds point editing only, since bot
 - **Simultaneous edits:** if two users edit the same record, the second is told it changed and sees the latest version. Neither edit is silently lost.
 - **Status history:** changing a status adds an entry (status, date, remarks, photo, user). The popup shows the timeline, e.g. Turned-over → Serviceable → Needs Repair. An imported status with no known change date shows as "as of [date] ([source])", not as the date it changed.
 - **Resolving a flag:** from the popup or the record's row, correct the barangay or coordinates, set the location basis, or clear a name check. A reason is required and goes in the audit log. Flags still clear only when the data agrees. The corrections file (§5.6) still handles bulk fixes.
+- **Not built yet: a reason in the Edit form** (phase 6 in §9). The Edit form can still change a barangay, which can clear a flag, with no reason. Resolve flag and the move dialog already need one.
 - **Audit log:** every create, edit and delete is recorded, and each record shows its own change history. Deleted records can be restored by an Admin.
 
 ### 5.4 Admin customization
@@ -455,7 +456,7 @@ Layout: left panel for layers and filters, center map, right or bottom panel for
 | **3. On-map editing** (local data) | `DataStore` interface; add by clicking, drag to move, soft delete, for points only; generated form; status history; audit log | Create, edit and delete work for Farm Machinery and SSIP, and show in a second tab at once |
 | **4. Supabase switch** | Auth, roles, row-level security, Realtime, Storage, server-side audit | An edit in one browser appears on another device within about 2 s |
 | **5. Admin customization** | Type manager, form builder, lookups, baseline fields | A new type with custom fields can be created and used with no code change |
-| **6. Custom views, dashboard and audit log page** | Color by and filter by any field; saved views; KPIs, charts and table; an Admin-only audit log page in `/admin`, for accountability in a government office: who changed what and when, with filters by user, record and date | A saved view restores layers, filters, style and extent; totals match the data; an Admin can find any change by user, record or date, and nobody else can open the page |
+| **6. Custom views, dashboard and audit log page** | Color by and filter by any field; saved views; KPIs, charts and table; an Admin-only audit log page in `/admin`, for accountability in a government office: who changed what and when, with filters by user, record and date; the Edit form asks for a reason when a barangay changes, as Resolve flag and the move dialog do | A saved view restores layers, filters, style and extent; totals match the data; an Admin can find any change by user, record or date, and nobody else can open the page; changing a barangay in the Edit form needs a reason, which goes in the audit log |
 | **7. Export** | KML, KMZ, GeoJSON, CSV, XLSX, PNG/PDF for all geometries | KMZ opens in Google Earth Pro and Web with folders, styles and attributes |
 | **8. Import and QA** | Import wizard for any type, QA queue | An ABEMIS export imports without manual editing, and a new dataset of another type imports the same way |
 | **9. Reports and ABE PDCS** | Profiles, print layouts, merge into ABE PDCS | |
@@ -490,6 +491,7 @@ Layout: left panel for layers and filters, center map, right or bottom panel for
 - [ ] A status change adds a history entry, and the popup shows the timeline.
 - [ ] Only logged-in Encoders/Admins can edit; every create, edit and delete is in the audit log.
 - [ ] An Admin, and nobody else, can open an audit log page showing who changed what and when, filtered by user, record and date.
+- [ ] Changing a record's barangay needs a reason everywhere it can be done: Resolve flag, the move dialog and the Edit form.
 - [ ] A coordinate outside Marinduque, or outside the selected municipality or barangay, triggers a warning.
 - [ ] A point outside its encoded barangay counts under the encoded barangay, and its popup says "Plotted in [X], encoded as [Y]".
 - [ ] Only confirmed corrections are applied; each keeps the raw value and appears in the audit log.
