@@ -74,6 +74,12 @@ export function validateIntervention(
 ): FieldErrors {
   const errors: FieldErrors = {};
 
+  // Mirrors interventions_need_a_shape. A point record can wait for its coordinates, but a line or
+  // polygon record has nothing to show without its shape, and there's no way to draw one yet.
+  if (previous === null && type.geometry_kind !== 'point' && values.point === null) {
+    errors.intervention_type_id = `${type.name} needs a shape, and drawing tools aren't built yet.`;
+  }
+
   if (!values.municipality_id) errors.municipality_id = 'Choose a municipality.';
 
   if (values.title === null && values.category_id === null) {

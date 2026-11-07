@@ -236,26 +236,60 @@ test.describe('a type with records', () => {
 });
 
 test.describe('a line or polygon type', () => {
-  test('says drawing isn\'t built yet, and its records save without a shape', async ({ page }) => {
+  const NOTE = 'Needs drawing tools (not yet built)';
+
+  test('can\'t be activated from the list or its own page, and is never offered for a record', async ({ page }) => {
     await openAdmin(page);
-    await row(page, 'Farm-to-Market Road').getByRole('link', { name: /Edit/ }).click();
-    await expect(page.getByTestId('no-drawing-note')).toContainText('isn\'t built yet');
-    await form(page, 'Type').getByLabel(/^Active/).check();
-    await form(page, 'Type').getByRole('button', { name: 'Save type' }).click();
+    for (const name of ['Farm-to-Market Road', 'Irrigation Canal', 'Service Area']) {
+      await expect(row(page, name)).toContainText(NOTE);
+      await expect(row(page, name).getByRole('button', { name: /Activate/ })).toBeDisabled();
+    }
+    await expect(row(page, 'Postharvest Facility')).not.toContainText(NOTE);
+    await expect(row(page, 'Postharvest Facility').getByRole('button', { name: /Activate/ })).toBeEnabled();
+
+    await row(page, 'Service Area').getByRole('link', { name: /Edit/ }).click();
+    const editor = form(page, 'Type');
+    const active = editor.getByLabel(/^Active/);
+    await expect(active).toBeDisabled();
+    await expect(active).not.toBeChecked();
+    await expect(active).toHaveAccessibleDescription(NOTE);
+
+    // Everything else about it can still be set up.
+    await editor.getByLabel('Name').fill('Service Areas');
+    await editor.getByRole('button', { name: 'Save type' }).click();
+    await expect(row(page, 'Service Areas')).toContainText('Inactive');
+
     await goToMap(page);
-
     await page.getByRole('button', { name: '+ Add intervention' }).click();
-    const add = form(page, 'Add intervention');
-    await select(add, 'Type').selectOption({ label: 'Farm-to-Market Road' });
-    await expect(page.getByTestId('no-drawing-note')).toContainText('isn\'t available yet');
-    await expect(page.getByLabel('Type or paste coordinates')).toHaveCount(0);
-    await expect(page.locator('.map-hint')).toHaveCount(0);
+    const choices = select(form(page, 'Add intervention'), 'Type').locator('option');
+    await expect(choices.filter({ hasText: 'Farm Machinery' })).toHaveCount(1);
+    await expect(choices.filter({ hasText: /Farm-to-Market Road|Irrigation Canal|Service Area/ })).toHaveCount(0);
+  });
 
-    await add.getByLabel('Title').fill('Bantad FMR');
-    await select(add, 'Municipality').selectOption({ label: 'Boac' });
-    await add.getByRole('button', { name: 'Save record' }).click();
-    await expect(add).toHaveCount(0);
-    await expect(page.getByText(/isn't on the map because it has no usable coordinates/)).toBeVisible();
+  test('a new one saves as inactive, and going back to Point gives the switch back', async ({ page }) => {
+    await openAdmin(page, '/admin/types/new');
+    const editor = form(page, 'Type');
+    const active = editor.getByLabel(/^Active/);
+    await expect(active).toBeChecked();
+    await expect(editor.getByText(NOTE)).toHaveCount(0);
+
+    await select(editor, 'Geometry').selectOption('line');
+    await expect(active).toBeDisabled();
+    await expect(active).not.toBeChecked();
+    await expect(editor.getByText(NOTE)).toBeVisible();
+
+    await select(editor, 'Geometry').selectOption('point');
+    await expect(active).toBeEnabled();
+    await expect(active).toBeChecked();
+    await expect(editor.getByText(NOTE)).toHaveCount(0);
+
+    await select(editor, 'Geometry').selectOption('polygon');
+    await editor.getByLabel('Name').fill('Greenhouse');
+    await editor.getByRole('button', { name: 'Save type' }).click();
+    await expect(row(page, 'Greenhouse')).toContainText('Polygon');
+    await expect(row(page, 'Greenhouse')).toContainText('Inactive');
+    await expect(row(page, 'Greenhouse')).toContainText(NOTE);
+    await expect(row(page, 'Greenhouse').getByRole('button', { name: /Activate/ })).toBeDisabled();
   });
 });
 

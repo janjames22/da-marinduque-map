@@ -130,7 +130,7 @@ An Admin can change these from **Admin** in the header. Changes reach every open
 - **What can't change:** a code or field key, once made. A saved field's kind. A type's geometry once it has records. A status stays on a type's list while any record is at it.
 - **Custom field kinds:** text, number, date, dropdown, yes or no, and photo. Barangay fields can't be photos, as photos belong to a record.
 - **Icons:** upload a simple one-color SVG with a `viewBox`, up to 20 KB. Files holding scripts or links are refused.
-- **Line and polygon types:** these can be made and activated, but **drawing them on the map isn't built yet**. Until it is, their records are saved without a shape and listed as having no coordinates. The screens say so.
+- **Line and polygon types:** these can be set up but **not activated until drawing them on the map is built**. Their Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses it too, so no record is saved without a shape.
 - **Two Admins at once:** if someone else saves a type or the barangay fields while you're editing them, you're told, and your save is held until you load their version.
 
 ## Exports

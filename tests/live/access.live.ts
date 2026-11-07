@@ -305,6 +305,22 @@ describe('the lists and forms', () => {
     await expect(admin.saveType(type.id, type.version, typeValues(code), statuses('Proposed', 'Operational'))).rejects.toThrow(ConflictError);
   });
 
+  it('a line or polygon type stays inactive and takes no record without a shape, on the hosted service', async () => {
+    const code = `e2e-test-line-${Date.now()}`;
+    const values = { ...typeValues(code), geometry_kind: 'line' as const };
+    const made = await adminClient.rpc('save_intervention_type', { p_id: null, p_expected_version: null, p_values: values, p_statuses: statuses('Proposed') });
+    expect(made.error?.message).toMatch(/drawing tools/);
+
+    const line = await admin.saveType(null, null, { ...values, is_active: false }, statuses('Proposed'));
+    expect(line.is_active).toBe(false);
+    const activated = await adminClient.from('intervention_types').update({ is_active: true }).eq('id', line.id);
+    expect(activated.error?.message).toMatch(/drawing tools/);
+
+    const record = { ...newValues('Live test no shape'), intervention_type_id: line.id, category_id: null, title: 'Live test', attributes: { note: 'kept' } };
+    const created = await encoderClient.rpc('create_intervention', { p_values: record, p_status: { status_id: statusId('Proposed'), status_date: '2024-05-01', remarks: null } });
+    expect(created.error?.message).toMatch(/needs its shape/);
+  });
+
   it('a code stays as it was, and an unsafe icon is refused, on the hosted service', async () => {
     const code = await adminClient.from('programs').update({ code: 'renamed' }).eq('code', 'rice');
     expect(code.error?.message).toMatch(/code cannot change/);

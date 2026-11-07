@@ -92,10 +92,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     required: rule(key) === 'required',
   });
 
-  // Only points can be placed so far. A line or polygon type's records wait for drawing, without a shape.
-  const isPoint = type?.geometry_kind === 'point';
-  const location = isPoint ? draft : null;
-  const values: InterventionValues | null = type ? { ...valuesFromForm(form, location, type.field_schema, base?.attributes), field_photos: photoFiles } : null;
+  const values: InterventionValues | null = type ? { ...valuesFromForm(form, draft, type.field_schema, base?.attributes), field_photos: photoFiles } : null;
 
   const warnings = useMemo(() => {
     const municipalityId = Number(form.municipality_id);
@@ -104,7 +101,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     return editWarnings(
       {
         id: record?.id ?? null,
-        point: location,
+        point: draft,
         municipality_id: municipalityId,
         barangay_id: barangayId,
         barangay_raw: latest?.barangay_raw ?? null,
@@ -118,7 +115,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
       places,
       data,
     );
-  }, [form, location, data, places, record, latest]);
+  }, [form, draft, data, places, record, latest]);
 
   const isDirty = () => JSON.stringify(form) !== JSON.stringify(initialForm.current) || JSON.stringify(draft) !== JSON.stringify(initialPoint.current);
 
@@ -246,10 +243,6 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     });
     setPhotoFiles({});
     setErrors({});
-    if (data.types.find((t) => t.id === id)?.geometry_kind !== 'point') {
-      setDraft(null);
-      useEditUi.getState().setPicking(false);
-    }
   };
 
   const setPhoto = (key: string, file: File | null) => {
@@ -341,13 +334,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
           />
         )}
 
-        {isPoint ? (
-          <LocationInput />
-        ) : (
-          <p className="field-hint" data-testid="no-drawing-note">
-            Drawing a {type?.geometry_kind ?? 'shape'} on the map isn't available yet, so this record is saved without a shape and listed as having no coordinates.
-          </p>
-        )}
+        <LocationInput />
 
         <PlaceFields
           data={data}

@@ -222,6 +222,11 @@ body,
   margin: 0;
 }
 
+.choice:has(input:disabled) {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
 .field {
   display: block;
   margin-top: 6px;

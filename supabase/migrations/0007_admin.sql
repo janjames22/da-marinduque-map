@@ -113,9 +113,35 @@ begin
     new.version := old.version + 1;
   end if;
 
+  -- Drawing lines and polygons isn't built, so these types can be set up but not switched on. Drop
+  -- this check once drawing is.
+  if new.is_active and new.geometry_kind <> 'point' then
+    raise exception 'a % type cannot be active until drawing tools are built', new.geometry_kind using errcode = 'check_violation';
+  end if;
+
   return new;
 end;
 $$;
+
+-- A point record can wait for its coordinates, as many in the source data do. A line or polygon record
+-- has nothing to show without its shape.
+create function public.interventions_need_a_shape()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.geom is null and (
+    select geometry_kind from public.intervention_types where id = new.intervention_type_id
+  ) <> 'point' then
+    raise exception 'a line or polygon record needs its shape' using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger interventions_need_a_shape
+  before insert or update of geom, intervention_type_id on public.interventions
+  for each row execute function public.interventions_need_a_shape();
 
 -- A status can't leave a type's list while a record is at it, as the record would have a status
 -- that its form no longer knows. A status that's only in a record's past is fine: the past stays.

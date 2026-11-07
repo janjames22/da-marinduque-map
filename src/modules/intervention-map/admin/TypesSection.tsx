@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { TypeStatusValues, TypeValues } from '../data/store';
 import type { CoreFieldRule, InterventionType, MapData } from '../data/types';
 import { SelectField, TextField } from '../edit/FormParts';
-import { CORE_FIELDS, draftProblems, draftsFromSchema, newCode, schemaFromDrafts, validateTypeChange, type FieldDraft } from '../lib/admin-rules';
+import { CORE_FIELDS, draftProblems, draftsFromSchema, NEEDS_DRAWING, needsDrawing, newCode, schemaFromDrafts, validateTypeChange, type FieldDraft } from '../lib/admin-rules';
 import { coreFieldLabel } from '../lib/validation';
 import { useStore } from '../state/store-context';
 import { FieldBuilder } from './FieldBuilder';
@@ -74,7 +74,12 @@ export function TypesList({ data }: { data: MapData }) {
             <span className="admin-row-main">
               <strong>{type.name}</strong>
               <span className="field-hint">
-                {[GEOMETRY_LABELS[type.geometry_kind], plural(recordsOfType(data, type.id).length, 'record'), type.is_active ? 'Active' : 'Inactive'].join(' · ')}
+                {[
+                  GEOMETRY_LABELS[type.geometry_kind],
+                  plural(recordsOfType(data, type.id).length, 'record'),
+                  type.is_active ? 'Active' : 'Inactive',
+                  ...(needsDrawing(type.geometry_kind) ? [NEEDS_DRAWING] : []),
+                ].join(' · ')}
               </span>
             </span>
             <span className="admin-row-actions">
@@ -87,7 +92,7 @@ export function TypesList({ data }: { data: MapData }) {
               <Link className="secondary-button" to={`/admin/types/${type.id}`}>
                 Edit<span className="visually-hidden"> {type.name}</span>
               </Link>
-              <button type="button" className="secondary-button" disabled={busy} onClick={() => setActive(type, !type.is_active)}>
+              <button type="button" className="secondary-button" disabled={busy || (!type.is_active && needsDrawing(type.geometry_kind))} onClick={() => setActive(type, !type.is_active)}>
                 {type.is_active ? 'Deactivate' : 'Activate'}
                 <span className="visually-hidden"> {type.name}</span>
               </button>
@@ -163,6 +168,8 @@ function TypeEditor({ id, data }: { id: string; data: MapData }) {
   const update = (changes: Partial<EditorState>) => setForm((current) => ({ ...current, ...changes }));
   const hasRecords = type ? recordsOfType(data, type.id).length > 0 : false;
   const changedElsewhere = type !== undefined && version !== null && type.version > version;
+  // Going back to Point gives the switch back as it was.
+  const waitingForDrawing = needsDrawing(form.geometry_kind);
 
   const reload = () => {
     setForm(startingState(type, data));
@@ -189,7 +196,7 @@ function TypeEditor({ id, data }: { id: string; data: MapData }) {
       core_field_rules: form.rules,
       field_schema: schemaFromDrafts(form.fields),
       sort_order: type?.sort_order ?? data.types.length + 1,
-      is_active: form.is_active,
+      is_active: form.is_active && !waitingForDrawing,
     };
 
     const invalid = validateTypeChange(typeId, values, form.statuses, data);
@@ -264,15 +271,21 @@ function TypeEditor({ id, data }: { id: string; data: MapData }) {
           error={errors.geometry_kind}
         />
         {hasRecords && <p className="field-hint">This type has records, so its geometry can't change.</p>}
-        {form.geometry_kind !== 'point' && (
-          <p className="record-warning" data-testid="no-drawing-note">
-            Drawing lines and polygons on the map isn't built yet. Until it is, this type's records are saved without a shape and listed as having no coordinates.
-          </p>
-        )}
         <label className="choice">
-          <input type="checkbox" checked={form.is_active} onChange={(event) => update({ is_active: event.target.checked })} />
+          <input
+            type="checkbox"
+            checked={form.is_active && !waitingForDrawing}
+            disabled={waitingForDrawing}
+            aria-describedby={waitingForDrawing ? 'needs-drawing' : undefined}
+            onChange={(event) => update({ is_active: event.target.checked })}
+          />
           Active: show this type as a layer, and offer it when adding a record
         </label>
+        {waitingForDrawing && (
+          <p className="field-hint" id="needs-drawing">
+            {NEEDS_DRAWING}
+          </p>
+        )}
 
         <fieldset>
           <legend className="section-title">Standard fields</legend>

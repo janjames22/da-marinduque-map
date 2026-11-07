@@ -2,7 +2,7 @@
 // field, and so local mode behaves the same. tests/admin.test.ts runs these against the real triggers
 // in supabase/migrations/0007_admin.sql, so change them together.
 import type { TypeStatusValues, TypeValues } from '../data/store';
-import type { CoreFieldRule, FieldDefinition, FieldOption, FieldSchema, MapData } from '../data/types';
+import type { CoreFieldRule, FieldDefinition, FieldOption, FieldSchema, InterventionType, MapData } from '../data/types';
 import type { FieldErrors } from './validation';
 
 export const CORE_FIELDS = [
@@ -148,6 +148,11 @@ export function statusListProblem(list: TypeStatusValues[]): string | null {
   return null;
 }
 
+// Drawing lines and polygons isn't built, so these types can be set up but not switched on. Their
+// records would have no shape.
+export const NEEDS_DRAWING = 'Needs drawing tools (not yet built)';
+export const needsDrawing = (kind: InterventionType['geometry_kind']) => kind !== 'point';
+
 // Everything the database would refuse about saving a type, keyed by what to fix. Mirrors
 // intervention_types_before_write and type_status_before_delete.
 export function validateTypeChange(
@@ -188,6 +193,7 @@ export function validateTypeChange(
     );
     if (stranded && !list) errors.statuses = 'Records are at a status you removed, so it stays on the list until they move on.';
   }
+  if (values.is_active && needsDrawing(values.geometry_kind)) errors.is_active = NEEDS_DRAWING;
   return errors;
 }
 
