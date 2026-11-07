@@ -1,24 +1,31 @@
 import { useState } from 'react';
-import { ConflictError, type InterventionPatch } from '../data/store';
-import type { MapData } from '../data/types';
+import { ConflictError, type ChangeNote, type InterventionPatch } from '../data/store';
+import type { Intervention, MapData } from '../data/types';
 import { formatPoint } from '../lib/coordinates';
 import { recordName } from '../lib/display';
 import { editWarnings } from '../lib/qa';
-import { useEditUi } from '../state/edit-ui';
+import { useEditUi, type PendingMove } from '../state/edit-ui';
 import { useStore } from '../state/store-context';
+import { TextField } from './FormParts';
 
 // A dragged marker doesn't move until this is confirmed, so a slip of the finger changes nothing.
 export function MoveConfirm({ data }: { data: MapData }) {
-  const { store, places } = useStore();
   const pendingMove = useEditUi((state) => state.pendingMove);
+  const record = data.interventions.find((r) => r.id === pendingMove?.recordId);
+  if (!pendingMove || !record) return null;
+  // Another marker can be dragged while this is open. Its dialog starts afresh, so a note can't be
+  // logged against the wrong record. Dragging the same one again to fine-tune it keeps the note.
+  return <MoveDialog key={pendingMove.recordId} data={data} record={record} pendingMove={pendingMove} />;
+}
+
+function MoveDialog({ data, record, pendingMove }: { data: MapData; record: Intervention; pendingMove: PendingMove }) {
+  const { store, places } = useStore();
   const finishMove = useEditUi((state) => state.finishMove);
   const setNotice = useEditUi((state) => state.setNotice);
+  const [note, setNote] = useState('');
+  const [noteError, setNoteError] = useState<string>();
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  if (!pendingMove) return null;
-  const record = data.interventions.find((r) => r.id === pendingMove.recordId);
-  if (!record) return null;
 
   const result = editWarnings(
     {
@@ -40,12 +47,14 @@ export function MoveConfirm({ data }: { data: MapData }) {
   );
   const { plotted } = result;
   const canSetBarangay = plotted && (plotted.barangayId !== record.barangay_id || plotted.municipalityId !== record.municipality_id);
+  const reason = note.trim();
 
   const confirm = async (patch: InterventionPatch) => {
     setSaving(true);
     setFailure(null);
+    const logged: ChangeNote = reason === '' ? { kind: 'move' } : { kind: 'move', reason };
     try {
-      await store.updateIntervention(record.id, pendingMove.version, { point: pendingMove.to, ...patch }, { kind: 'move' });
+      await store.updateIntervention(record.id, pendingMove.version, { point: pendingMove.to, ...patch }, logged);
       finishMove();
       setNotice('Marker moved.');
     } catch (error) {
@@ -82,6 +91,17 @@ export function MoveConfirm({ data }: { data: MapData }) {
           ))}
         </ul>
       )}
+      <TextField
+        label={canSetBarangay ? 'Reason or note' : 'Note (optional)'}
+        multiline
+        value={note}
+        onChange={(value) => {
+          setNote(value);
+          setNoteError(undefined);
+        }}
+        error={noteError}
+        hint={canSetBarangay ? 'Optional for a plain move. Setting the barangay needs a reason.' : undefined}
+      />
       {failure && (
         <p className="field-error" role="alert">
           {failure}
@@ -99,7 +119,11 @@ export function MoveConfirm({ data }: { data: MapData }) {
             type="button"
             className="secondary-button"
             disabled={saving}
-            onClick={() => void confirm({ municipality_id: plotted.municipalityId, barangay_id: plotted.barangayId })}
+            onClick={() => {
+              // It can clear a flag, so it needs a reason, as resolving one does.
+              if (reason === '') setNoteError('Give a reason. It goes in the audit log.');
+              else void confirm({ municipality_id: plotted.municipalityId, barangay_id: plotted.barangayId });
+            }}
           >
             Move and set barangay to {plotted.label}
           </button>
