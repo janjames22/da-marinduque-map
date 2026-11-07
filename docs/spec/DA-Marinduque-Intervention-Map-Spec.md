@@ -271,8 +271,10 @@ This is the main use of the system. Phase 3 builds point editing only, since bot
 - **Intervention types:** create, activate and edit a type's name, geometry, icon, color and status list without code changes.
 - **Form builder:** add, reorder and archive fields (text, number, date, dropdown, yes/no, photo).
 - **Lookups:** programs, categories, category groups, statuses, beneficiary types, icons and colors.
-- **Barangay baseline fields:** the same form builder.
+- **Barangay baseline fields:** the same form builder, without photo fields, as photos belong to a record.
+- **Users:** invite by email or by link, set a role, correct a name, deactivate and reactivate, all from `/admin`. A Supabase Edge Function holds the secret key this needs, and the database refuses any change that would leave no active Admin.
 - Changes appear on open maps without a code release.
+- **Not built yet:** drawing lines and polygons (§5.3). A line or polygon type can be made and activated, but until drawing is built its records are saved without a shape, and the screens say so.
 
 ### 5.5 Dashboard
 

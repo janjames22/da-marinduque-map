@@ -387,7 +387,7 @@ describe('popupHtml', () => {
     ],
     dataSources: [],
     members: [{ id: 'u1', full_name: 'Enzo <Encoder>' }],
-  } as MapData;
+  } as unknown as MapData;
 
   it('shows the details, location basis and the as-of status', () => {
     const html = popupHtml(record({ id: 'a', attributes: { engine_no: 'E-1', old: 'hidden' } }), data, permissionsFor('admin'));

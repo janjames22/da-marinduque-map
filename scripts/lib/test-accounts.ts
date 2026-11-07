@@ -60,6 +60,11 @@ async function removeAccounts() {
     );
     await db.query('delete from public.interventions where id = any($1::uuid[])', [records]);
     await db.query('delete from public.saved_views where owner_id = any($1::uuid[])', [ids]);
+    // Lists are archived, never deleted, so these are the only rows of theirs that ever go.
+    await db.query(`delete from public.programs where code like 'e2e-test-%'`);
+    await db.query(`delete from public.intervention_type_statuses where intervention_type_id in (select id from public.intervention_types where code like 'e2e-test-%')`);
+    await db.query(`delete from public.intervention_types where code like 'e2e-test-%'`);
+    await db.query(`delete from public.audit_log where action = 'delete' and actor_id is null and table_name in ('programs', 'intervention_types', 'intervention_type_statuses')`);
     await db.query('delete from public.profiles where id = any($1::uuid[])', [ids]);
     await db.query(
       `delete from public.audit_log

@@ -26,6 +26,9 @@ export interface FormState {
   status_remarks: string;
 }
 
+// What a photo field holds from choosing a file until the save gives it a photo's id.
+export const PENDING_PHOTO = 'pending';
+
 const text = (value: string | number | null | undefined) => (value === null || value === undefined ? '' : String(value));
 
 export function attributeToText(field: FieldDefinition, value: unknown): string {
@@ -61,12 +64,21 @@ export function attributesFromText(
   return result;
 }
 
-export function defaultStatusId(data: Pick<MapData, 'typeStatuses'>, typeId: number): string {
-  const list = data.typeStatuses.filter((s) => s.intervention_type_id === typeId);
+// A status that was archived stays in a record's past, but isn't offered for new entries.
+export function statusChoices(data: Pick<MapData, 'typeStatuses' | 'statuses'>, typeId: number): { value: number; label: string }[] {
+  const named = new Map(data.statuses.map((status) => [status.id, status]));
+  return data.typeStatuses
+    .filter((s) => s.intervention_type_id === typeId && named.get(s.status_id)?.is_active)
+    .map((s) => ({ value: s.status_id, label: named.get(s.status_id)?.name ?? '' }));
+}
+
+export function defaultStatusId(data: Pick<MapData, 'typeStatuses' | 'statuses'>, typeId: number): string {
+  const offered = new Set(statusChoices(data, typeId).map((choice) => choice.value));
+  const list = data.typeStatuses.filter((s) => s.intervention_type_id === typeId && offered.has(s.status_id));
   return text((list.find((s) => s.is_default) ?? list[0])?.status_id);
 }
 
-export function blankForm(data: Pick<MapData, 'types' | 'typeStatuses'>, prefill?: { municipality_id: number; barangay_id: number }): FormState {
+export function blankForm(data: Pick<MapData, 'types' | 'typeStatuses' | 'statuses'>, prefill?: { municipality_id: number; barangay_id: number }): FormState {
   const type = data.types.filter((t) => t.is_active).sort((a, b) => a.sort_order - b.sort_order)[0];
   return {
     intervention_type_id: text(type?.id),
@@ -195,6 +207,7 @@ export function buildPatch(base: Intervention, values: InterventionValues, lates
     else attributes[key] = values.attributes[key];
   }
   if (attributesChanged) patch.attributes = attributes;
+  if (values.field_photos && Object.keys(values.field_photos).length > 0) patch.field_photos = values.field_photos;
 
   return patch;
 }

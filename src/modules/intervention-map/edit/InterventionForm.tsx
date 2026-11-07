@@ -10,16 +10,19 @@ import {
   buildPatch,
   defaultStatusId,
   formFromRecord,
+  PENDING_PHOTO,
+  statusChoices,
   valuesFromForm,
   valuesFromRecord,
   type FormState,
 } from '../lib/form-values';
+import { photoProblem } from '../lib/photo-meta';
 import { editWarnings, locatePoint, pointOf } from '../lib/qa';
 import { activeFields, attributeKey, validateIntervention, validateStatus, type FieldErrors } from '../lib/validation';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
 import { useStore } from '../state/store-context';
-import { CustomField, PanelFrame, PlaceFields, SelectField, TextField, WarningList } from './FormParts';
+import { CustomField, PanelFrame, PhotoField, PlaceFields, SelectField, TextField, WarningList } from './FormParts';
 import { LocationInput } from './LocationInput';
 
 interface InterventionFormProps {
@@ -50,6 +53,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
   const [errors, setErrors] = useState<FieldErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [photoFiles, setPhotoFiles] = useState<Record<string, File>>({});
   const formRef = useRef<HTMLFormElement>(null);
 
   // A long form can hide the problem off screen, especially on a phone.
@@ -88,7 +92,10 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     required: rule(key) === 'required',
   });
 
-  const values: InterventionValues | null = type ? valuesFromForm(form, draft, type.field_schema, base?.attributes) : null;
+  // Only points can be placed so far. A line or polygon type's records wait for drawing, without a shape.
+  const isPoint = type?.geometry_kind === 'point';
+  const location = isPoint ? draft : null;
+  const values: InterventionValues | null = type ? { ...valuesFromForm(form, location, type.field_schema, base?.attributes), field_photos: photoFiles } : null;
 
   const warnings = useMemo(() => {
     const municipalityId = Number(form.municipality_id);
@@ -97,7 +104,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     return editWarnings(
       {
         id: record?.id ?? null,
-        point: draft,
+        point: location,
         municipality_id: municipalityId,
         barangay_id: barangayId,
         barangay_raw: latest?.barangay_raw ?? null,
@@ -111,7 +118,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
       places,
       data,
     );
-  }, [form, draft, data, places, record, latest]);
+  }, [form, location, data, places, record, latest]);
 
   const isDirty = () => JSON.stringify(form) !== JSON.stringify(initialForm.current) || JSON.stringify(draft) !== JSON.stringify(initialPoint.current);
 
@@ -221,9 +228,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
         )
       : [];
 
-  const statusOptions = data.typeStatuses
-    .filter((s) => s.intervention_type_id === typeId)
-    .map((s) => ({ value: s.status_id, label: data.statuses.find((status) => status.id === s.status_id)?.name ?? '' }));
+  const statusOptions = statusChoices(data, typeId);
 
   const categoryOptions = data.categories
     .filter((c) => c.intervention_type_id === typeId || c.intervention_type_id === null)
@@ -239,7 +244,23 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
       attributes: attributesToText(schemaFor(id), {}),
       status_id: defaultStatusId(data, id),
     });
+    setPhotoFiles({});
     setErrors({});
+    if (data.types.find((t) => t.id === id)?.geometry_kind !== 'point') {
+      setDraft(null);
+      useEditUi.getState().setPicking(false);
+    }
+  };
+
+  const setPhoto = (key: string, file: File | null) => {
+    const problem = file ? photoProblem(file) : null;
+    if (problem) {
+      setErrors((current) => ({ ...current, [attributeKey(key)]: problem }));
+      return;
+    }
+    setErrors(({ [attributeKey(key)]: _cleared, ...others }) => others);
+    setPhotoFiles(({ [key]: _replaced, ...others }) => (file ? { ...others, [key]: file } : others));
+    update({ attributes: { ...form.attributes, [key]: file ? PENDING_PHOTO : '' } });
   };
 
   return (
@@ -320,7 +341,13 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
           />
         )}
 
-        <LocationInput />
+        {isPoint ? (
+          <LocationInput />
+        ) : (
+          <p className="field-hint" data-testid="no-drawing-note">
+            Drawing a {type?.geometry_kind ?? 'shape'} on the map isn't available yet, so this record is saved without a shape and listed as having no coordinates.
+          </p>
+        )}
 
         <PlaceFields
           data={data}
@@ -350,15 +377,28 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
           />
         )}
 
-        {fields.map((field) => (
-          <CustomField
-            key={field.key}
-            field={field}
-            value={form.attributes[field.key] ?? ''}
-            error={errors[attributeKey(field.key)]}
-            onChange={(value) => update({ attributes: { ...form.attributes, [field.key]: value } })}
-          />
-        ))}
+        {fields.map((field) =>
+          field.input === 'photo' ? (
+            <PhotoField
+              key={field.key}
+              field={field}
+              value={form.attributes[field.key] ?? ''}
+              fileName={photoFiles[field.key]?.name}
+              error={errors[attributeKey(field.key)]}
+              onChoose={(file) => setPhoto(field.key, file)}
+              onClear={() => setPhoto(field.key, null)}
+              onView={(photoId) => useEditUi.getState().showPhoto(photoId)}
+            />
+          ) : (
+            <CustomField
+              key={field.key}
+              field={field}
+              value={form.attributes[field.key] ?? ''}
+              error={errors[attributeKey(field.key)]}
+              onChange={(value) => update({ attributes: { ...form.attributes, [field.key]: value } })}
+            />
+          ),
+        )}
 
         {rule('remarks') !== 'hidden' && <TextField {...textProps('remarks', 'Remarks')} multiline />}
 

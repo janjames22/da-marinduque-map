@@ -36,6 +36,7 @@ export function representativePoint(record: Intervention): { longitude: number; 
 function customValue(definition: FieldDefinition | undefined, value: unknown): FieldValue {
   if (value === null || value === undefined || value === '') return null;
   if (definition?.input === 'yes_no') return value ? 'Yes' : 'No';
+  if (definition?.input === 'photo') return 'Photo attached';
   if (definition?.input === 'dropdown') return definition.options?.find((option) => option.value === value)?.label ?? String(value);
   if (typeof value === 'number') return value;
   if (definition?.input === 'number' && Number.isFinite(Number(value))) return Number(value);

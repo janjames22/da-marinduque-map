@@ -6,7 +6,7 @@ import { connectDb, loadEnv, projectUrl, publicKey } from '../../scripts/lib/env
 import { createTestAccounts, removeTestAccounts, type TestAccount, type TestAccounts } from '../../scripts/lib/test-accounts';
 import { createSupabaseBackend } from '../../src/modules/intervention-map/data/supabase-backend';
 import { createSupabaseStore } from '../../src/modules/intervention-map/data/supabase-store';
-import type { DataStore, InterventionValues, NewStatus } from '../../src/modules/intervention-map/data/store';
+import { ConflictError, type DataStore, type InterventionValues, type NewStatus, type TypeStatusValues, type TypeValues } from '../../src/modules/intervention-map/data/store';
 import type { MapData } from '../../src/modules/intervention-map/data/types';
 
 const BUCKET = 'intervention-photos';
@@ -255,6 +255,71 @@ describe('exports', () => {
   });
 });
 
+describe('the lists and forms', () => {
+  const statusId = (name: string) => data.statuses.find((s) => s.name === name)!.id;
+  const typeValues = (code: string): TypeValues => ({
+    code,
+    name: code,
+    geometry_kind: 'point',
+    icon_id: null,
+    color: '#123456',
+    core_field_rules: { title: 'required' },
+    field_schema: { fields: [{ key: 'note', label: 'Note', input: 'text', required: true }] },
+    sort_order: 90,
+    is_active: true,
+  });
+  const statuses = (...names: string[]): TypeStatusValues[] => names.map((name, index) => ({ status_id: statusId(name), is_default: index === 0, counts_as_operational: false }));
+
+  it('an Admin can add to a list, and nobody else can', async () => {
+    const code = `e2e-test-program-${Date.now()}`;
+    await admin.saveLookup('programs', null, { code, name: code, color: '#123456' });
+    const loaded = await admin.load();
+    const added = loaded.programs.find((p) => p.code === code)!;
+    expect(added.is_active).toBe(true);
+    await admin.saveLookup('programs', added.id, { is_active: false });
+    expect((await admin.load()).programs.find((p) => p.code === code)?.is_active).toBe(false);
+
+    await expect(encoder.saveLookup('programs', null, { code: `${code}-x`, name: `${code}-x`, color: '#123456' })).rejects.toThrow();
+    await expect(viewer.saveLookup('programs', added.id, { name: 'Taken over' })).rejects.toThrow();
+    expect((await admin.load()).programs.find((p) => p.code === code)?.name).toBe(code);
+  });
+
+  it('a type made by an Admin takes records straight away, by its own rules', async () => {
+    const code = `e2e-test-type-${Date.now()}`;
+    const type = await admin.saveType(null, null, typeValues(code), statuses('Proposed', 'Operational'));
+    expect(type).toMatchObject({ code, version: 1 });
+    await encoder.load();
+
+    const status = { status_id: statusId('Operational'), status_date: '2024-05-01', remarks: null };
+    const values = { ...newValues('Live test custom type'), intervention_type_id: type.id, category_id: null, banner_program_id: null, title: 'Live test' };
+    await expect(encoder.createIntervention(values, status)).rejects.toThrow();
+    const record = await encoder.createIntervention({ ...values, attributes: { note: 'kept' } }, status);
+    expect(record.attributes).toEqual({ note: 'kept' });
+
+    await admin.load();
+    await expect(admin.saveType(type.id, type.version, { ...typeValues(code), geometry_kind: 'line' }, statuses('Proposed', 'Operational'))).rejects.toThrow(/geometry/);
+    await expect(admin.saveType(type.id, type.version, typeValues(code), statuses('Proposed'))).rejects.toThrow(/stays on the list/);
+
+    const updated = await admin.saveType(type.id, type.version, { ...typeValues(code), color: '#654321' }, statuses('Proposed', 'Operational'));
+    expect(updated.version).toBe(type.version + 1);
+    await expect(admin.saveType(type.id, type.version, typeValues(code), statuses('Proposed', 'Operational'))).rejects.toThrow(ConflictError);
+  });
+
+  it('a code stays as it was, and an unsafe icon is refused, on the hosted service', async () => {
+    const code = await adminClient.from('programs').update({ code: 'renamed' }).eq('code', 'rice');
+    expect(code.error?.message).toMatch(/code cannot change/);
+    const icon = await adminClient.from('icons').insert({ name: 'e2e-test-icon', image: '<svg viewBox="0 0 1 1"><script>alert(1)</script></svg>' });
+    expect(icon.error?.message).toMatch(/scripts or links/);
+  });
+
+  it('the functions refuse a stranger and a Viewer', async () => {
+    const refused = await strangerClient.rpc('save_barangay_fields', { p_expected_version: 1, p_schema: { fields: [] } });
+    expect(refused.error).not.toBeNull();
+    const viewerRefused = await viewerClient.rpc('save_intervention_type', { p_id: null, p_expected_version: null, p_values: typeValues('e2e-test-refused'), p_statuses: statuses('Proposed') });
+    expect(viewerRefused.error?.code).toBe('42501');
+  });
+});
+
 describe('photos', () => {
   it('stores a photo privately, and serves it through a signed link to any member', async () => {
     const record = await encoder.createIntervention(newValues('Live test photo'), newStatus({ photo: jpeg() }));
@@ -346,6 +411,16 @@ describe('live signals', () => {
     const onDelete = await waitingAgain;
     console.log(`Signal after a soft delete: ${onDelete} ms`);
     expect(onDelete).toBeLessThan(SIGNAL_LIMIT_MS);
+  });
+
+  it('reaches another person within about 2 s when a list changes', async () => {
+    const listener = await join(viewerClient);
+    expect(listener.status).toBe('SUBSCRIBED');
+    const waiting = listener.nextSignal();
+    await adminClient.from('programs').update({ sort_order: 6 }).eq('code', 'urban');
+    const elapsed = await waiting;
+    console.log(`Signal after a list changed: ${elapsed} ms`);
+    expect(elapsed).toBeLessThan(SIGNAL_LIMIT_MS);
   });
 
   it('doesn\'t let visitors or strangers listen', async () => {

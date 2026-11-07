@@ -1,5 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import type { Barangay, FieldDefinition, MapData } from '../data/types';
+import { PENDING_PHOTO } from '../lib/form-values';
+import { PHOTO_ACCEPT } from '../lib/photo-meta';
 import type { EditWarning, WarningResult } from '../lib/qa';
 
 export function ErrorText({ id, message }: { id: string; message?: string }) {
@@ -17,7 +19,7 @@ interface TextFieldProps {
   onChange(value: string): void;
   error?: string;
   required?: boolean;
-  type?: 'text' | 'number' | 'date';
+  type?: 'text' | 'number' | 'date' | 'email';
   unit?: string;
   multiline?: boolean;
   step?: string;
@@ -125,7 +127,7 @@ export function CustomField({ field, value, onChange, error }: { field: FieldDef
         />
       );
     case 'photo':
-      // No active type has a photo field yet. The form builder (Phase 5) adds them.
+      // Photos belong to a record, so InterventionForm handles these with PhotoField.
       return null;
     default:
       return (
@@ -141,6 +143,67 @@ export function CustomField({ field, value, onChange, error }: { field: FieldDef
         />
       );
   }
+}
+
+// A photo field's value is the saved photo's id, or PENDING_PHOTO once a new file is chosen.
+export function PhotoField({
+  field,
+  value,
+  fileName,
+  error,
+  onChoose,
+  onClear,
+  onView,
+}: {
+  field: FieldDefinition;
+  value: string;
+  fileName?: string;
+  error?: string;
+  onChoose(file: File): void;
+  onClear(): void;
+  onView(photoId: string): void;
+}) {
+  const id = useId();
+  const errorId = `${id}-error`;
+  const saved = value !== '' && value !== PENDING_PHOTO;
+  return (
+    <div className="form-field">
+      <span className="field-label">
+        {field.label}
+        {field.required && <span className="required-mark"> *</span>}
+      </span>
+      {fileName && <span className="field-hint">{fileName} will be saved with the record.</span>}
+      {saved && !fileName && (
+        <button type="button" className="link-button" onClick={() => onView(value)}>
+          View the saved photo
+        </button>
+      )}
+      <div className="location-buttons">
+        <label className="secondary-button">
+          {value === '' ? 'Choose a photo' : 'Replace the photo'}
+          <input
+            type="file"
+            accept={PHOTO_ACCEPT}
+            className="visually-hidden"
+            aria-label={field.label}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onChoose(file);
+              event.target.value = '';
+            }}
+          />
+        </label>
+        {value !== '' && (
+          <button type="button" className="secondary-button" onClick={onClear}>
+            Remove
+          </button>
+        )}
+      </div>
+      <ErrorText id={errorId} message={error} />
+    </div>
+  );
 }
 
 interface PlaceFieldsProps {

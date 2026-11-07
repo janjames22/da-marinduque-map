@@ -5,7 +5,7 @@ import type { Permissions } from './permissions';
 const byId = <T extends { id: number }>(items: T[], id: number | null): T | undefined =>
   id === null ? undefined : items.find((item) => item.id === id);
 
-export function recordName(record: Intervention, data: Pick<MapData, 'categories'>): string {
+export function recordName(record: Intervention, data: { categories: Pick<MapData['categories'][number], 'id' | 'name'>[] }): string {
   const variant = typeof record.attributes.variant === 'string' ? record.attributes.variant : null;
   const name = record.title ?? byId(data.categories, record.category_id)?.name ?? 'Unnamed record';
   return variant ? `${name} (${variant})` : name;
@@ -79,6 +79,7 @@ export function needsReview(record: Pick<Intervention, 'qa_flags'>): boolean {
 export function fieldValue(field: FieldDefinition, value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
   if (field.input === 'yes_no') return value ? 'Yes' : 'No';
+  if (field.input === 'photo') return 'Photo';
   if (field.input === 'dropdown') {
     return field.options?.find((option) => option.value === value)?.label ?? String(value);
   }
@@ -116,7 +117,14 @@ export function popupHtml(record: Intervention, data: MapData, permissions: Perm
 
   const customFields = (type?.field_schema.fields ?? [])
     .filter((field) => !field.archived)
-    .map((field) => row(field.label, fieldValue(field, record.attributes[field.key])))
+    .map((field) => {
+      const value = record.attributes[field.key];
+      const photo = field.input === 'photo' ? data.photos.find((p) => p.id === value) : undefined;
+      if (photo) {
+        return `<tr><th scope="row">${escapeHtml(field.label)}</th><td>${actionButton('photo', 'View photo', ` data-photo-id="${escapeHtml(photo.id)}"`)}</td></tr>`;
+      }
+      return row(field.label, fieldValue(field, value));
+    })
     .join('');
 
   const timeline = statusTimeline(record.id, data.statusHistory)

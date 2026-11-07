@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
+import { Link, useMatch } from 'react-router-dom';
 import { dataMode } from '../modules/intervention-map/data/app-config';
 import { localUser } from '../modules/intervention-map/data/create-store';
 import type { AppUser } from '../modules/intervention-map/data/types';
@@ -7,10 +8,33 @@ import { MapPage } from '../modules/intervention-map/MapPage';
 
 // Only loaded when there are logins, so local mode never starts a Supabase client.
 const AuthGate = lazy(() => import('./auth/AuthGate').then((module) => ({ default: module.AuthGate })));
+// Only loaded when opened, so the map doesn't carry the admin screens.
+const AdminPage = lazy(() => import('../modules/intervention-map/admin/AdminPage').then((module) => ({ default: module.AdminPage })));
+
+function AdminLink({ user }: { user: AppUser }) {
+  const inAdmin = useMatch('/admin/*') !== null;
+  if (user.role !== 'admin') return null;
+  return (
+    <Link className="header-button" to={inAdmin ? '/' : '/admin'}>
+      {inAdmin ? 'Back to the map' : 'Admin'}
+    </Link>
+  );
+}
+
+function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources: string[]): void }) {
+  const inAdmin = useMatch('/admin/*') !== null;
+  if (!inAdmin) return <MapPage key={user.id} user={user} onDataSources={onDataSources} />;
+  return (
+    <Suspense fallback={<p className="page-message">Loading…</p>}>
+      <AdminPage key={user.id} user={user} />
+    </Suspense>
+  );
+}
 
 function UserMenu({ user, changePassword, signOut }: { user: AppUser; changePassword(): void; signOut(): void }) {
   return (
     <div className="user-menu">
+      <AdminLink user={user} />
       <span>
         {user.full_name ?? 'Signed in'} · {ROLE_LABELS[user.role]}
       </span>
@@ -69,8 +93,15 @@ export function App() {
 
   if (local) {
     return (
-      <Frame dataSources={dataSources}>
-        <MapPage user={local} onDataSources={setDataSources} />
+      <Frame
+        dataSources={dataSources}
+        menu={
+          <div className="user-menu">
+            <AdminLink user={local} />
+          </div>
+        }
+      >
+        <Screen user={local} onDataSources={setDataSources} />
       </Frame>
     );
   }
@@ -81,7 +112,7 @@ export function App() {
         {({ user, changePassword, signOut }) => (
           <Frame dataSources={dataSources} menu={<UserMenu user={user} changePassword={changePassword} signOut={signOut} />}>
             {/* A new person gets a new store and fresh data. */}
-            <MapPage key={user.id} user={user} onDataSources={setDataSources} />
+            <Screen user={user} onDataSources={setDataSources} />
           </Frame>
         )}
       </AuthGate>

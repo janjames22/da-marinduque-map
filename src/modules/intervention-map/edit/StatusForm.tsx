@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { ConflictError, ValidationError } from '../data/store';
 import type { Intervention, MapData } from '../data/types';
 import { manilaToday } from '../lib/dates';
+import { statusChoices } from '../lib/form-values';
 import { isOnMap, recordName, statusDateLabel, statusTimeline } from '../lib/display';
 import { PHOTO_ACCEPT, photoProblem } from '../lib/photo-meta';
 import { validateStatus, type FieldErrors } from '../lib/validation';
@@ -24,9 +25,7 @@ export function StatusForm({ data, record }: { data: MapData; record: Interventi
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const options = data.typeStatuses
-    .filter((s) => s.intervention_type_id === record.intervention_type_id)
-    .map((s) => ({ value: s.status_id, label: data.statuses.find((status) => status.id === s.status_id)?.name ?? '' }));
+  const options = statusChoices(data, record.intervention_type_id);
 
   const current = statusTimeline(record.id, data.statusHistory).at(-1);
   const currentName = data.statuses.find((s) => s.id === record.status_id)?.name;

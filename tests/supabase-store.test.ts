@@ -151,6 +151,7 @@ describe('the same steps as local mode', () => {
       typeStatuses: state.fixed.typeStatuses,
       municipalities: state.fixed.municipalities,
       barangayFields: state.fixed.barangayFields,
+      lists: state.fixed,
       places,
       now: clock,
       newId: () => `00000000-0000-4000-8000-${String(++next).padStart(12, '0')}`,

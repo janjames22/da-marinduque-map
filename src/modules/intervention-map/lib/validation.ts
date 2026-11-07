@@ -60,8 +60,8 @@ export const coreFieldLabel = (key: string) => CORE_LABELS[key] ?? key;
 
 export interface ValidationContext {
   type: InterventionType;
-  categories: Category[];
-  barangays: Barangay[];
+  categories: Pick<Category, 'id' | 'intervention_type_id'>[];
+  barangays: Pick<Barangay, 'id' | 'municipality_id'>[];
   now?: Date;
 }
 

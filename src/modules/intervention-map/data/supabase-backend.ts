@@ -3,6 +3,8 @@ import type { ConnectionListener } from './store';
 import { BackendError, type SupabaseBackend } from './supabase-store';
 
 const PHOTO_BUCKET = 'intervention-photos';
+const NOT_SET_UP = 'The Users service isn\'t set up on this project yet. See "Deploying" in docs/OPERATIONS.md.';
+const NOT_REACHED = 'Could not reach the Users service. Check your connection and try again.';
 const CHANGE_TOPIC = 'map-changes';
 const PAGE_SIZE = 1000;
 const SIGNED_URL_SECONDS = 60 * 60;
@@ -35,6 +37,27 @@ export function createSupabaseBackend(client: SupabaseClient): SupabaseBackend {
       const { data, error } = await client.from(table).select(columns).eq('id', id).maybeSingle();
       if (error) throw toBackendError(error);
       return data as T | null;
+    },
+
+    async insertRow(table, values) {
+      const { error } = await client.from(table).insert(values);
+      if (error) throw toBackendError(error);
+    },
+
+    async updateRow(table, id, values) {
+      const { data, error } = await client.from(table).update(values).eq('id', id).select('id');
+      if (error) throw toBackendError(error);
+      if (data.length === 0) throw new BackendError('42501', 'Nothing was changed.');
+    },
+
+    async invokeFunction<T>(name: string, body: Record<string, unknown>) {
+      const { data, error } = await client.functions.invoke(name, { body });
+      if (!error) return data as T;
+      const response = (error as { context?: unknown }).context;
+      if (!(response instanceof Response)) throw new BackendError('function', NOT_REACHED);
+      if (response.status === 404) throw new BackendError('function', NOT_SET_UP);
+      const detail = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new BackendError('function', detail?.message ?? NOT_REACHED);
     },
 
     async uploadPhoto(path, file, contentType) {

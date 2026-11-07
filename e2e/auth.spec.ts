@@ -404,6 +404,178 @@ test.describe('exporting', () => {
   });
 });
 
+test.describe('the admin screens', () => {
+  const peopleList = (page: Page) => page.getByRole('list', { name: 'Everyone' });
+  const person = (page: Page, email: string) => peopleList(page).locator(`[data-row="${email}"]`);
+  const inviteForm = (page: Page) => page.getByRole('form', { name: 'Invite someone' });
+
+  async function openUsers(page: Page) {
+    const fake = await signedIn(page, USERS.admin);
+    await page.getByRole('link', { name: 'Admin' }).click();
+    await expect(peopleList(page)).toBeVisible();
+    return fake;
+  }
+
+  test('only an Admin is offered them, and nobody else\'s browser calls the service', async ({ page }) => {
+    const fake = await signedIn(page, USERS.encoder);
+    await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(0);
+    await page.goto('/admin/users');
+    await expect(page.getByRole('alert')).toContainText('This page is for Admins');
+    expect(fake.functionCalls).toEqual([]);
+  });
+
+  test('the Users page lists people, with their login on the request', async ({ page }) => {
+    const fake = await openUsers(page);
+    await expect(person(page, USERS.viewer.email)).toContainText('Vera Viewer');
+    await expect(person(page, USERS.viewer.email)).toContainText('Active');
+    await expect(person(page, USERS.former.email)).toContainText('Deactivated');
+    await expect(person(page, USERS.stranger.email)).toContainText('No role yet');
+    expect(fake.functionCalls[0]).toMatchObject({ name: 'admin-users', hasLogin: true, body: { action: 'list' } });
+  });
+
+  test('a long list scrolls inside its own area, not the whole page', async ({ page }) => {
+    await openUsers(page);
+    await expect(person(page, USERS.stranger.email)).toBeAttached();
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
+  });
+
+  test('inviting by email needs no script, and the person appears as invited', async ({ page }) => {
+    const fake = await openUsers(page);
+    await inviteForm(page).getByRole('textbox', { name: /^Email/ }).fill('mao.gasan@example.test');
+    await inviteForm(page).getByLabel('Full name').fill('Maria Santos');
+    await inviteForm(page).getByLabel('Role').selectOption('encoder');
+    await inviteForm(page).getByRole('button', { name: 'Invite' }).click();
+
+    await expect(page.locator('.admin-notice')).toContainText('Invited mao.gasan@example.test');
+    await expect(person(page, 'mao.gasan@example.test')).toContainText('Invited, hasn\'t set a password yet');
+    const call = fake.functionCalls.find(({ body }) => body.action === 'invite')!;
+    expect(call.body).toMatchObject({ email: 'mao.gasan@example.test', full_name: 'Maria Santos', role: 'encoder', delivery: 'email' });
+    expect(call.body.redirect_to).toMatch(/^http:\/\/localhost/);
+  });
+
+  test('inviting by link shows it to the Admin, and only then', async ({ page, context }, testInfo) => {
+    await openUsers(page);
+    await inviteForm(page).getByRole('textbox', { name: /^Email/ }).fill('mao.boac@example.test');
+    await inviteForm(page).getByLabel('Full name').fill('Jose Reyes');
+    await inviteForm(page).getByRole('radio', { name: /link to send them myself/ }).check();
+    await inviteForm(page).getByRole('button', { name: 'Invite' }).click();
+
+    const box = page.getByLabel('Sign-in link');
+    await expect(box).toHaveValue(/token=invite-token/);
+    if (testInfo.project.name !== 'auth-mobile') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.getByRole('button', { name: /^Copy/ }).click();
+    await expect(page.getByRole('button', { name: 'Copied' })).toBeVisible();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(box).toHaveCount(0);
+  });
+
+  test('a failed invitation keeps what was typed, and says why', async ({ page }) => {
+    const fake = await openUsers(page);
+    fake.onFunction(({ body }) => (body.action === 'invite' ? { status: 502, body: { message: 'The email could not be sent. Choose to get a link instead.' } } : undefined));
+    await inviteForm(page).getByRole('textbox', { name: /^Email/ }).fill('mao.mogpog@example.test');
+    await inviteForm(page).getByLabel('Full name').fill('Ana Cruz');
+    await inviteForm(page).getByRole('button', { name: 'Invite' }).click();
+    await expect(inviteForm(page).getByRole('alert')).toContainText('The email could not be sent');
+    await expect(inviteForm(page).getByRole('textbox', { name: /^Email/ })).toHaveValue('mao.mogpog@example.test');
+  });
+
+  test('an Admin can set a role, send a new link, and deactivate and reactivate someone', async ({ page }) => {
+    const fake = await openUsers(page);
+    const viewer = person(page, USERS.viewer.email);
+
+    await viewer.getByLabel(/^Role of/).selectOption('encoder');
+    await expect(page.locator('.admin-notice')).toContainText('Vera Viewer is now Encoder');
+    expect(fake.functionCalls.find(({ body }) => body.action === 'update')?.body).toMatchObject({ id: USERS.viewer.id, role: 'encoder' });
+
+    await viewer.getByRole('button', { name: /Email a new link/ }).click();
+    await expect(page.locator('.admin-notice')).toContainText(`A new link was emailed to ${USERS.viewer.email}`);
+
+    await viewer.getByRole('button', { name: /Get a new link/ }).click();
+    await expect(page.getByLabel('Sign-in link')).toHaveValue(/token=reset-token/);
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    await viewer.getByRole('button', { name: /Edit name/ }).click();
+    await viewer.getByLabel('Full name').fill('Vera V. Viewer');
+    await viewer.getByRole('button', { name: 'Save' }).click();
+    await expect(viewer).toContainText('Vera V. Viewer');
+
+    page.once('dialog', (dialog) => void dialog.accept());
+    await viewer.getByRole('button', { name: /Deactivate/ }).click();
+    await expect(viewer).toContainText('Deactivated');
+    await expect(viewer.getByLabel(/^Role of/)).toBeDisabled();
+
+    await viewer.getByRole('button', { name: /Reactivate/ }).click();
+    await expect(viewer).toContainText('Active');
+  });
+
+  test('cancelling the deactivate question changes nothing', async ({ page }) => {
+    const fake = await openUsers(page);
+    page.once('dialog', (dialog) => void dialog.dismiss());
+    await person(page, USERS.viewer.email).getByRole('button', { name: /Deactivate/ }).click();
+    expect(fake.functionCalls.some(({ body }) => body.action === 'deactivate')).toBe(false);
+  });
+
+  test('an Admin can\'t lock themselves out from their own row', async ({ page }) => {
+    await openUsers(page);
+    const me = person(page, USERS.admin.email);
+    await expect(me).toContainText('(you)');
+    await expect(me.getByLabel(/^Role of/)).toBeDisabled();
+    await expect(me.getByRole('button', { name: /Deactivate/ })).toHaveCount(0);
+  });
+
+  test('says what to do if the function isn\'t deployed yet', async ({ page }) => {
+    const fake = await installFakeSupabase(page);
+    fake.onFunction(() => ({ status: 404, body: { code: 'NOT_FOUND', message: 'Requested function was not found' } }));
+    await page.goto('/admin/users');
+    await signIn(page, USERS.admin);
+    await expect(page.getByRole('alert')).toContainText('isn\'t set up on this project yet');
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+  });
+
+  test('a list saves through the real client, and a signal brings it to an open map', async ({ page }) => {
+    const fake = await signedIn(page, USERS.admin);
+    await page.goto('/admin/programs');
+    await page.getByRole('button', { name: '+ Add program' }).click();
+    const add = page.getByRole('form', { name: 'Add program' });
+    await add.getByLabel('Name').fill('Coconut Program');
+    await add.getByLabel('Color').fill('#123456');
+    await add.getByRole('button', { name: 'Save' }).click();
+    await expect(page.locator('[data-row="Coconut Program"]')).toBeVisible();
+    expect(fake.restWrites.find(({ table }) => table === 'programs')).toMatchObject({ method: 'POST', values: { code: 'coconut-program', name: 'Coconut Program', color: '#123456' } });
+
+    await page.locator('[data-row="Rice Program"]').getByRole('button', { name: /Archive/ }).click();
+    await expect(page.locator('[data-row="Rice Program"]')).toContainText('Archived');
+    expect(fake.restWrites.at(-1)).toMatchObject({ method: 'PATCH', table: 'programs', values: { is_active: false } });
+  });
+
+  test('a type saves through its database function, with its status list and the version it started from', async ({ page }) => {
+    const fake = await signedIn(page, USERS.admin);
+    await page.goto('/admin/types');
+    await page.locator('[data-row="SSIP"]').getByRole('link', { name: /Edit/ }).click();
+    const editor = page.getByRole('form', { name: 'Type' });
+    await editor.getByLabel('Name').fill('SSIP (renamed)');
+    await editor.getByRole('button', { name: 'Save type' }).click();
+    await expect(page.locator('[data-row="SSIP (renamed)"]')).toBeVisible();
+
+    const { args } = fake.rpcCalls.find(({ name }) => name === 'save_intervention_type')!;
+    expect(args).toMatchObject({ p_expected_version: 1, p_values: { code: 'ssip', name: 'SSIP (renamed)' } });
+    expect((args.p_statuses as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  test('an uploaded icon previews under the site\'s real security rules', async ({ page }) => {
+    await signedIn(page, USERS.admin);
+    await page.goto('/admin/lists');
+    await page.getByRole('button', { name: '+ Add icon' }).click();
+    const add = page.getByRole('form', { name: 'Add icon' });
+    await add.getByLabel('SVG file').setInputFiles({
+      name: 'Round.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>'),
+    });
+    await expect.poll(() => add.getByRole('img', { name: 'Preview' }).evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  });
+});
+
 test.describe('live updates', () => {
   async function whenJoined(fake: FakeSupabase) {
     await expect.poll(() => fake.channelJoins.length).toBeGreaterThan(0);
