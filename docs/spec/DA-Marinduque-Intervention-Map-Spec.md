@@ -286,7 +286,7 @@ It sits beside the map on a computer, and takes turns with the map and the list 
 KPI cards:
 - Total interventions
 - Units of each active type, such as machinery units and SSIPs
-- Beneficiary FCAs served: different beneficiary names, ignoring case and spacing. No RAED record has a beneficiary type yet, so this counts every beneficiary named, not only FCAs
+- Beneficiaries (approx.): different beneficiary names, ignoring case, spacing and punctuation. Labelled approximate until records have beneficiary types and there's a proper list of beneficiaries, as no RAED record has a beneficiary type yet
 - % operational, by units, using each type's own `counts_as_operational` statuses. For Farm Machinery this is "% turned-over or serviceable". Records with `Unknown` status or no status are left out
 - Barangays with no intervention yet, out of those the filters cover
 - Records needing QA: any flag except a shared point, which is often correct

@@ -842,8 +842,13 @@ describe('local dataset through the map logic', () => {
     const [{ n: needingQa }] = await rows<{ n: number }>(`select count(*)::int n from interventions where exists (select 1 from unnest(qa_flags) flag where flag <> 'duplicate_point')`);
     expect(numbers.needingQa).toBe(needingQa);
 
-    const [{ n: beneficiaries }] = await rows<{ n: number }>(`select count(distinct lower(regexp_replace(btrim(beneficiary), '\\s+', ' ', 'g')))::int n from interventions where beneficiary is not null and btrim(beneficiary) <> ''`);
-    expect(numbers.beneficiaries).toBe(beneficiaries);
+    // Written out again here, so a slip in the app's own version can't hide.
+    const named = await rows<{ beneficiary: string | null }>('select beneficiary from interventions');
+    const lettersOnly = (name: string) => name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    const beneficiaries = new Set(named.map((row) => lettersOnly(row.beneficiary ?? '')).filter(Boolean));
+    expect(numbers.beneficiaries).toBe(beneficiaries.size);
+    // Fewer than the 156 names counted by case and spacing alone, if punctuation hid some repeats.
+    expect(beneficiaries.size).toBeLessThanOrEqual(156);
 
     // By each type's own list of what counts: Turned-over and Serviceable machinery, and no SSIP yet.
     const [{ units, known }] = await rows<{ units: number; known: number }>(

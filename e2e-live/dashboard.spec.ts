@@ -169,15 +169,15 @@ test('the audit log filters by person and action on the real service', async ({ 
   const lines = log.locator('.audit-table tbody tr');
   await expect(lines.first()).toBeVisible({ timeout: 30_000 });
 
+  // The newest lines may already be the encoder's, so wait for the whole page to be theirs.
+  const column = (n: number) => lines.locator(`td:nth-child(${n})`).evaluateAll((cells) => [...new Set(cells.map((cell) => cell.textContent))]);
   const filters = log.getByRole('form', { name: 'Filter the audit log' });
   await filters.getByLabel('Person').selectOption({ label: 'Test encoder' });
-  await expect(lines.first()).toContainText('Test encoder', { timeout: 15_000 });
-  expect(await lines.locator('td:nth-child(2)').evaluateAll((cells) => [...new Set(cells.map((cell) => cell.textContent))])).toEqual(['Test encoder']);
+  await expect.poll(() => column(2), { timeout: 15_000 }).toEqual(['Test encoder']);
 
   await filters.getByRole('button', { name: 'Clear filters' }).click();
   await filters.getByLabel('Action').selectOption({ label: 'Created' });
-  await expect(lines.first().locator('td:nth-child(3)')).toHaveText('Created', { timeout: 15_000 });
-  expect(await lines.locator('td:nth-child(3)').evaluateAll((cells) => [...new Set(cells.map((cell) => cell.textContent))])).toEqual(['Created']);
+  await expect.poll(() => column(3), { timeout: 15_000 }).toEqual(['Created']);
   await expect(log.locator('.records-count')).toHaveText(/^1–50 of [\d,]+$/);
 });
 

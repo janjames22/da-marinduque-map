@@ -101,8 +101,14 @@ describe('the key figures', () => {
   });
 
   it('counts each beneficiary once, however it was typed', () => {
-    const numbers = buildDashboard([record({ beneficiary: 'Bantad FCA' }), record({ beneficiary: ' bantad   fca ' }), record({ beneficiary: 'Tumapon FA' }), record({ beneficiary: null }), record({ beneficiary: '  ' })], data(), BARANGAYS);
-    expect(numbers.beneficiaries).toBe(2);
+    const typed = ['Bantad FCA', ' bantad   fca ', 'Bantad F.C.A.', 'BANTAD-FCA', 'Bantad, FCA', 'Tumapon FA', 'Tumapon F.A.', 'Kiñaman FA', 'Kinaman FA', null, '  ', '.'];
+    const numbers = buildDashboard(typed.map((beneficiary) => record({ beneficiary })), data(), BARANGAYS);
+    expect(numbers.beneficiaries).toBe(3);
+  });
+
+  it('still tells names apart when their letters differ', () => {
+    const numbers = buildDashboard([record({ beneficiary: 'Bantad FCA' }), record({ beneficiary: 'Bantad FA' }), record({ beneficiary: 'Bantad FCA 2' })], data(), BARANGAYS);
+    expect(numbers.beneficiaries).toBe(3);
   });
 
   describe('% operational', () => {

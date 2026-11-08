@@ -141,7 +141,7 @@ On a computer these sit beside the map, and on a phone the **Map**, **Dashboard*
 |---|---|
 | Total interventions | Records, whatever their quantity |
 | Machinery units, SSIPs and other types' units | The quantity on each record |
-| Beneficiary FCAs served | Different beneficiary names, ignoring case and spacing. No record has a beneficiary type yet, so this counts everyone named, not only FCAs |
+| Beneficiaries (approx.) | Different beneficiary names, ignoring case, spacing and punctuation, so "Bantad F.C.A." and "bantad fca" count once. It's approximate until records have beneficiary types and there's a proper list of beneficiaries |
 | % operational | Units at a status marked as operational on that type's page in Admin, out of all units with a known status. Unknown and no status are left out |
 | Barangays with no intervention yet | Out of the barangays the filters cover |
 | Records needing QA | Any QA flag except a shared point, which is often correct |

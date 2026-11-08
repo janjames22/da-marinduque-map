@@ -230,7 +230,7 @@ export function DashboardView({ numbers }: { numbers: DashboardNumbers }) {
         {numbers.types.map((type) => (
           <Tile key={type.typeId} id={`type-${type.typeId}`} label={type.label} value={type.units.toLocaleString('en-US')} />
         ))}
-        <Tile id="beneficiaries" label="Beneficiary FCAs served" value={numbers.beneficiaries.toLocaleString('en-US')} />
+        <Tile id="beneficiaries" label="Beneficiaries (approx.)" value={numbers.beneficiaries.toLocaleString('en-US')} note="Different names, ignoring case, spacing and punctuation" />
         <Tile
           id="operational"
           label="% operational"
