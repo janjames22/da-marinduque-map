@@ -492,6 +492,27 @@ test.describe('the lists', () => {
     await expect(after.locator('option:checked')).toHaveText('Turned-over');
   });
 
+  test('a status can be set to count as assessed or not, and % operational follows', async ({ page, isMobile }) => {
+    await openAdmin(page, '/admin/statuses');
+    await expect(row(page, 'Turned-over')).toContainText('Not counted as assessed');
+    await expect(row(page, 'Serviceable')).not.toContainText('Not counted as assessed');
+
+    // Count Turned-over as assessed, and it joins the figure: all 195 machines work, out of 195.
+    await row(page, 'Turned-over').getByRole('button', { name: /^Edit/ }).click();
+    const edit = form(page, 'Edit Turned-over');
+    await expect(edit.getByLabel('Counts as assessed')).not.toBeChecked();
+    await edit.getByLabel('Counts as assessed').check();
+    await edit.getByRole('button', { name: 'Save' }).click();
+    await expect(row(page, 'Turned-over')).not.toContainText('Not counted as assessed');
+
+    await goToMap(page);
+    if (isMobile) await page.getByRole('navigation', { name: 'Views' }).getByRole('button', { name: 'Dashboard' }).click();
+    const notes = page.locator('[data-kpi="operational"] .kpi-note');
+    await expect(page.locator('[data-kpi="operational"] .kpi-value')).toHaveText('100%', { timeout: 30_000 });
+    await expect(notes.first()).toHaveText('Operational: 195 of 195 assessed');
+    await expect(notes.nth(1)).toHaveText('2 inventory, 2 completed, not yet assessed');
+  });
+
   test('a beneficiary type, location basis and category group can be added or renamed', async ({ page }) => {
     await openAdmin(page, '/admin/lists');
     await page.getByRole('button', { name: '+ Add beneficiary type' }).click();

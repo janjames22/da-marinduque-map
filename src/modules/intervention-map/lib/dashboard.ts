@@ -31,11 +31,21 @@ export interface TypeTile {
   units: number;
 }
 
+// Out of the units whose condition has been checked. Those at a status that doesn't count as
+// assessed, such as Turned-over, are counted apart, by status, so it's clear how many are waiting.
+export interface OperationalShare {
+  percent: number | null;
+  units: number;
+  assessed: number;
+  notAssessed: { key: string; label: string; units: number }[];
+  noStatus: number;
+}
+
 export interface DashboardNumbers {
   records: number;
   types: TypeTile[];
   beneficiaries: number;
-  operational: { percent: number | null; units: number; known: number };
+  operational: OperationalShare;
   barangaysWithout: number;
   barangaysTotal: number;
   needingQa: number;
@@ -76,18 +86,34 @@ function tally(records: Intervention[], rowFor: (record: Intervention) => Omit<B
   return [...rows.values()];
 }
 
-// Unknown says nothing either way, so it's left out rather than counted as not working.
-function operationalShare(records: Intervention[], data: Pick<MapData, 'typeStatuses' | 'statuses'>): DashboardNumbers['operational'] {
-  const unknown = new Set(data.statuses.filter((status) => status.name.trim().toLowerCase() === 'unknown').map((status) => status.id));
+// A status that doesn't count as assessed, such as Turned-over or Unknown, says nothing about whether
+// a unit works, so its units are left out rather than counted as not working. Which statuses those
+// are is set in Admin, Statuses. What counts as operational is each type's own list.
+function operationalShare(records: Intervention[], data: Pick<MapData, 'typeStatuses' | 'statuses'>): OperationalShare {
+  const statusById = new Map(data.statuses.map((status) => [status.id, status]));
   const working = new Set(data.typeStatuses.filter((entry) => entry.counts_as_operational).map((entry) => `${entry.intervention_type_id}:${entry.status_id}`));
+  const waiting = new Map<number, number>();
   let units = 0;
-  let known = 0;
+  let assessed = 0;
+  let noStatus = 0;
   for (const record of records) {
-    if (record.status_id === null || unknown.has(record.status_id)) continue;
-    known += record.quantity;
-    if (working.has(`${record.intervention_type_id}:${record.status_id}`)) units += record.quantity;
+    const status = record.status_id === null ? undefined : statusById.get(record.status_id);
+    if (!status) {
+      noStatus += record.quantity;
+      continue;
+    }
+    if (status.counts_as_assessed === false) {
+      waiting.set(status.id, (waiting.get(status.id) ?? 0) + record.quantity);
+      continue;
+    }
+    assessed += record.quantity;
+    if (working.has(`${record.intervention_type_id}:${status.id}`)) units += record.quantity;
   }
-  return { percent: known === 0 ? null : Math.round((units / known) * 100), units, known };
+  const notAssessed = [...data.statuses]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .filter((status) => waiting.has(status.id))
+    .map((status) => ({ key: String(status.id), label: status.name, units: waiting.get(status.id)! }));
+  return { percent: assessed === 0 ? null : Math.round((units / assessed) * 100), units, assessed, notAssessed, noStatus };
 }
 
 type DashboardData = Pick<MapData, 'types' | 'typeStatuses' | 'statuses' | 'municipalities' | 'programs' | 'categories' | 'links'>;

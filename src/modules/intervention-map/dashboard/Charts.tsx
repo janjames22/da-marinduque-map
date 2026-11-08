@@ -2,7 +2,7 @@
 // value is never only in a tooltip: every chart has a table beside it, one button away.
 import { useState, type ReactNode } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, Rectangle, ResponsiveContainer, Text, Tooltip, XAxis, YAxis } from 'recharts';
-import type { BarRow, DashboardNumbers, StatusRow, StatusSeries } from '../lib/dashboard';
+import type { BarRow, DashboardNumbers, OperationalShare, StatusRow, StatusSeries } from '../lib/dashboard';
 
 // One measure, so one color: the same blue as the map's count shading.
 const MEASURE_COLOR = '#2a78d6';
@@ -211,14 +211,27 @@ function StatusTable({ rows, series }: { rows: StatusRow[]; series: StatusSeries
   );
 }
 
-function Tile({ id, label, value, note }: { id: string; label: string; value: string; note?: string }) {
+function Tile({ id, label, value, note }: { id: string; label: string; value: string; note?: string | string[] }) {
   return (
     <div className="kpi" data-kpi={id}>
       <dt>{label}</dt>
       <dd className="kpi-value">{value}</dd>
-      {note && <dd className="kpi-note">{note}</dd>}
+      {(Array.isArray(note) ? note : note ? [note] : []).map((line) => (
+        <dd className="kpi-note" key={line}>
+          {line}
+        </dd>
+      ))}
     </div>
   );
+}
+
+// "Operational: 32 of 32 assessed", then what isn't counted, such as "163 turned-over, not yet assessed".
+function operationalNotes(operational: OperationalShare): string[] {
+  const lines = [operational.assessed === 0 ? 'No unit assessed yet' : `Operational: ${operational.units.toLocaleString('en-US')} of ${operational.assessed.toLocaleString('en-US')} assessed`];
+  const waiting = operational.notAssessed.map((status) => `${status.units.toLocaleString('en-US')} ${status.label.toLowerCase()}`);
+  if (waiting.length > 0) lines.push(`${waiting.join(', ')}, not yet assessed`);
+  if (operational.noStatus > 0) lines.push(`${plural(operational.noStatus, 'unit')} with no status`);
+  return lines;
 }
 
 export function DashboardView({ numbers }: { numbers: DashboardNumbers }) {
@@ -235,7 +248,7 @@ export function DashboardView({ numbers }: { numbers: DashboardNumbers }) {
           id="operational"
           label="% operational"
           value={operational.percent === null ? '–' : `${operational.percent}%`}
-          note={operational.percent === null ? 'No known status' : `${operational.units.toLocaleString('en-US')} of ${plural(operational.known, 'unit')} with a known status`}
+          note={operationalNotes(operational)}
         />
         <Tile id="barangays-without" label="Barangays with no intervention yet" value={numbers.barangaysWithout.toLocaleString('en-US')} note={`of ${plural(numbers.barangaysTotal, 'barangay')}`} />
         <Tile id="needing-qa" label="Records needing QA" value={numbers.needingQa.toLocaleString('en-US')} />

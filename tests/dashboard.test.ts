@@ -4,11 +4,11 @@ import type { Category, Intervention, InterventionBarangay, InterventionType, Ma
 import { buildDashboard } from '../src/modules/intervention-map/lib/dashboard';
 
 const statuses: Status[] = [
-  { id: 1, name: 'Turned-over', color: '#2e7d32', sort_order: 1, is_active: true },
-  { id: 2, name: 'Serviceable', color: '#43a047', sort_order: 2, is_active: true },
-  { id: 3, name: 'Needs Repair', color: '#f59e0b', sort_order: 3, is_active: true },
-  { id: 4, name: 'Operational', color: '#2e7d32', sort_order: 4, is_active: true },
-  { id: 5, name: 'Unknown', color: '#9e9e9e', sort_order: 5, is_active: true },
+  { id: 1, name: 'Turned-over', color: '#2e7d32', sort_order: 1, is_active: true, counts_as_assessed: false },
+  { id: 2, name: 'Serviceable', color: '#43a047', sort_order: 2, is_active: true, counts_as_assessed: true },
+  { id: 3, name: 'Needs Repair', color: '#f59e0b', sort_order: 3, is_active: true, counts_as_assessed: true },
+  { id: 4, name: 'Operational', color: '#2e7d32', sort_order: 4, is_active: true, counts_as_assessed: true },
+  { id: 5, name: 'Unknown', color: '#9e9e9e', sort_order: 5, is_active: true, counts_as_assessed: false },
 ];
 
 const type = (id: number, code: string, name: string, is_active = true): InterventionType => ({
@@ -112,27 +112,46 @@ describe('the key figures', () => {
   });
 
   describe('% operational', () => {
-    it('uses each type\'s own list of what counts', () => {
-      const machine = record({ status_id: 1 }); // operational for machinery
-      const notWorking = record({ status_id: 3 });
+    it('uses each type\'s own list of what counts, among assessed units', () => {
+      const machine = record({ status_id: 2 }); // Serviceable, operational for machinery
+      const broken = record({ status_id: 3 });
       const pumpWorking = record({ intervention_type_id: 2, status_id: 4 }); // operational for an SSIP
-      const pumpTurnedOver = record({ intervention_type_id: 2, status_id: 1 }); // the same status as the first, but not for an SSIP
-      const { operational } = buildDashboard([machine, notWorking, pumpWorking, pumpTurnedOver], data(), BARANGAYS);
-      expect(operational).toEqual({ percent: 50, units: 2, known: 4 });
+      const pumpServiceable = record({ intervention_type_id: 2, status_id: 2 }); // not on an SSIP's list as operational
+      const { operational } = buildDashboard([machine, broken, pumpWorking, pumpServiceable], data(), BARANGAYS);
+      expect(operational).toEqual({ percent: 50, units: 2, assessed: 4, notAssessed: [], noStatus: 0 });
     });
 
-    it('leaves out Unknown and records with no status, rather than counting them as not working', () => {
-      const { operational } = buildDashboard([record({ status_id: 1 }), record({ status_id: 5 }), record({ status_id: null })], data(), BARANGAYS);
-      expect(operational).toEqual({ percent: 100, units: 1, known: 1 });
+    it('leaves out statuses that aren\'t assessed, such as Turned-over and Unknown, and counts them apart', () => {
+      const records = [record({ status_id: 2 }), record({ status_id: 1, quantity: 3 }), record({ status_id: 1 }), record({ status_id: 5 }), record({ status_id: null, quantity: 2 })];
+      const { operational } = buildDashboard(records, data(), BARANGAYS);
+      expect(operational).toEqual({
+        percent: 100,
+        units: 1,
+        assessed: 1,
+        notAssessed: [
+          { key: '1', label: 'Turned-over', units: 4 },
+          { key: '5', label: 'Unknown', units: 1 },
+        ],
+        noStatus: 2,
+      });
+    });
+
+    it('follows the setting on each status, not its name', () => {
+      const changed = { ...data(), statuses: statuses.map((status) => ({ ...status, counts_as_assessed: status.name !== 'Serviceable' })) };
+      const { operational } = buildDashboard([record({ status_id: 1 }), record({ status_id: 2 }), record({ status_id: 3 })], changed, BARANGAYS);
+      // Turned-over now counts, and is operational for machinery. Serviceable is set aside.
+      expect(operational).toEqual({ percent: 50, units: 1, assessed: 2, notAssessed: [{ key: '2', label: 'Serviceable', units: 1 }], noStatus: 0 });
     });
 
     it('goes by units, as one record can hold several machines', () => {
-      const { operational } = buildDashboard([record({ status_id: 1, quantity: 3 }), record({ status_id: 3, quantity: 1 })], data(), BARANGAYS);
-      expect(operational).toEqual({ percent: 75, units: 3, known: 4 });
+      const { operational } = buildDashboard([record({ status_id: 2, quantity: 3 }), record({ status_id: 3, quantity: 1 })], data(), BARANGAYS);
+      expect(operational).toMatchObject({ percent: 75, units: 3, assessed: 4 });
     });
 
-    it('has no figure when nothing has a known status', () => {
-      expect(buildDashboard([record({ status_id: 5 })], data(), BARANGAYS).operational.percent).toBeNull();
+    it('has no figure when nothing has been assessed', () => {
+      const waiting = buildDashboard([record({ status_id: 1 })], data(), BARANGAYS).operational;
+      expect(waiting.percent).toBeNull();
+      expect(waiting.notAssessed).toEqual([{ key: '1', label: 'Turned-over', units: 1 }]);
       expect(buildDashboard([], data(), BARANGAYS).operational.percent).toBeNull();
     });
   });

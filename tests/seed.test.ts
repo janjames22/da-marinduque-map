@@ -221,6 +221,16 @@ describe('status history', () => {
 });
 
 describe('lookups', () => {
+  it('counts only statuses that say whether a unit works as assessed', async () => {
+    const statuses = await rows<{ name: string; counts_as_assessed: boolean }>('select name, counts_as_assessed from statuses order by sort_order');
+    const notAssessed = statuses.filter((status) => !status.counts_as_assessed).map((status) => status.name);
+    expect(notAssessed).toEqual(['Turned-over', 'Undelivered/For Distribution', 'Proposed', 'Inventory', 'On-going', 'Completed', 'Unknown']);
+    // A status added later counts, unless an Admin says otherwise.
+    const [added] = await rows<{ counts_as_assessed: boolean }>(`insert into statuses (name, color) values ('Rechecked', '#000000') returning counts_as_assessed`);
+    expect(added.counts_as_assessed).toBe(true);
+    await rows(`delete from statuses where name = 'Rechecked'`);
+  });
+
   it('adds the Urban and Peri-Urban program', async () => {
     const programs = await rows<{ name: string }>('select name from programs');
     expect(programs).toHaveLength(6);
@@ -850,14 +860,21 @@ describe('local dataset through the map logic', () => {
     // Fewer than the 156 names counted by case and spacing alone, if punctuation hid some repeats.
     expect(beneficiaries.size).toBeLessThanOrEqual(156);
 
-    // By each type's own list of what counts: Turned-over and Serviceable machinery, and no SSIP yet.
-    const [{ units, known }] = await rows<{ units: number; known: number }>(
-      `select coalesce(sum(i.quantity) filter (where ts.counts_as_operational), 0)::int units, sum(i.quantity)::int known
+    // Only units whose condition has been checked: the 32 Serviceable machines. Turned-over machinery
+    // and the SSIPs still in Inventory or Completed are counted apart, by status.
+    const [{ units, assessed }] = await rows<{ units: number; assessed: number }>(
+      `select coalesce(sum(i.quantity) filter (where ts.counts_as_operational), 0)::int units, coalesce(sum(i.quantity), 0)::int assessed
        from interventions i
-       join statuses s on s.id = i.status_id and s.name <> 'Unknown'
+       join statuses s on s.id = i.status_id and s.counts_as_assessed
        left join intervention_type_statuses ts on ts.intervention_type_id = i.intervention_type_id and ts.status_id = i.status_id`,
     );
-    expect(numbers.operational).toEqual({ percent: Math.round((units / known) * 100), units, known });
+    expect(numbers.operational).toMatchObject({ percent: Math.round((units / assessed) * 100), units, assessed, noStatus: 0 });
+    expect({ units, assessed }).toEqual({ units: 32, assessed: 32 });
+    expect(numbers.operational.notAssessed.map((status) => [status.label, status.units])).toEqual([
+      ['Turned-over', 163],
+      ['Inventory', 2],
+      ['Completed', 2],
+    ]);
 
     const total = (chartRows: { value: number }[]) => chartRows.reduce((sum, row) => sum + row.value, 0);
     expect(total(numbers.byMunicipality)).toBe(199);

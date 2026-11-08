@@ -19,9 +19,10 @@ export interface LookupRow {
   category_group_id?: number | null;
   sort_order?: number;
   is_active?: boolean;
+  counts_as_assessed?: boolean;
 }
 
-type LookupField = 'color' | 'icon' | 'type' | 'group' | 'image';
+type LookupField = 'color' | 'icon' | 'type' | 'group' | 'image' | 'assessed';
 
 interface LookupSectionProps {
   title: string;
@@ -46,6 +47,7 @@ interface FormValues {
   icon_id: string;
   intervention_type_id: string;
   category_group_id: string;
+  counts_as_assessed: boolean;
 }
 
 const optionalId = (value: string) => (value === '' ? null : Number(value));
@@ -79,6 +81,7 @@ function LookupForm({
     icon_id: text(row?.icon_id),
     intervention_type_id: text(row?.intervention_type_id),
     category_group_id: text(row?.category_group_id),
+    counts_as_assessed: row?.counts_as_assessed ?? true,
   });
   const update = (changes: Partial<FormValues>) => setValues((current) => ({ ...current, ...changes }));
   const has = (field: LookupField) => fields.includes(field);
@@ -131,6 +134,17 @@ function LookupForm({
         />
       )}
       {has('color') && <ColorField label="Color" value={values.color} onChange={(color) => update({ color })} error={errors.color} />}
+      {has('assessed') && (
+        <div className="form-field">
+          <label className="choice">
+            <input type="checkbox" checked={values.counts_as_assessed} onChange={(event) => update({ counts_as_assessed: event.target.checked })} />
+            Counts as assessed
+          </label>
+          <span className="field-hint">
+            Untick for a status that says where a unit is, such as turned-over or in inventory, rather than whether it works. Its units are left out of % operational on the dashboard, and shown apart as not yet assessed.
+          </span>
+        </div>
+      )}
       {has('image') && (
         <div className="form-field">
           <label htmlFor="icon-svg-file">SVG file</label>
@@ -186,6 +200,7 @@ export function LookupSection({
     if (fields.includes('icon')) values.icon_id = optionalId(form.icon_id);
     if (fields.includes('type')) values.intervention_type_id = optionalId(form.intervention_type_id);
     if (fields.includes('group')) values.category_group_id = optionalId(form.category_group_id);
+    if (fields.includes('assessed')) values.counts_as_assessed = form.counts_as_assessed;
     if (!row) {
       if (hasCode) values.code = newCode(form.name, rows.map((r) => r.code ?? ''));
       if (canReorder) values.sort_order = active.length + 1;
@@ -243,6 +258,7 @@ export function LookupSection({
               fields.includes('type') ? (type?.name ?? 'Any type') : null,
               fields.includes('group') ? (group?.name ?? 'No group') : null,
               count === undefined ? null : plural(count, usageWord),
+              fields.includes('assessed') && row.counts_as_assessed === false ? 'Not counted as assessed' : null,
               row.is_active === false ? 'Archived' : null,
             ]
               .filter(Boolean)

@@ -129,10 +129,10 @@ function AdminWorkspace({ data }: { data: MapData }) {
               <LookupSection
                 title="Statuses"
                 singular="status"
-                description="All the status names. Which ones each type uses is set on its page, under Intervention types."
+                description="All the status names, and whether each says a unit's condition has been checked. Which ones each type uses, and which count as operational, is set on its page, under Intervention types."
                 table="statuses"
                 rows={data.statuses}
-                fields={['color']}
+                fields={['color', 'assessed']}
                 data={data}
                 usage={(row) => data.interventions.filter((record) => record.status_id === row.id).length}
               />
