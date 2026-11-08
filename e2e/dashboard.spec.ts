@@ -48,6 +48,7 @@ const counts = new Map<string, number>();
 for (const r of records) counts.set(r.beneficiary ?? '', (counts.get(r.beneficiary ?? '') ?? 0) + 1);
 const onMapRecord = records.find((r) => r.geojson && r.qa_flags.length === 0 && counts.get(r.beneficiary ?? '') === 1)!;
 const unlocatedRecord = records.find((r) => r.qa_flags.includes('no_coords') && r.barangay_id !== null)!;
+const sharedPointRecord = records.find((r) => r.geojson && r.qa_flags.join() === 'duplicate_point' && counts.get(r.beneficiary ?? '') === 1)!;
 const customRecords = records.filter((r) => r.intervention_type_id === machinery.id && r.geojson && r.qa_flags.length === 0 && counts.get(r.beneficiary ?? '') === 1).slice(0, 3);
 
 // The one record with a mark in its text, such as a ñ.
@@ -239,7 +240,7 @@ test.describe('the key figures', () => {
     await showDashboard(page, isMobile);
 
     const units = (typeId: number) => records.filter((r) => r.intervention_type_id === typeId).reduce((sum, r) => sum + r.quantity, 0);
-    const beneficiaries = new Set(records.map((r) => (r.beneficiary ?? '').trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean));
+    const beneficiaries = new Set(records.map((r) => (r.beneficiary ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean));
     const linked = new Set(seed.intervention_barangays.map((link) => link.barangay_id));
     const needingQa = records.filter((r) => r.qa_flags.some((flag) => flag !== 'duplicate_point')).length;
     const unknown = seed.lookups.statuses.find((s) => s.name === 'Unknown')!.id;
@@ -252,6 +253,7 @@ test.describe('the key figures', () => {
     await expect(kpi(page, `type-${ssip.id}`)).toHaveText(String(units(ssip.id)));
     await expect(page.locator(`[data-kpi="type-${ssip.id}"] dt`)).toHaveText('SSIPs');
     await expect(kpi(page, 'beneficiaries')).toHaveText(String(beneficiaries.size));
+    await expect(page.locator('[data-kpi="beneficiaries"] dt')).toHaveText('Beneficiaries (approx.)');
     await expect(kpi(page, 'operational')).toHaveText(`${Math.round((operational.length / known.length) * 100)}%`);
     await expect(kpi(page, 'barangays-without')).toHaveText(String(seed.barangays.length - linked.size));
     await expect(page.locator('[data-kpi="barangays-without"] .kpi-note')).toHaveText('of 218 barangays');
@@ -1007,6 +1009,20 @@ test.describe('a link to one record', () => {
     await expect(popup(page).filter({ hasText: onMapRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/$/);
     if (isMobile) await expect(panel(page)).toHaveCount(0);
+  });
+
+  // Zooming can't separate two markers on one spot, and the map is still settling as it first opens.
+  test('shows one on the same spot as another, as the map opens', async ({ page }) => {
+    await ready(page, `/records/${sharedPointRecord.id}`);
+    await expect(popup(page).filter({ hasText: sharedPointRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('one on the same spot as another opens from the table too', async ({ page, isMobile }) => {
+    await ready(page);
+    await showRecords(page, isMobile);
+    await page.getByRole('searchbox', { name: 'Search these records' }).fill(sharedPointRecord.source_id);
+    await page.locator(`tr[data-record="${sharedPointRecord.id}"]`).click();
+    await expect(popup(page).filter({ hasText: sharedPointRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
   });
 
   test('one that isn\'t on the map opens its history', async ({ page }) => {

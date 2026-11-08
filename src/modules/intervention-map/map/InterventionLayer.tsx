@@ -29,14 +29,20 @@ function clusterIcon(cluster: L.MarkerCluster) {
 
 // zoomToShowLayer waits for the map to move, which never happens for a marker that zooming can't
 // separate from its cluster, so its callback would never run. Those are spiderfied directly.
-function revealMarker(map: L.Map, cluster: L.MarkerClusterGroup, marker: L.Marker) {
+// Returns a function that cancels anything still waiting.
+function revealMarker(map: L.Map, cluster: L.MarkerClusterGroup, marker: L.Marker): () => void {
   const open = () => marker.openPopup();
+  const spiderfy = (visible: L.MarkerCluster) => {
+    cluster.off('spiderfied'); // only the latest request should open a popup
+    cluster.once('spiderfied', open);
+    visible.spiderfy();
+  };
   const parent = cluster.getVisibleParent(marker);
 
   // Already showing, on its own or spiderfied. The popup pans itself into view.
   if (parent === marker) {
     open();
-    return;
+    return () => {};
   }
 
   if (parent instanceof L.MarkerCluster) {
@@ -46,14 +52,27 @@ function revealMarker(map: L.Map, cluster: L.MarkerClusterGroup, marker: L.Marke
       map.setView(marker.getLatLng(), map.getZoom(), { animate: false });
       const visible = cluster.getVisibleParent(marker);
       if (visible instanceof L.MarkerCluster) {
-        cluster.off('spiderfied'); // only the latest request should open a popup
-        cluster.once('spiderfied', open);
-        visible.spiderfy();
-        return;
+        spiderfy(visible);
+        return () => {};
       }
     }
   }
+
+  // A marker on the same spot as another, seen from further out. Zooming in step by step can stall
+  // before the two separate, such as while the map is still settling after it first opens, so go
+  // straight to full zoom there and spread them out.
+  const point = marker.getLatLng();
+  const sharesItsPoint = cluster.getLayers().some((other) => other !== marker && other instanceof L.Marker && other.getLatLng().equals(point));
+  if (sharesItsPoint) {
+    map.setView(point, map.getMaxZoom(), { animate: false });
+    return whenSettled(map, cluster, () => {
+      const visible = cluster.getVisibleParent(marker);
+      if (visible === marker) open();
+      else if (visible instanceof L.MarkerCluster) spiderfy(visible);
+    });
+  }
   cluster.zoomToShowLayer(marker, open);
+  return () => {};
 }
 
 const SETTLE_POLL_MS = 50;
@@ -248,7 +267,9 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
     if (!marker) return; // the save hasn't reached the map yet
     pendingFocus.current = null;
     cancelFocus.current();
-    cancelFocus.current = whenSettled(map, cluster, () => revealMarker(map, cluster, marker));
+    cancelFocus.current = whenSettled(map, cluster, () => {
+      cancelFocus.current = revealMarker(map, cluster, marker);
+    });
   }
 
   useEffect(() => {

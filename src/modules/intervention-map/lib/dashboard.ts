@@ -59,6 +59,10 @@ const TILE_LABELS: Record<string, string> = {
   ssip: 'SSIPs',
 };
 
+// An approximate count until there's a proper list of beneficiaries: "Bantad F.C.A." and "bantad fca"
+// are one, as case, marks, spaces and punctuation are left out.
+export const beneficiaryKey = (name: string | null) => foldText(name ?? '').replace(/[^\p{L}\p{N}]/gu, '');
+
 const ranked = (rows: BarRow[]) => rows.sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
 
 function tally(records: Intervention[], rowFor: (record: Intervention) => Omit<BarRow, 'value'>): BarRow[] {
@@ -101,7 +105,7 @@ export function buildDashboard(records: Intervention[], data: DashboardData, bar
       units: records.filter((record) => record.intervention_type_id === type.id).reduce((sum, record) => sum + record.quantity, 0),
     }));
 
-  const names = new Set(records.map((record) => foldText(record.beneficiary ?? '')).filter(Boolean));
+  const names = new Set(records.map((record) => beneficiaryKey(record.beneficiary)).filter(Boolean));
   const counts = countByBarangay(records, data.links);
 
   const byMunicipality = ranked(tally(records, (record) => ({ key: String(record.municipality_id), label: municipalityName.get(record.municipality_id) ?? 'Unknown' })));
