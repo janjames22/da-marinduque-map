@@ -1,6 +1,6 @@
 // A real export on the real service, under the real site's security rules. Nothing from the file is
 // written down or printed, as it holds beneficiary names.
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import { connectDb, loadEnv } from '../scripts/lib/env';
 import type { TestAccount } from '../scripts/lib/test-accounts';
@@ -9,8 +9,16 @@ import { readAccounts } from './accounts';
 const toolbarExport = (page: Page) => page.getByRole('button', { name: 'Export', exact: true });
 const dialog = (page: Page) => page.getByRole('dialog', { name: /^Export/ });
 
+// Every window a test opens is closed after it, as an open map reloads on every change and would
+// slow the timing tests that come later.
+const contexts: BrowserContext[] = [];
+test.afterEach(async () => {
+  for (const context of contexts.splice(0)) await context.close();
+});
+
 async function open(browser: Browser, account: TestAccount) {
   const context = await browser.newContext();
+  contexts.push(context);
   const page = await context.newPage();
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.abort());
   await page.goto('/');
