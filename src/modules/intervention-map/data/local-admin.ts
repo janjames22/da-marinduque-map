@@ -12,7 +12,7 @@ const LISTS: Record<LookupTable, { key: keyof EngineContext['lists']; rules: Loo
   programs: { key: 'programs', rules: { needsColor: true }, defaults: { sort_order: 0, is_active: true } },
   categories: { key: 'categories', rules: {}, defaults: { sort_order: 0, is_active: true, icon_id: null, intervention_type_id: null, category_group_id: null } },
   category_groups: { key: 'categoryGroups', rules: {}, defaults: { sort_order: 0, icon_id: null } },
-  statuses: { key: 'statuses', rules: { needsColor: true }, defaults: { sort_order: 0, is_active: true } },
+  statuses: { key: 'statuses', rules: { needsColor: true }, defaults: { sort_order: 0, is_active: true, counts_as_assessed: true } },
   beneficiary_types: { key: 'beneficiaryTypes', rules: {}, defaults: { sort_order: 0, is_active: true } },
   location_bases: { key: 'locationBases', rules: { needsColor: true }, defaults: { sort_order: 0, is_active: true } },
   icons: { key: 'icons', rules: { isIcon: true }, defaults: { is_active: true } },

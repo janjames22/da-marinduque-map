@@ -122,7 +122,7 @@ An Admin can change these from **Admin** in the header. Changes reach every open
 | **Intervention types** | Add a type or activate one, which adds its layer to the map. Set its name, color, icon, geometry, which standard fields are required or hidden, its status list, and its custom fields |
 | **Categories** | What a record is within its type, with its group and icon |
 | **Programs** | Banner programs. A program's color is the color of its markers everywhere, including exports |
-| **Statuses** | All the status names. Each type picks its own list on its page |
+| **Statuses** | All the status names, and whether each **counts as assessed**: says a unit's condition has been checked. Each type picks its own list on its page, and which of them count as operational |
 | **Other lists** | Category groups, beneficiary types, location bases and icons |
 | **Barangay fields** | The baseline values on each barangay's profile |
 
@@ -142,7 +142,7 @@ On a computer these sit beside the map, and on a phone the **Map**, **Dashboard*
 | Total interventions | Records, whatever their quantity |
 | Machinery units, SSIPs and other types' units | The quantity on each record |
 | Beneficiaries (approx.) | Different beneficiary names, ignoring case, spacing and punctuation, so "Bantad F.C.A." and "bantad fca" count once. It's approximate until records have beneficiary types and there's a proper list of beneficiaries |
-| % operational | Units at a status marked as operational on that type's page in Admin, out of all units with a known status. Unknown and no status are left out |
+| % operational | Units at a status marked as operational on that type's page in Admin, out of the units whose condition has been checked. A status that doesn't **count as assessed** in Admin, Statuses, such as Turned-over (delivered, not checked) or Unknown, is left out, and its units are shown under the figure as not yet assessed. Turned-over, Undelivered/For Distribution, Proposed, Inventory, On-going, Completed and Unknown start that way |
 | Barangays with no intervention yet | Out of the barangays the filters cover |
 | Records needing QA | Any QA flag except a shared point, which is often correct |
 
@@ -232,6 +232,8 @@ Add `--photos backups/photos-2026-11-05` to either command to upload the photo f
 4. Deploy, since the website's settings have changed, and set the Supabase URL settings in the new project, as described in [Deploying](#deploying).
 
 The new project has no accounts, so "created by" and "updated by" become empty and saved views are left out. The audit log keeps the old account ids.
+
+A backup made before `0009_assessed.sql` doesn't say which statuses count as assessed. Restoring it keeps the settings the project already has, and a status that only the backup has starts out counting. Check Admin, Statuses afterwards.
 
 ## Changing the database
 

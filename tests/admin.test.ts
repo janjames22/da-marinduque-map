@@ -267,6 +267,9 @@ describe('who can change the lists and forms', () => {
     it('editing a list', async () => {
       expectResult(await attempt(account, `update public.programs set name = 'Renamed' where code = 'rice'`), allowed);
     });
+    it('changing whether a status counts as assessed', async () => {
+      expectResult(await attempt(account, `update public.statuses set counts_as_assessed = true where name = 'Turned-over'`), allowed);
+    });
     it('taking a status off a type\'s list', async () => {
       const inactive = data.types.find((t) => t.code === 'other')!.id;
       expectResult(await attempt(account, `delete from public.intervention_type_statuses where intervention_type_id = ${inactive} and status_id = ${statusId('Unknown')}`), allowed);
@@ -504,8 +507,8 @@ describe('the lists', () => {
   it('stop offering an archived status, without touching anything already at it', () => {
     const lists = {
       statuses: [
-        { id: 1, name: 'First', color: '#000000', sort_order: 1, is_active: false },
-        { id: 2, name: 'Second', color: '#000000', sort_order: 2, is_active: true },
+        { id: 1, name: 'First', color: '#000000', sort_order: 1, is_active: false, counts_as_assessed: true },
+        { id: 2, name: 'Second', color: '#000000', sort_order: 2, is_active: true, counts_as_assessed: true },
       ],
       typeStatuses: [
         { intervention_type_id: 9, status_id: 1, sort_order: 1, is_default: true, counts_as_operational: false },

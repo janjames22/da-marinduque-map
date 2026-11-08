@@ -30,7 +30,7 @@ const seed = JSON.parse(readFileSync('data/local/local-seed.json', 'utf8')) as {
   intervention_barangays: { barangay_id: number; intervention_id: string }[];
   lookups: {
     programs: { id: number; name: string }[];
-    statuses: { id: number; name: string; color: string }[];
+    statuses: { id: number; name: string; color: string; sort_order: number; counts_as_assessed: boolean }[];
     intervention_types: { id: number; code: string; name: string; is_active: boolean }[];
     intervention_type_statuses: { intervention_type_id: number; status_id: number; counts_as_operational: boolean }[];
   };
@@ -243,9 +243,15 @@ test.describe('the key figures', () => {
     const beneficiaries = new Set(records.map((r) => (r.beneficiary ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean));
     const linked = new Set(seed.intervention_barangays.map((link) => link.barangay_id));
     const needingQa = records.filter((r) => r.qa_flags.some((flag) => flag !== 'duplicate_point')).length;
-    const unknown = seed.lookups.statuses.find((s) => s.name === 'Unknown')!.id;
-    const known = records.filter((r) => r.status_id !== null && r.status_id !== unknown);
-    const operational = known.filter((r) => seed.lookups.intervention_type_statuses.some((s) => s.intervention_type_id === r.intervention_type_id && s.status_id === r.status_id && s.counts_as_operational));
+    // Only units whose condition has been checked count, by each status's own setting.
+    const statusOf = (r: SeedRecord) => seed.lookups.statuses.find((s) => s.id === r.status_id);
+    const assessed = records.filter((r) => statusOf(r)?.counts_as_assessed);
+    const operational = assessed.filter((r) => seed.lookups.intervention_type_statuses.some((s) => s.intervention_type_id === r.intervention_type_id && s.status_id === r.status_id && s.counts_as_operational));
+    const waiting = [...seed.lookups.statuses]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .filter((s) => !s.counts_as_assessed)
+      .map((s) => [s.name, records.filter((r) => r.status_id === s.id).reduce((sum, r) => sum + r.quantity, 0)] as const)
+      .filter(([, count]) => count > 0);
 
     await expect(kpi(page, 'records')).toHaveText(String(records.length));
     await expect(kpi(page, `type-${machinery.id}`)).toHaveText(String(units(machinery.id)));
@@ -254,7 +260,11 @@ test.describe('the key figures', () => {
     await expect(page.locator(`[data-kpi="type-${ssip.id}"] dt`)).toHaveText('SSIPs');
     await expect(kpi(page, 'beneficiaries')).toHaveText(String(beneficiaries.size));
     await expect(page.locator('[data-kpi="beneficiaries"] dt')).toHaveText('Beneficiaries (approx.)');
-    await expect(kpi(page, 'operational')).toHaveText(`${Math.round((operational.length / known.length) * 100)}%`);
+    await expect(kpi(page, 'operational')).toHaveText(`${Math.round((operational.length / assessed.length) * 100)}%`);
+    await expect(page.locator('[data-kpi="operational"] .kpi-note')).toHaveText([
+      `Operational: ${operational.length} of ${assessed.length} assessed`,
+      `${waiting.map(([name, count]) => `${count} ${name.toLowerCase()}`).join(', ')}, not yet assessed`,
+    ]);
     await expect(kpi(page, 'barangays-without')).toHaveText(String(seed.barangays.length - linked.size));
     await expect(page.locator('[data-kpi="barangays-without"] .kpi-note')).toHaveText('of 218 barangays');
     await expect(kpi(page, 'needing-qa')).toHaveText(String(needingQa));

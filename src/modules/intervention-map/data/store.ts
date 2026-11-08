@@ -94,6 +94,7 @@ export interface LookupValues {
   category_group_id?: number | null;
   sort_order?: number;
   is_active?: boolean;
+  counts_as_assessed?: boolean;
 }
 
 export interface TypeValues {

@@ -74,6 +74,9 @@ export interface Status {
   color: string;
   sort_order: number;
   is_active: boolean;
+  // Whether a unit at this status has had its condition checked. Those that haven't, such as
+  // Turned-over, are left out of % operational.
+  counts_as_assessed: boolean;
 }
 
 export interface LocationBasis {

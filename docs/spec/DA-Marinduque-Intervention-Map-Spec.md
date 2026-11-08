@@ -165,7 +165,7 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 | Table | Key columns |
 |---|---|
 | `status_history` | id, intervention_id, status_id, status_date, date_basis, source_note, remarks, photo_id, created_by, created_at. Entries are added, never overwritten. A backdated entry doesn't replace a later one as current. `date_basis` says whether the date is when the status changed (`changed`) or when it was reported (`as_of`), so RAED entries show as "as of 2026-10-21 (RAED report)" |
-| `statuses` | id, name, color, sort_order, is_active |
+| `statuses` | id, name, color, sort_order, is_active, counts_as_assessed: whether a unit at this status has had its condition checked. Turned-over, Unknown and the delivery and building stages start as not assessed |
 | `intervention_type_statuses` | intervention_type_id, status_id, sort_order, is_default, counts_as_operational: the status list for each type, and which of its statuses count as operational for that type |
 | `programs` | id, code, name, color, sort_order, is_active |
 | `categories` | id, code, name, intervention_type_id, category_group_id, icon_id, sort_order, is_active |
@@ -287,7 +287,7 @@ KPI cards:
 - Total interventions
 - Units of each active type, such as machinery units and SSIPs
 - Beneficiaries (approx.): different beneficiary names, ignoring case, spacing and punctuation. Labelled approximate until records have beneficiary types and there's a proper list of beneficiaries, as no RAED record has a beneficiary type yet
-- % operational, by units, using each type's own `counts_as_operational` statuses. For Farm Machinery this is "% turned-over or serviceable". Records with `Unknown` status or no status are left out
+- % operational, by units, out of the units whose condition has been checked: those at a status that counts as assessed, set per status in Admin, Statuses. What counts as operational is each type's own `counts_as_operational` list. Turned-over means delivered, not checked, so it's left out, as Unknown and the stages before delivery are. The card shows the assessed count, such as "Operational: 32 of 32 assessed", and the units left out, by status, such as "163 turned-over, not yet assessed"
 - Barangays with no intervention yet, out of those the filters cover
 - Records needing QA: any flag except a shared point, which is often correct
 

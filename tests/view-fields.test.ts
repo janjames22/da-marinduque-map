@@ -91,8 +91,8 @@ const baseData = (interventions: Intervention[] = []): MapData =>
       { id: 3, code: 'road', name: 'Road part', intervention_type_id: 3, category_group_id: null, sort_order: 3, is_active: true },
     ],
     statuses: [
-      { id: 1, name: 'Serviceable', color: '#43a047', sort_order: 1, is_active: true },
-      { id: 2, name: 'Unknown', color: '#9e9e9e', sort_order: 2, is_active: true },
+      { id: 1, name: 'Serviceable', color: '#43a047', sort_order: 1, is_active: true, counts_as_assessed: true },
+      { id: 2, name: 'Unknown', color: '#9e9e9e', sort_order: 2, is_active: true, counts_as_assessed: false },
     ],
     locationBases: [{ id: 1, name: 'Actual', color: '#2e7d32', sort_order: 1, is_active: true }],
     beneficiaryTypes: [{ id: 1, name: 'FCA', sort_order: 1, is_active: true }],
