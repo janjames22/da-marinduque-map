@@ -13,6 +13,8 @@ import { useMapUi } from '../state/map-ui';
 import { usePermissions } from '../state/store-context';
 
 const FOCUS_WAIT_MS = 3000;
+// How long a record just shown keeps its popup through a reload. After that it's the person's.
+const FOCUS_HOLD_MS = 2000;
 
 // Icons load through <img>, so even an uploaded icon couldn't run a script, and uploads are checked too.
 function iconDataUrl(svg: string): string {
@@ -118,7 +120,7 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
   const map = useMap();
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const shown = useRef(new Map<string, ShownMarker>());
-  const pendingFocus = useRef<{ id: string; until: number } | null>(null);
+  const pendingFocus = useRef<{ id: string; until: number; release?: () => void } | null>(null);
   const cancelFocus = useRef<() => void>(() => {});
   const focusRecord = useMapUi((state) => state.focusRecord);
   const moveNonce = useEditUi((state) => state.moveNonce);
@@ -265,7 +267,35 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
     }
     const marker = shown.current.get(pending.id)?.marker;
     if (!marker) return; // the save hasn't reached the map yet
-    pendingFocus.current = null;
+    if (marker.isPopupOpen()) return; // already showing
+    // The request is kept until the popup has stayed open a moment. A reload, such as the one that
+    // follows a save, can redraw a cluster and fold up its markers just as the popup opens, and the
+    // next call then opens it again.
+    pending.until = Math.max(pending.until, Date.now() + FOCUS_WAIT_MS);
+    pending.release?.();
+    let hold: ReturnType<typeof setTimeout> | undefined;
+    const done = () => {
+      pending.release?.();
+      if (pendingFocus.current === pending) pendingFocus.current = null;
+    };
+    // Closed while its marker is still on the map, the person closed it: by its button, a drag or a
+    // click elsewhere. That stays closed. If the marker has left the map, a redraw folded it into its
+    // cluster, and the next call opens it again.
+    const closed = () => {
+      setTimeout(() => {
+        if (map.hasLayer(marker)) done();
+      }, 0);
+    };
+    const opened = () => {
+      marker.off('popupclose', closed).on('popupclose', closed);
+      clearTimeout(hold);
+      hold = setTimeout(done, FOCUS_HOLD_MS);
+    };
+    marker.on('popupopen', opened);
+    pending.release = () => {
+      marker.off('popupopen', opened).off('popupclose', closed);
+      clearTimeout(hold);
+    };
     cancelFocus.current();
     cancelFocus.current = whenSettled(map, cluster, () => {
       cancelFocus.current = revealMarker(map, cluster, marker);

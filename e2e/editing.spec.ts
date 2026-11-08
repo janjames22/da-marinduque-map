@@ -382,6 +382,20 @@ test.describe('live warnings while editing', () => {
     await expect(warning(page, 'possible_duplicate')).toHaveCount(0);
   });
 
+  // The save is followed by a reload, which redraws the cluster on that spot just as the popup opens.
+  test('a new record on the same spot as another opens after saving, and stays open', async ({ page }) => {
+    await openProfile(page, sharedPointRecord.barangay_id!);
+    await profile(page).getByRole('button', { name: 'Add intervention here' }).click();
+    const add = form(page, 'Add intervention');
+    const [lng, lat] = sharedPointRecord.geojson!.coordinates;
+    await typeCoordinates(page, `${lat}, ${lng}`);
+    await fillRequiredMachinery(add, 'Same spot FA');
+    await add.getByRole('button', { name: 'Save record' }).click();
+    await expect(popup(page).filter({ hasText: 'Same spot FA' })).toBeVisible();
+    await page.waitForTimeout(2500);
+    await expect(popup(page).filter({ hasText: 'Same spot FA' })).toBeVisible();
+  });
+
   test('warnings can be overridden, and the flag stays on the record', async ({ page }) => {
     await openProfile(page, cleanRecord.barangay_id!);
     await profile(page).getByRole('button', { name: 'Add intervention here' }).click();

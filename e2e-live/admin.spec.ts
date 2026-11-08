@@ -1,14 +1,22 @@
 // The admin screens on the real service, under the real site's security rules: a change to a list
 // reaches someone else's open map, and the deployed function manages people. Only ever makes invite
 // links, so no email goes out. Anything it creates is named e2e-test, and removed at the end.
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import type { TestAccount } from '../scripts/lib/test-accounts';
 import { readAccounts } from './accounts';
 
 const LIVE_LIMIT_MS = 2500; // "about 2 s" in the spec
 
+// Every window a test opens is closed after it, as an open map reloads on every change and would
+// slow the timing tests that come later.
+const contexts: BrowserContext[] = [];
+test.afterEach(async () => {
+  for (const context of contexts.splice(0)) await context.close();
+});
+
 async function open(browser: Browser, account: TestAccount, path = '/') {
   const context = await browser.newContext();
+  contexts.push(context);
   const page = await context.newPage();
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.abort());
   await page.goto(path);
