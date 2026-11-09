@@ -3,6 +3,7 @@
 // a record is printed.
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { readAccounts } from './accounts';
+import { skipNetlifyBadge } from './netlify';
 
 const contexts: BrowserContext[] = [];
 test.afterEach(async () => {
@@ -18,6 +19,7 @@ test('a Viewer downloads each report and prints the map, with nothing blocked', 
   const account = readAccounts().viewer;
   const context = await browser.newContext({ acceptDownloads: true });
   contexts.push(context);
+  await skipNetlifyBadge(context);
   const page = await context.newPage();
   const blocked: string[] = [];
   page.on('console', (message) => {
