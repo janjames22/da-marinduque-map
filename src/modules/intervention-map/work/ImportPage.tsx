@@ -625,6 +625,7 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
       )}
 
       {step === 'done' && result && file && (
+        <>
         <div className="import-done" role="status">
           <h3>Imported {plural(result.records, 'record')}</h3>
           <p>
@@ -645,6 +646,9 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
             </button>
           </div>
         </div>
+        {/* So a wrong file can be undone straight away. */}
+        <BatchList data={data} user={user} />
+        </>
       )}
     </section>
   );

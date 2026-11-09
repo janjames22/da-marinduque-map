@@ -306,6 +306,8 @@ test.describe('importing', () => {
     await importIt(page, 2);
     await expect(page.locator('.import-done')).toContainText('1 of them need a look in the QA queue.');
     await expect(page.locator('.import-done')).toContainText('Left out: row 4.');
+    // A wrong file can be undone from here, straight away.
+    await expect(page.getByRole('region', { name: 'Earlier imports' }).locator('.queue-item').filter({ hasText: 'e2e.csv' }).getByRole('button', { name: 'Undo this import' })).toBeVisible();
 
     await page.getByRole('link', { name: 'Open the QA queue' }).click();
     await filterQueue(page, 'E2E Test FCA');

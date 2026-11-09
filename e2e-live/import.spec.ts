@@ -57,7 +57,7 @@ test('a file imported in the wizard reaches another person\'s map, and undoing i
   expect(arrived).toBeLessThan(LIVE_LIMIT_MS + 1000);
   await expect(wizard.getByRole('heading', { name: 'Imported 1 record' })).toBeVisible();
 
-  await wizard.getByRole('navigation', { name: 'QA and import' }).getByRole('link', { name: 'Import' }).click();
+  // Undone straight from the page that says it came in.
   const batch = wizard.locator('.import-batches .queue-item').filter({ hasText: 'live-test.csv' });
   await batch.getByRole('button', { name: 'Undo this import' }).click();
   await wizard.getByRole('form', { name: 'Undo live-test.csv' }).getByLabel(/^Reason/).fill('Live test');
