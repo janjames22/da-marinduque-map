@@ -312,6 +312,8 @@ npm run test:e2e:live
 Remove-Item Env:LIVE_URL
 ```
 
+**Netlify's badge.** Netlify can add a "Powered by Netlify" badge script (`/.netlify/scripts/hud?variant=public`) to every page of a new deploy. Its setting is under **Project configuration → General → Powered by Netlify badge**. The site's security rules keep the badge from showing either way. The live tests that fail on anything blocked don't load that one script (see `e2e-live/netlify.ts`); anything else that's blocked still fails them.
+
 These tests create temporary `e2e-test-` accounts, test records, imports, dismissed flags, list items, a test signature block and saved views, then remove them, including from the audit log. They also download each report and print the map. They make invite links rather than sending invite emails, so test the email itself as described in [Before inviting the MAOs](#before-inviting-the-maos). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
 
 **If a default view is set,** choose **Stop opening on this** before running `test:e2e:live`, and set it again afterwards. The tests never change a real default, but several of them expect the map to open on everything.

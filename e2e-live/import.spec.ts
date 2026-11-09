@@ -4,6 +4,7 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import type { TestAccount } from '../scripts/lib/test-accounts';
 import { readAccounts } from './accounts';
+import { skipNetlifyBadge } from './netlify';
 
 const LIVE_LIMIT_MS = 2500; // "about 2 s" in the spec
 
@@ -15,6 +16,7 @@ test.afterEach(async () => {
 async function open(browser: Browser, account: TestAccount, path: string) {
   const context = await browser.newContext();
   contexts.push(context);
+  await skipNetlifyBadge(context);
   const page = await context.newPage();
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.abort());
   await page.goto(path);
