@@ -84,10 +84,17 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
       return;
     }
     const isActive = data.types.some((type) => type.id === record.intervention_type_id && type.is_active);
+    // From the QA queue, to fix a location on the map. A record with no coordinates yet gets them here too.
+    const fixing = new URLSearchParams(location.search).get('fix') === 'resolve' && canEdit && record.deleted_at === null && isActive;
     if (record.deleted_at === null && isActive && isOnMap(record)) {
       state.showEverything();
       if (globalThis.matchMedia?.('(max-width: 800px)').matches) state.setInsights(null);
       state.zoomToRecord(id);
+      if (fixing) openRecordPanel('resolve', record);
+    } else if (fixing) {
+      state.showEverything();
+      if (record.barangay_id !== null) state.zoomToBarangay(record.barangay_id);
+      openRecordPanel('resolve', record);
     } else if (canSeeHistory) {
       openRecordPanel('history', record);
       edit.setNotice(record.deleted_at ? 'This record was deleted, so it isn\'t on the map. Here\'s its history.' : 'This record isn\'t on the map. Here\'s its history.');

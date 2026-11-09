@@ -1,6 +1,7 @@
 import { buildPlaceIndex, type PlaceIndex } from '../lib/qa';
 import * as admin from './local-admin';
 import * as engine from './local-engine';
+import * as imports from './local-import';
 import type { EngineContext, LocalRows } from './local-engine';
 import { LocalSeedMissingError, type DataStore, type InterventionValues, type NewStatus, type PhotoMeta } from './store';
 import type {
@@ -12,6 +13,7 @@ import type {
   CategoryGroup,
   FieldSchema,
   Icon,
+  ImportBatch,
   Intervention,
   InterventionBarangay,
   InterventionPhoto,
@@ -57,8 +59,26 @@ export interface LocalSeed {
 
 const bySortOrder = <T extends { sort_order: number }>(items: T[]) => [...items].sort((a, b) => a.sort_order - b.sort_order);
 
+// The seed's batches were loaded by script, before undoing existed.
+const asBatch = (batch: Partial<ImportBatch>): ImportBatch => ({
+  id: '',
+  file_name: '',
+  data_source: '',
+  intervention_type_id: null,
+  column_mapping: {},
+  counts: {},
+  imported_by: null,
+  imported_at: '',
+  undone_at: null,
+  undone_by: null,
+  undo_reason: null,
+  ...batch,
+});
+
+const dataSourcesOf = (batches: ImportBatch[]) => [...new Set(batches.map((b) => b.data_source))];
+
 export function toMapData(seed: LocalSeed): MapData {
-  const batches = seed.import_batches as { data_source: string }[];
+  const batches = (seed.import_batches as Partial<ImportBatch>[]).map(asBatch);
   const schemaRows = seed.lookups.barangay_field_schema as { field_schema: FieldSchema; version?: number }[];
 
   return {
@@ -79,14 +99,16 @@ export function toMapData(seed: LocalSeed): MapData {
     links: seed.intervention_barangays as InterventionBarangay[],
     statusHistory: seed.status_history as StatusEntry[],
     photos: [],
-    dataSources: [...new Set(batches.map((b) => b.data_source))],
+    dataSources: dataSourcesOf(batches),
     members: [],
     savedViews: [],
+    importBatches: batches,
+    qaDismissals: [],
   };
 }
 
 // The parts of a saved state that never change while the app runs, and the rows that do.
-type FixedData = Omit<MapData, 'interventions' | 'links' | 'statusHistory' | 'barangays' | 'photos' | 'members' | 'savedViews'>;
+type FixedData = Omit<MapData, 'interventions' | 'links' | 'statusHistory' | 'barangays' | 'photos' | 'members' | 'savedViews' | 'importBatches' | 'qaDismissals'>;
 
 export interface LocalState {
   fingerprint: string;
@@ -95,7 +117,7 @@ export interface LocalState {
 }
 
 export function stateFromSeed(seed: LocalSeed, fingerprint: string): LocalState {
-  const { interventions, links, statusHistory, barangays, photos, members: _members, savedViews, ...fixed } = toMapData(seed);
+  const { interventions, links, statusHistory, barangays, photos, members: _members, savedViews, importBatches, qaDismissals, ...fixed } = toMapData(seed);
   return {
     fingerprint,
     fixed,
@@ -107,6 +129,8 @@ export function stateFromSeed(seed: LocalSeed, fingerprint: string): LocalState 
       photos,
       auditLog: (seed.audit_log ?? []) as AuditEntry[],
       savedViews,
+      importBatches,
+      qaDismissals,
       changeCount: 0,
     },
   };
@@ -257,6 +281,10 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
         photos,
         members: [],
         savedViews: state.rows.savedViews ?? [],
+        importBatches: state.rows.importBatches ?? [],
+        qaDismissals: state.rows.qaDismissals ?? [],
+        // Imports add sources as the app runs.
+        dataSources: [...new Set([...fixed.dataSources, ...dataSourcesOf(state.rows.importBatches ?? [])])],
       };
     },
 
@@ -337,6 +365,26 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
       await mutate((rows, context) => admin.setDefaultView(rows, context, id));
     },
 
+    async importRecords(batch, rows) {
+      requireEditor(user);
+      return mutate((localRows, context) => imports.importRecords(localRows, context, user.id, batch, rows));
+    },
+
+    async undoImport(id, reason) {
+      requireEditor(user);
+      return mutate((rows, context) => imports.undoImport(rows, context, user, id, reason));
+    },
+
+    async dismissFlag(recordId, flag, reason) {
+      requireEditor(user);
+      await mutate((rows, context) => imports.dismissFlag(rows, context, user.id, recordId, flag, reason));
+    },
+
+    async undismissFlag(recordId, flag) {
+      requireEditor(user);
+      await mutate((rows, context) => imports.undismissFlag(rows, context, recordId, flag));
+    },
+
     async auditLog(query) {
       requireAdmin(user);
       const state = await readState();
@@ -371,6 +419,10 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
       },
     },
   };
+}
+
+function requireEditor(user: AppUser) {
+  if (user.role === 'viewer') throw new Error('Your account can only view records.');
 }
 
 function requireAdmin(user: AppUser) {

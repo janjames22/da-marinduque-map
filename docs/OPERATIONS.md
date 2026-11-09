@@ -144,7 +144,7 @@ On a computer these sit beside the map, and on a phone the **Map**, **Dashboard*
 | Beneficiaries (approx.) | Different beneficiary names, ignoring case, spacing and punctuation, so "Bantad F.C.A." and "bantad fca" count once. It's approximate until records have beneficiary types and there's a proper list of beneficiaries |
 | % operational | Units at a status marked as operational on that type's page in Admin, out of the units whose condition has been checked. A status that doesn't **count as assessed** in Admin, Statuses, such as Turned-over (delivered, not checked) or Unknown, is left out, and its units are shown under the figure as not yet assessed. Turned-over, Undelivered/For Distribution, Proposed, Inventory, On-going, Completed and Unknown start that way |
 | Barangays with no intervention yet | Out of the barangays the filters cover |
-| Records needing QA | Any QA flag except a shared point, which is often correct |
+| Records needing QA | Any QA flag except a shared point, which is often correct, or a flag someone has dismissed in the QA queue |
 
 **Show table** on each chart gives the same numbers as a table. **Export this table** exports all the rows found, on every page, in their order, and is logged like any other export. The search shows in the dialog, the audit log and a KML or KMZ's "Read me". It's left out of the file name, as it can be someone's name.
 
@@ -164,7 +164,40 @@ On a computer these sit beside the map, and on a phone the **Map**, **Dashboard*
 - **"No login (a script or Supabase's dashboard)"** means the change didn't come through the website, such as a seed, a correction by script or an edit in Supabase's table editor.
 - **"An account since removed"** means that person's account no longer exists. The line stays.
 - **Nothing here can be edited**, even by an Admin. The only lines that ever leave are the temporary ones from the live tests in [Proving it works](#proving-it-works).
-- **Reasons:** changing a barangay needs a reason everywhere on the website: Resolve flag, **Move and set barangay**, and the Edit form. The reason shows on the line. A script can still change a barangay without one, and the log then shows no login.
+- **Reasons:** changing a barangay needs a reason everywhere on the website: Resolve flag, **Move and set barangay**, the Edit form and the QA queue. The reason shows on the line. A script can still change a barangay without one, and the log then shows no login.
+
+## QA and import
+
+Admins and Encoders get **QA and import** in the header. It has three pages. Viewers don't get it.
+
+### The QA queue
+
+Every flagged record, worst first: outside Marinduque, no coordinates, a barangay not on the list, then mismatches, name checks and shared points. Each flag is split by municipality. Filter by municipality, flag or record. Each record offers what fits its flag:
+
+- **Fix on the map** opens the record on the map with Resolve flag, for moving a point or adding coordinates.
+- **Set barangay** offers where the point is plotted and, for a name not on the list, the nearest names. It needs a reason, like any barangay change.
+- **Set location basis** is for a point that marks somewhere else on purpose, such as the FCA's office. The point stays outside the barangay, so the same reason also dismisses the flag.
+- **Update status** adds a status, dated today unless changed.
+- **Dismiss** is for a flag that's right as it is. It needs a reason. The flag stays on the record, but it leaves the queue and the "Records needing QA" count. **Show dismissed** lists those flags with who dismissed them and why, and **Put back in the queue** reopens one. A dismissal ends by itself if the data changes so the flag goes. Dismissing a name check clears it.
+
+Fixing the data clears a flag by itself. Every change goes in the audit log.
+
+### Condition check
+
+Units delivered but not yet looked at: those at a status that doesn't **count as assessed**. It opens on Turned-over, and the **Status** filter lists the other such statuses that have records, such as Inventory or Completed. Filter by municipality to go through one MAO's area. A button for each status that does count as assessed opens a short form: the date it was checked (today unless changed) and what was found. Once saved, the unit leaves the list and counts in % operational.
+
+### Importing records
+
+**Import** brings a file in as one batch. Nothing is saved until the last step.
+
+1. **File:** a CSV, Excel (.xlsx) or Google Earth (.kml, .kmz) file of up to 2,000 rows. Choose what it lists and say where it came from, such as "ABEMIS export". Use the same name for every file from that source, because the columns and values chosen are remembered under it. For a workbook, the first sheet with anything on it is read, and title rows above the header are skipped.
+2. **Columns:** check which field each column fills. Starred fields need a column. Set the status for rows without one, and the date the file's statuses were true, such as the day it was exported.
+3. **Values:** names the lists don't know, such as "RICE PROG", need a choice. A name the lists already have, in any case or spacing, is matched by itself. Sta. Cruz is Santa Cruz.
+4. **Check:** every row, with the same checks as the Edit form and the flags it will get. Rows to fix must be fixed in the file or left out. Rows whose ID was already imported from the same source are left out unless you untick that. Rows that only look like a record already on the map are warned about, not left out.
+
+A barangay the list doesn't have still comes in, flagged, and waits in the QA queue. Every row keeps its whole source row with the record.
+
+**Undo this import**, under Earlier imports, takes a whole batch off the map, with a reason. The person who imported it or an Admin can do this, until anyone changes one of its records. After that, change or delete those records one at a time. Undone records are deleted, so an Admin can still restore one from its history. The RAED batches were loaded by script and can't be undone here.
 
 ## Exports
 
@@ -192,13 +225,13 @@ npm run backup
 npm run backup -- --photos
 ```
 
-This writes dated files to `backups/`. Without `--photos`, the photo files themselves aren't copied.
+This writes files to `backups/`, named by the Philippine date and time they were taken, such as `snapshot-2026-11-08-1942.json`, so two backups on one day sit side by side. A backup never overwrites another. Without `--photos`, the photo files themselves aren't copied.
 
 | File | Use |
 |---|---|
-| `snapshot-<date>.json` | What `npm run restore` reads |
+| `snapshot-<date>-<time>.json` | What `npm run restore` reads |
 | `interventions`, `status-history` and `barangay-attributes`, as `.csv` and `.geojson` | Opening in a spreadsheet or QGIS |
-| `photos-<date>/` | The photo files, with `--photos` |
+| `photos-<date>-<time>/` | The photo files, with `--photos` |
 
 We suggest a backup at least weekly, and always before a migration or restore. The Supabase free plan has no automatic backups you can rely on, so these files may be the only copy.
 
@@ -211,18 +244,18 @@ Take a fresh backup first, if the database is still readable. A restore runs as 
 **Into an empty database:**
 
 ```
-npm run restore -- backups/snapshot-2026-11-05.json --yes
+npm run restore -- backups/snapshot-2026-11-05-0930.json --yes
 ```
 
 **Over existing records:**
 
 ```
-npm run restore -- backups/snapshot-2026-11-05.json --yes --replace
+npm run restore -- backups/snapshot-2026-11-05-0930.json --yes --replace
 ```
 
-**`--replace` removes every record made since the backup.** Status entries, photo links, saved views and import batches go back to the backup too, and any work encoded since then is lost. The audit log keeps its newer entries. Photo files uploaded since then stay in storage, but nothing links to them.
+**`--replace` removes every record made since the backup.** Status entries, photo links, saved views, import batches and dismissed flags go back to the backup too, and any work encoded since then is lost. The audit log keeps its newer entries. Photo files uploaded since then stay in storage, but nothing links to them.
 
-Add `--photos backups/photos-2026-11-05` to either command to upload the photo files too. Ask everyone to reload the map afterwards.
+Add `--photos backups/photos-2026-11-05-0930` to either command to upload the photo files too. Ask everyone to reload the map afterwards.
 
 **Moving to a new Supabase project:**
 
@@ -234,6 +267,8 @@ Add `--photos backups/photos-2026-11-05` to either command to upload the photo f
 The new project has no accounts, so "created by" and "updated by" become empty and saved views are left out. The audit log keeps the old account ids.
 
 A backup made before `0009_assessed.sql` doesn't say which statuses count as assessed. Restoring it keeps the settings the project already has, and a status that only the backup has starts out counting. Check Admin, Statuses afterwards.
+
+A backup made before `0010_import_qa.sql` has no dismissed flags and no undone imports. Restoring it leaves every flag open in the QA queue, and its imports as not undone.
 
 ## Changing the database
 
@@ -261,7 +296,7 @@ npm run test:e2e:live
 Remove-Item Env:LIVE_URL
 ```
 
-These tests create temporary `e2e-test-` accounts, test records, list items and saved views, then remove them, including from the audit log. They make invite links rather than sending invite emails, so test the email itself as described in [Before inviting the MAOs](#before-inviting-the-maos). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
+These tests create temporary `e2e-test-` accounts, test records, imports, dismissed flags, list items and saved views, then remove them, including from the audit log. They make invite links rather than sending invite emails, so test the email itself as described in [Before inviting the MAOs](#before-inviting-the-maos). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
 
 **If a default view is set,** choose **Stop opening on this** before running `test:e2e:live`, and set it again afterwards. The tests never change a real default, but several of them expect the map to open on everything.
 

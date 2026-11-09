@@ -6,7 +6,7 @@ import { connectDb, loadEnv, projectUrl, publicKey } from '../../scripts/lib/env
 import { createTestAccounts, removeTestAccounts, type TestAccount, type TestAccounts } from '../../scripts/lib/test-accounts';
 import { createSupabaseBackend } from '../../src/modules/intervention-map/data/supabase-backend';
 import { createSupabaseStore } from '../../src/modules/intervention-map/data/supabase-store';
-import { ConflictError, type DataStore, type InterventionValues, type NewStatus, type TypeStatusValues, type TypeValues } from '../../src/modules/intervention-map/data/store';
+import { ConflictError, type DataStore, type ImportBatchInput, type ImportRowInput, type InterventionValues, type NewStatus, type TypeStatusValues, type TypeValues } from '../../src/modules/intervention-map/data/store';
 import type { MapData } from '../../src/modules/intervention-map/data/types';
 
 const BUCKET = 'intervention-photos';
@@ -97,6 +97,25 @@ const newStatus = (changes: Partial<NewStatus> = {}): NewStatus => ({
   status_date: '2024-05-01',
   remarks: null,
   ...changes,
+});
+
+// A row of a test import in Bantad, each a little apart so none shares a point.
+const importRow = (row: number, beneficiary: string, changes: Partial<ImportRowInput['values']> = {}): ImportRowInput => {
+  const { intervention_type_id: _type, ...values } = newValues(beneficiary);
+  return {
+    row,
+    source_id: `LIVE-${row}`,
+    source_raw: { Beneficiary: beneficiary, Barangay: 'Bantad' },
+    values: { ...values, point: { lat: 13.45, lng: 121.85 + row * 0.0001 }, barangay_raw: 'Bantad', ...changes },
+    status: { status_id: newStatus().status_id, status_date: '2024-05-01', date_basis: 'as_of', remarks: null },
+  };
+};
+
+const liveBatch = (file: string): ImportBatchInput => ({
+  file_name: file,
+  data_source: 'Live test export',
+  intervention_type_id: data.types.find((t) => t.code === 'farm-machinery')!.id,
+  column_mapping: {},
 });
 
 const jpeg = () => new File([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], 'live.jpg', { type: 'image/jpeg' });
@@ -496,6 +515,83 @@ describe('the audit log page', () => {
   });
 });
 
+describe('import and QA', () => {
+  const recordsOf = async (store: DataStore, batchId: string) => (await store.load()).interventions.filter((record) => record.import_batch_id === batchId);
+
+  it('refuses a Viewer, a stranger and a visitor', async () => {
+    await expect(viewer.importRecords(liveBatch('viewer.csv'), [importRow(2, 'Live test import refused')])).rejects.toThrow();
+    for (const client of [visitor, strangerClient]) {
+      const { error } = await client.rpc('import_records', { p_batch: liveBatch('stranger.csv'), p_rows: [importRow(2, 'Live test import refused')] });
+      expect(error).not.toBeNull();
+    }
+    expect((await admin.load()).interventions.some((record) => record.beneficiary === 'Live test import refused')).toBe(false);
+  });
+
+  it('brings a file in as one batch, all or nothing, under the person who imported it', async () => {
+    await expect(encoder.importRecords(liveBatch('bad.csv'), [importRow(2, 'Live test import A'), importRow(3, 'Live test import B', { year_funded: 2999 })])).rejects.toThrow(/^Row 3: /);
+    expect((await admin.load()).interventions.some((record) => record.beneficiary === 'Live test import A')).toBe(false);
+
+    const { id, records } = await encoder.importRecords(liveBatch('good.csv'), [importRow(2, 'Live test import A'), importRow(3, 'Live test import B', { point: null })]);
+    expect(records).toBe(2);
+    const after = await encoder.load();
+    expect(after.importBatches.find((batch) => batch.id === id)).toMatchObject({
+      file_name: 'good.csv',
+      data_source: 'Live test export',
+      imported_by: accounts.encoder.id,
+      counts: { records: 2, flagged: 1 },
+      undone_at: null,
+    });
+    const imported = await recordsOf(encoder, id);
+    expect(imported.map((record) => [record.beneficiary, record.source_id, record.data_source, record.qa_flags]).sort()).toEqual([
+      ['Live test import A', 'LIVE-2', 'Live test export', []],
+      ['Live test import B', 'LIVE-3', 'Live test export', ['no_coords']],
+    ]);
+    expect(after.dataSources).toContain('Live test export');
+  });
+
+  it('can be undone with a reason by its importer or an Admin, not by anyone else, and not once a record is worked on', async () => {
+    const mine = await encoder.importRecords(liveBatch('undo.csv'), [importRow(4, 'Live test undo A'), importRow(5, 'Live test undo B')]);
+    const theirs = await admin.importRecords(liveBatch('admin.csv'), [importRow(6, 'Live test undo C')]);
+    await expect(viewer.undoImport(mine.id, 'No')).rejects.toThrow();
+    await expect(encoder.undoImport(theirs.id, 'Not mine')).rejects.toThrow('Only the person who imported it, or an Admin, can undo an import.');
+    await expect(encoder.undoImport(mine.id, ' ')).rejects.toThrow('Give a reason for undoing the import.');
+
+    const [first] = await recordsOf(encoder, mine.id);
+    await encoder.addStatus(first.id, newStatus({ status_id: data.statuses.find((s) => s.name === 'Serviceable')!.id, status_date: '2024-06-01' }));
+    await expect(admin.undoImport(mine.id, 'Wrong file')).rejects.toThrow('1 of its records has been worked on since');
+
+    expect(await admin.undoImport(theirs.id, 'Imported twice')).toEqual({ records: 1 });
+    await expect(admin.undoImport(theirs.id, 'Again')).rejects.toThrow('This import has already been undone.');
+    const after = await admin.load();
+    expect(after.importBatches.find((batch) => batch.id === theirs.id)).toMatchObject({ undone_by: accounts.admin.id, undo_reason: 'Imported twice' });
+    // Deleted, so an Admin can still restore it, and off everyone else's map.
+    expect((await recordsOf(admin, theirs.id)).map((record) => record.deleted_at !== null)).toEqual([true]);
+    expect(await recordsOf(encoder, theirs.id)).toEqual([]);
+  });
+
+  it('a flag can be dismissed with a reason and put back by an Encoder, not by a Viewer, and only through its function', async () => {
+    const { id } = await encoder.importRecords(liveBatch('flags.csv'), [importRow(7, 'Live test dismiss', { point: null })]);
+    const [record] = await recordsOf(encoder, id);
+    expect(record.qa_flags).toEqual(['no_coords']);
+
+    await expect(viewer.dismissFlag(record.id, 'no_coords', 'No')).rejects.toThrow();
+    await expect(encoder.dismissFlag(record.id, 'no_coords', ' ')).rejects.toThrow('Give a reason.');
+    await expect(encoder.dismissFlag(record.id, 'out_of_province', 'Not there')).rejects.toThrow('That flag is no longer on this record.');
+    const { error } = await encoderClient.from('qa_dismissals').insert({ intervention_id: record.id, flag: 'no_coords', reason: 'Around the function' });
+    expect(error).not.toBeNull();
+
+    await encoder.dismissFlag(record.id, 'no_coords', 'Coordinates to follow from the MAO');
+    expect((await viewer.load()).qaDismissals.find((dismissal) => dismissal.intervention_id === record.id)).toMatchObject({
+      flag: 'no_coords',
+      reason: 'Coordinates to follow from the MAO',
+      dismissed_by: accounts.encoder.id,
+    });
+    await expect(viewer.undismissFlag(record.id, 'no_coords')).rejects.toThrow();
+    await encoder.undismissFlag(record.id, 'no_coords');
+    expect((await viewer.load()).qaDismissals.some((dismissal) => dismissal.intervention_id === record.id)).toBe(false);
+  });
+});
+
 describe('live signals', () => {
   const channels: SupabaseClient[] = [];
 
@@ -511,8 +607,12 @@ describe('live signals', () => {
     await client.removeAllChannels();
     await client.realtime.setAuth();
     let onSignal: (() => void) | null = null;
+    let received = 0;
     const channel = client.channel('map-changes', { config: { private: true } });
-    channel.on('broadcast', { event: 'changed' }, () => onSignal?.());
+    channel.on('broadcast', { event: 'changed' }, () => {
+      received += 1;
+      onSignal?.();
+    });
     const status = await new Promise<string>((resolve) => {
       channel.subscribe((state) => {
         if (state !== 'CLOSED') resolve(state);
@@ -521,6 +621,7 @@ describe('live signals', () => {
     });
     return {
       status,
+      received: () => received,
       nextSignal: () =>
         new Promise<number>((resolve, reject) => {
           const started = Date.now();
@@ -572,6 +673,19 @@ describe('live signals', () => {
     const elapsed = await waiting;
     console.log(`Signal after a view was shared: ${elapsed} ms`);
     expect(elapsed).toBeLessThan(SIGNAL_LIMIT_MS);
+  });
+
+  it('reaches another person within about 2 s when a file is imported, as one signal for the whole file', async () => {
+    const listener = await join(viewerClient);
+    expect(listener.status).toBe('SUBSCRIBED');
+    const waiting = listener.nextSignal();
+    await encoder.importRecords(liveBatch('signal.csv'), [importRow(8, 'Live test signal import A'), importRow(9, 'Live test signal import B'), importRow(10, 'Live test signal import C')]);
+    const elapsed = await waiting;
+    console.log(`Signal after an import of 3 rows: ${elapsed} ms`);
+    expect(elapsed).toBeLessThan(SIGNAL_LIMIT_MS);
+    // Not one for each row and its status.
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(listener.received()).toBe(1);
   });
 
   it('doesn\'t let visitors or strangers listen', async () => {

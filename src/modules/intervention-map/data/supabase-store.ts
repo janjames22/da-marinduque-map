@@ -29,6 +29,7 @@ import type {
   CategoryGroup,
   FieldSchema,
   Icon,
+  ImportBatch,
   Intervention,
   InterventionBarangay,
   InterventionPhoto,
@@ -38,6 +39,7 @@ import type {
   Member,
   Municipality,
   Program,
+  QaDismissal,
   SavedView,
   Status,
   StatusEntry,
@@ -74,7 +76,7 @@ export interface SupabaseBackend {
 const INTERVENTION_COLUMNS =
   'id,source_id,source_page,intervention_type_id,category_id,title,banner_program_id,year_funded,quantity,unit_cost,fund_source,beneficiary,' +
   'beneficiary_type_id,municipality_id,barangay_id,barangay_raw,location_basis_id,status_id,attributes,remarks,data_source,' +
-  'qa_flags,geojson,plotted_barangay_id,plotted_barangay,plotted_municipality,version,created_by,updated_by,created_at,updated_at,deleted_at';
+  'qa_flags,geojson,plotted_barangay_id,plotted_barangay,plotted_municipality,version,created_by,updated_by,created_at,updated_at,deleted_at,import_batch_id';
 const BARANGAY_COLUMNS = 'id,municipality_id,name,psgc_code,attributes,version';
 
 const PHOTO_EXTENSIONS: Record<string, string> = {
@@ -247,6 +249,7 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         batches,
         members,
         savedViews,
+        qaDismissals,
       ] = await Promise.all([
         all<Icon>('icons'),
         all<Program>('programs', '*', ['sort_order', 'id']),
@@ -268,9 +271,10 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
           ['status_date', 'created_at', 'id'],
         ),
         all<InterventionPhoto>('intervention_photos', 'id,intervention_id,storage_path,caption,taken_at,exif_location,created_at'),
-        all<{ data_source: string }>('import_batches', 'data_source', ['imported_at', 'id']),
+        all<ImportBatch>('import_batches', 'id,file_name,data_source,intervention_type_id,column_mapping,counts,imported_by,imported_at,undone_at,undone_by,undo_reason', ['imported_at', 'id']),
         backend.rpc<Member[]>('member_names', {}),
         all<SavedView>('saved_views', 'id,name,owner_id,config,is_shared,is_default,created_at,updated_at', ['name', 'id']),
+        all<QaDismissal>('qa_dismissals', '*', ['dismissed_at', 'intervention_id', 'flag']),
       ]);
 
       loaded = {
@@ -294,6 +298,8 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         dataSources: [...new Set(batches.map((batch) => batch.data_source))],
         members,
         savedViews,
+        importBatches: batches,
+        qaDismissals,
       };
       return loaded;
     },
@@ -506,6 +512,28 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         p_limit: pageSize,
         p_offset: page * pageSize,
       });
+    },
+
+    async importRecords(batch, rows) {
+      const result = await call<{ id: string; records: number }>('import_records', { p_batch: batch, p_rows: rows });
+      notify();
+      return result;
+    },
+
+    async undoImport(id, reason) {
+      const result = await call<{ records: number }>('undo_import', { p_id: id, p_reason: reason });
+      notify();
+      return result;
+    },
+
+    async dismissFlag(recordId, flag, reason) {
+      await call('dismiss_flag', { p_id: recordId, p_flag: flag, p_reason: reason });
+      notify();
+    },
+
+    async undismissFlag(recordId, flag) {
+      await call('undismiss_flag', { p_id: recordId, p_flag: flag });
+      notify();
     },
 
     people: createPeopleApi(backend),

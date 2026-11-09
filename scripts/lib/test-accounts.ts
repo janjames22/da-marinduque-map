@@ -78,7 +78,11 @@ async function removeAccounts() {
       'select storage_path from public.intervention_photos where intervention_id = any($1::uuid[])',
       [records],
     );
+    // A dismissal names its person, so it goes before the profile, wherever it was made.
+    await db.query('delete from public.qa_dismissals where dismissed_by = any($1::uuid[])', [ids]);
     await db.query('delete from public.interventions where id = any($1::uuid[])', [records]);
+    // Their imports, once the records that came in with them are gone.
+    const { rows: batches } = await db.query<{ id: string }>('delete from public.import_batches where imported_by = any($1::uuid[]) returning id', [ids]);
     const { rows: views } = await db.query<{ id: string }>('delete from public.saved_views where owner_id = any($1::uuid[]) returning id', [ids]);
     await removeTestLists(db);
     await db.query('delete from public.profiles where id = any($1::uuid[])', [ids]);
@@ -88,8 +92,9 @@ async function removeAccounts() {
           or record_id = any($2::text[])
           or record_id = any($3::text[])
           or coalesce(new_row, old_row) ->> 'intervention_id' = any($2::text[])
-          or (table_name = 'saved_views' and record_id = any($4::text[]))`,
-      [ids, records, ids, views.map((view) => view.id)],
+          or (table_name = 'saved_views' and record_id = any($4::text[]))
+          or (table_name = 'import_batches' and record_id = any($5::text[]))`,
+      [ids, records, ids, views.map((view) => view.id), batches.map((batch) => batch.id)],
     );
     await db.query('commit');
 

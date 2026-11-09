@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import JSZip from 'jszip';
+import * as XLSX from 'xlsx';
 import { jpegWithGps } from '../tests/helpers/exif-fixture';
 import { FAKE_HOST, installFakeSupabase, inviteHash, PASSWORD, seedData, signIn, USERS, type FakeSupabase } from './helpers/fake-supabase';
 
@@ -924,4 +925,123 @@ test('stays signed out for a person who was never given the password', async ({ 
   await page.goto('/');
   await signIn(page, USERS.admin, `${PASSWORD}x`);
   await expect(signInForm(page).getByRole('alert')).toBeVisible();
+});
+
+test.describe('QA and import', () => {
+  const flagged = seedData.interventions.filter((r) => r.qa_flags.join() === 'barangay_mismatch');
+  const item = (page: Page, id: string) => page.locator(`.queue-item[data-record="${id}"][data-flag="barangay_mismatch"]`);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+
+  test('a Viewer isn\'t offered it, and their browser asks the service for nothing there', async ({ page }) => {
+    const fake = await signedIn(page, USERS.viewer);
+    await expect(page.getByRole('link', { name: 'QA and import' })).toHaveCount(0);
+    await page.goto('/qa');
+    await expect(page.getByRole('alert')).toContainText('This page is for Encoders and Admins');
+    expect(fake.rpcCalls.map(({ name }) => name).filter((name) => /import|flag/.test(name))).toEqual([]);
+  });
+
+  test('a dismissal goes to its database function with the reason, and a refusal is explained', async ({ page }) => {
+    const fake = await signedIn(page, USERS.encoder);
+    fake.onRpc((call) => {
+      if (call.name !== 'dismiss_flag') return undefined;
+      return call.args.p_id === flagged[0].id ? { status: 200, body: null } : { status: 400, body: { code: '23514', message: 'That flag is no longer on this record.' } };
+    });
+    await page.getByRole('link', { name: 'QA and import' }).click();
+    await expect(page.getByRole('region', { name: 'QA queue' })).toBeVisible();
+
+    await item(page, flagged[0].id).getByRole('button', { name: 'Dismiss' }).click();
+    await page.getByRole('form', { name: /^Dismiss: / }).getByLabel(/^Reason/).fill('At the FCA office');
+    await page.getByRole('form', { name: /^Dismiss: / }).getByRole('button', { name: 'Dismiss' }).click();
+    await expect(page.locator('.admin-notice')).toContainText('Flag dismissed for');
+    expect(fake.rpcCalls.filter(({ name }) => name === 'dismiss_flag').map(({ args }) => args)).toEqual([{ p_id: flagged[0].id, p_flag: 'barangay_mismatch', p_reason: 'At the FCA office' }]);
+
+    await item(page, flagged[1].id).getByRole('button', { name: 'Dismiss' }).click();
+    await page.getByRole('form', { name: /^Dismiss: / }).getByLabel(/^Reason/).fill('Checked');
+    await page.getByRole('form', { name: /^Dismiss: / }).getByRole('button', { name: 'Dismiss' }).click();
+    await expect(page.getByRole('form', { name: /^Dismiss: / }).getByRole('alert')).toHaveText('That flag is no longer on this record.');
+  });
+
+  test('a workbook is read under the site\'s security rules, and its rows go to the database in one call', async ({ page }) => {
+    const fake = await signedIn(page, USERS.encoder);
+    fake.onRpc((call) => (call.name === 'import_records' ? { status: 200, body: { id: 'c0000000-0000-4000-8000-000000000001', records: 1 } } : undefined));
+    const municipality = seedData.municipalities.find((m) => m.id === barangay.municipality_id)!;
+    const [lng, lat] = (record.geojson as { coordinates: number[] }).coordinates;
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ['Beneficiary', 'Category', 'Program', 'Year', 'Municipality', 'Barangay', 'Latitude', 'Longitude'],
+      ['E2E Sheet FCA', 'Rice Thresher', 'Rice Program', 2023, municipality.name, barangay.name, lat + 0.00003, lng + 0.00003],
+    ]);
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, sheet, 'Machinery');
+
+    await page.goto('/import');
+    const step = page.getByRole('form', { name: 'Choose a file' });
+    await step.getByLabel(/^What the file lists/).selectOption({ label: 'Farm Machinery' });
+    await step.getByLabel(/^Where it came from/).fill('ABEMIS export');
+    await step.getByLabel(/^File/).setInputFiles({ name: 'machinery.xlsx', mimeType: 'application/octet-stream', buffer: XLSX.write(book, { type: 'buffer', bookType: 'xlsx' }) as Buffer });
+    await expect(step.getByRole('status')).toHaveText('1 row and 8 columns read from the sheet "Machinery".');
+    await step.getByRole('button', { name: 'Next: columns' }).click();
+    await page.getByRole('button', { name: 'Next: check' }).click();
+    await expect(page.locator('.import-summary')).toHaveText('1 row: 1 ready, 0 to fix, 0 with warnings.');
+    await page.getByRole('button', { name: 'Import 1 record' }).click();
+    await expect(page.getByRole('heading', { name: 'Imported 1 record' })).toBeVisible();
+
+    const calls = fake.rpcCalls.filter(({ name }) => name === 'import_records');
+    expect(calls).toHaveLength(1);
+    const { p_batch: batch, p_rows: rows } = calls[0].args as { p_batch: Record<string, unknown>; p_rows: Record<string, unknown>[] };
+    expect(batch).toMatchObject({ file_name: 'machinery.xlsx', data_source: 'ABEMIS export', intervention_type_id: 1, column_mapping: { columns: { Beneficiary: 'beneficiary', Latitude: 'latitude' }, values: {}, sheet: 'Machinery' } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      row: 2,
+      source_id: null,
+      source_raw: { Beneficiary: 'E2E Sheet FCA', Year: '2023' },
+      values: { beneficiary: 'E2E Sheet FCA', year_funded: 2023, municipality_id: municipality.id, barangay_id: barangay.id, barangay_raw: barangay.name, quantity: 1 },
+      status: { status_date: today, date_basis: 'as_of', remarks: null },
+    });
+    expect((rows[0].values as { point: { lat: number } }).point.lat).toBeCloseTo(lat + 0.00003, 6);
+  });
+
+  test('a person can undo their own import through its database function, not someone else\'s, and a refusal is explained', async ({ page }) => {
+    const fake = await installFakeSupabase(page);
+    const batch = (id: string, file: string, by: string) => ({
+      id,
+      file_name: file,
+      data_source: 'ABEMIS export',
+      intervention_type_id: 1,
+      column_mapping: {},
+      counts: { records: 3, flagged: 1 },
+      imported_by: by,
+      imported_at: '2026-11-08T01:00:00Z',
+      undone_at: null,
+      undone_by: null,
+      undo_reason: null,
+    });
+    fake.tables.import_batches.push(batch('c0000000-0000-4000-8000-000000000002', 'mine.csv', USERS.encoder.id), batch('c0000000-0000-4000-8000-000000000003', 'theirs.csv', USERS.admin.id));
+    let refuse = true;
+    fake.onRpc((call) => {
+      if (call.name !== 'undo_import') return undefined;
+      if (refuse) return { status: 400, body: { code: '23514', message: '1 of its records has been worked on since, so undoing the import would lose that. Change or delete them one at a time instead.' } };
+      return { status: 200, body: { records: 3 } };
+    });
+    await page.goto('/import');
+    await signIn(page, USERS.encoder);
+    const earlier = page.getByRole('region', { name: 'Earlier imports' });
+    const mine = earlier.locator('.queue-item').filter({ hasText: 'mine.csv' });
+    const theirs = earlier.locator('.queue-item').filter({ hasText: 'theirs.csv' });
+    await expect(mine).toContainText('By Enzo Encoder');
+    await expect(theirs).toContainText('By Ana Admin');
+    await expect(theirs.getByRole('button', { name: 'Undo this import' })).toHaveCount(0);
+
+    await mine.getByRole('button', { name: 'Undo this import' }).click();
+    const undo = page.getByRole('form', { name: 'Undo mine.csv' });
+    await undo.getByLabel(/^Reason/).fill('Wrong file');
+    await undo.getByRole('button', { name: 'Undo the import' }).click();
+    await expect(earlier.getByRole('alert')).toContainText('1 of its records has been worked on since');
+    refuse = false;
+    await undo.getByRole('button', { name: 'Undo the import' }).click();
+    await expect(earlier.locator('.admin-notice')).toContainText('mine.csv was undone.');
+    expect(fake.rpcCalls.filter(({ name }) => name === 'undo_import').map(({ args }) => args)).toEqual([
+      { p_id: 'c0000000-0000-4000-8000-000000000002', p_reason: 'Wrong file' },
+      { p_id: 'c0000000-0000-4000-8000-000000000002', p_reason: 'Wrong file' },
+    ]);
+  });
 });

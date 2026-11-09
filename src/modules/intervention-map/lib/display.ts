@@ -71,10 +71,15 @@ export const FLAG_LABELS: Record<string, string> = {
   beneficiary_name_check: 'Beneficiary name needs checking',
 };
 
-// Shared coordinates are informational, and aren't counted as needing review.
-export function needsReview(record: Pick<Intervention, 'qa_flags'>): boolean {
-  return record.qa_flags.some((flag) => flag !== 'duplicate_point');
+// Shared coordinates are informational, and aren't counted as needing review. Nor is a flag a person
+// has looked at and dismissed: pass the dismissals to leave those out.
+export function needsReview(record: Pick<Intervention, 'id' | 'qa_flags'>, dismissed?: ReadonlySet<string>): boolean {
+  return record.qa_flags.some((flag) => flag !== 'duplicate_point' && !dismissed?.has(`${record.id}|${flag}`));
 }
+
+// Each dismissal as "record|flag", for needsReview.
+export const dismissedKeys = (dismissals: { intervention_id: string; flag: string }[] = []): ReadonlySet<string> =>
+  new Set(dismissals.map((dismissal) => `${dismissal.intervention_id}|${dismissal.flag}`));
 
 export function fieldValue(field: FieldDefinition, value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;

@@ -12,7 +12,7 @@ import {
 } from '@tanstack/react-table';
 import { useEffect, useMemo } from 'react';
 import type { Intervention, MapData } from '../data/types';
-import { encodedPlace, FLAG_LABELS, isOnMap, needsReview, recordName } from '../lib/display';
+import { dismissedKeys, encodedPlace, FLAG_LABELS, isOnMap, needsReview, recordName } from '../lib/display';
 import { foldText } from '../lib/view-fields';
 import { useEditUi } from '../state/edit-ui';
 import { useExportUi } from '../state/export-ui';
@@ -42,6 +42,7 @@ interface TableRow {
 }
 
 function toRows(records: Intervention[], data: MapData): TableRow[] {
+  const dismissed = dismissedKeys(data.qaDismissals);
   const nameOf = <T extends { id: number; name: string }>(items: T[], id: number | null) => items.find((item) => item.id === id)?.name;
   return records.map((record) => {
     const row = {
@@ -55,7 +56,7 @@ function toRows(records: Intervention[], data: MapData): TableRow[] {
       municipality: nameOf(data.municipalities, record.municipality_id),
       barangay: nameOf(data.barangays, record.barangay_id) ?? record.barangay_raw ?? undefined,
       units: record.quantity,
-      qa: needsReview(record) ? record.qa_flags.filter((flag) => flag !== 'duplicate_point').map((flag) => FLAG_LABELS[flag] ?? flag).join('; ') : undefined,
+      qa: needsReview(record, dismissed) ? record.qa_flags.filter((flag) => flag !== 'duplicate_point' && !dismissed.has(`${record.id}|${flag}`)).map((flag) => FLAG_LABELS[flag] ?? flag).join('; ') : undefined,
     };
     const search = foldText([row.name, row.beneficiary, row.type, row.program, row.year, row.status, row.municipality, row.barangay, row.qa, record.source_id, record.remarks].filter(Boolean).join(' '));
     return { ...row, search };

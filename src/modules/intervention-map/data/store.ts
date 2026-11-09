@@ -23,6 +23,30 @@ export interface InterventionValues {
   field_photos?: Record<string, File>;
 }
 
+// What one row of a file becomes. The type comes from the batch, and the barangay is kept as the file
+// wrote it, whether or not it matched.
+export type ImportValues = Omit<InterventionValues, 'intervention_type_id' | 'field_photos'> & { barangay_raw: string | null };
+
+export interface ImportRowInput {
+  // The row's own number in the file, so a refusal can say where to look.
+  row: number;
+  source_id: string | null;
+  source_raw: Record<string, unknown>;
+  values: ImportValues;
+  status: { status_id: number; status_date: string; date_basis: 'as_of' | 'changed'; remarks: string | null };
+}
+
+export interface ImportBatchInput {
+  file_name: string;
+  data_source: string;
+  intervention_type_id: number;
+  // How the file's columns and values were read, kept so the next file from this source starts there.
+  column_mapping: Record<string, unknown>;
+}
+
+// The most rows one import takes, as the database does.
+export const MOST_IMPORT_ROWS = 2000;
+
 // A record's type can't change, because its custom fields and status list belong to the type.
 export type InterventionPatch = Partial<Omit<InterventionValues, 'intervention_type_id'>> & {
   clear_name_check?: boolean;
@@ -42,7 +66,7 @@ export interface PhotoMeta {
 
 // Goes to the audit log with the change: why it was made, and what kind of change it was.
 export interface ChangeNote {
-  kind: 'create' | 'edit' | 'move' | 'resolve' | 'status' | 'baseline' | 'delete' | 'restore' | 'admin';
+  kind: 'create' | 'edit' | 'move' | 'resolve' | 'status' | 'baseline' | 'delete' | 'restore' | 'admin' | 'import' | 'dismiss';
   reason?: string;
 }
 
@@ -195,6 +219,12 @@ export interface DataStore {
   setDefaultView(id: string | null): Promise<void>;
   // Admins only, and the database refuses anyone else.
   auditLog(query: AuditQuery): Promise<AuditPage>;
+  // Encoders and Admins. All rows or none, as one batch.
+  importRecords(batch: ImportBatchInput, rows: ImportRowInput[]): Promise<{ id: string; records: number }>;
+  // By the person who imported it, or an Admin, while nobody has worked on its records.
+  undoImport(id: string, reason: string): Promise<{ records: number }>;
+  dismissFlag(recordId: string, flag: string, reason: string): Promise<void>;
+  undismissFlag(recordId: string, flag: string): Promise<void>;
   people?: PeopleApi;
   photoUrl(photoId: string): Promise<string | null>;
   // Fires on any change, from this tab or another. Screens reload through load().

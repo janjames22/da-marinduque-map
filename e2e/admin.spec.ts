@@ -77,7 +77,9 @@ test.describe('who is offered it', () => {
       await page.goto('/admin/types');
       await expect(page.getByRole('alert')).toContainText('This page is for Admins');
       await expect(page.getByRole('navigation', { name: 'Admin' })).toHaveCount(0);
-      await page.getByRole('link', { name: 'Back to the map' }).click();
+      // The header has a way back on every page but the map, and so does the message.
+      await expect(page.getByRole('banner').getByRole('link', { name: 'Back to the map' })).toBeVisible();
+      await page.getByRole('alert').getByRole('link', { name: 'Back to the map' }).click();
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
     });
   }

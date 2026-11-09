@@ -15,9 +15,9 @@ import type { Queryable } from './seed-interventions';
 const PHOTO_BUCKET = 'intervention-photos';
 const WRITTEN_TABLES = [...LOOKUP_TABLES, ...RECORD_TABLES, 'barangays'];
 // Children first, so each delete leaves nothing pointing at what it removes.
-const CLEARED_TABLES = ['status_history', 'intervention_photos', 'intervention_barangays', 'saved_views', 'interventions', 'import_batches'];
+const CLEARED_TABLES = ['qa_dismissals', 'status_history', 'intervention_photos', 'intervention_barangays', 'saved_views', 'interventions', 'import_batches'];
 // Columns naming a person. An account that no longer exists can't be pointed to.
-const PERSON_COLUMNS = ['created_by', 'updated_by', 'imported_by'];
+const PERSON_COLUMNS = ['created_by', 'updated_by', 'imported_by', 'undone_by', 'dismissed_by'];
 
 export interface RestoreResult {
   restored: Record<string, number>;
@@ -83,12 +83,25 @@ export async function restoreSnapshot(db: Queryable, snapshot: Snapshot, { repla
       }
     }
 
+    // A table a migration hasn't made here yet is fine while the backup has nothing for it. Otherwise
+    // its rows would be lost.
+    const missing = new Set<string>();
+    for (const table of WRITTEN_TABLES) {
+      const { rows: present } = await db.query<{ present: boolean }>('select to_regclass($1) is not null as present', [`public.${table}`]);
+      if (present[0].present) continue;
+      if ((snapshot.tables[table] ?? []).length > 0) {
+        throw new Error(`This backup has ${table}, which this database doesn't have yet. Run npm run db:migrate first. Nothing was changed.`);
+      }
+      missing.add(table);
+    }
+    const here = (table: string) => !missing.has(table);
+
     // What's in the backup already passed the rules, and running them again would raise version
     // numbers and write the whole backup into the audit log.
-    for (const table of WRITTEN_TABLES) await db.query(`alter table public.${table} disable trigger user`);
+    for (const table of WRITTEN_TABLES.filter(here)) await db.query(`alter table public.${table} disable trigger user`);
 
     if (replace) {
-      for (const table of CLEARED_TABLES) await db.query(`delete from public.${table}`);
+      for (const table of CLEARED_TABLES.filter(here)) await db.query(`delete from public.${table}`);
     }
 
     for (const table of LOOKUP_TABLES) await loadRows(db, table, snapshot.tables[table], 'update');
@@ -112,8 +125,9 @@ export async function restoreSnapshot(db: Queryable, snapshot: Snapshot, { repla
     const keptViews = snapshot.tables.saved_views.filter((view) => known.has(view.owner_id as string));
 
     for (const table of RECORD_TABLES) {
-      if (table === 'profiles') continue;
-      const rows = table === 'saved_views' ? keptViews : table === 'audit_log' ? snapshot.tables.audit_log : snapshot.tables[table].map(withKnownPeople);
+      if (table === 'profiles' || !here(table)) continue;
+      // A backup made before a table existed, such as qa_dismissals before 0010, has none of its rows.
+      const rows = table === 'saved_views' ? keptViews : table === 'audit_log' ? snapshot.tables.audit_log : (snapshot.tables[table] ?? []).map(withKnownPeople);
       // The log may hold entries made since the backup, and those are worth keeping.
       await loadRows(db, table, rows, table === 'audit_log' ? 'nothing' : 'fail');
       restored[table] = rows.length;
@@ -136,7 +150,7 @@ export async function restoreSnapshot(db: Queryable, snapshot: Snapshot, { repla
       );
     }
 
-    for (const table of WRITTEN_TABLES) await db.query(`alter table public.${table} enable trigger user`);
+    for (const table of WRITTEN_TABLES.filter(here)) await db.query(`alter table public.${table} enable trigger user`);
 
     await db.query(
       `insert into public.audit_log (table_name, action, context) values ('backup', 'restore', $1::jsonb)`,

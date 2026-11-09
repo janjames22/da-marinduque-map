@@ -3,6 +3,20 @@ export function manilaToday(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 }
 
+// The Philippine date and time to the minute, for file names: 2026-11-08-1942. Add the seconds when
+// two files could start in the same minute.
+export function manilaStamp(now: Date = new Date(), withSeconds = false): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? '00';
+  return `${manilaToday(now)}-${part('hour')}${part('minute')}${withSeconds ? part('second') : ''}`;
+}
+
 export function manilaYear(now: Date = new Date()): number {
   return Number(manilaToday(now).slice(0, 4));
 }

@@ -2066,3 +2066,224 @@ form.admin-form[aria-label='Barangay fields'] {
     font-weight: 600;
   }
 }
+
+/* QA and import: the QA queue, the condition check and the import wizard, laid out like the admin screens. */
+.work-page .admin-section {
+  max-width: 1100px;
+}
+
+.queue-group {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 8px;
+}
+
+.queue-group h3 {
+  font-size: 16px;
+  margin: 4px 0;
+}
+
+.queue-place h4 {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin: 12px 0 4px;
+}
+
+.count {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 7px;
+}
+
+.queue-list {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+
+.queue-item {
+  align-items: flex-start;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 8px 0;
+}
+
+.queue-item-main {
+  display: flex;
+  flex: 1 1 260px;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.queue-actions .secondary-button {
+  margin: 0;
+  text-align: center;
+  text-decoration: none;
+  width: auto;
+}
+
+.queue-action {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  flex: 1 1 100%;
+  padding: 8px 12px;
+}
+
+.import-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.import-steps li {
+  color: var(--text-secondary);
+}
+
+.import-steps li.done {
+  color: var(--da-green);
+}
+
+.import-steps li.current {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.import-form,
+.queue-action,
+.import-check {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.import-form .form-field,
+.import-form .field,
+.queue-action .form-field {
+  max-width: 480px;
+}
+
+/* Buttons their own width, as in the admin lists, rather than across the whole form. */
+.work-page .form-actions .primary-button,
+.work-page .form-actions .secondary-button,
+.work-page .form-actions .danger-button {
+  margin: 0;
+  text-align: center;
+  text-decoration: none;
+  width: auto;
+}
+
+.work-page .form-actions a.primary-button {
+  display: inline-block;
+}
+
+.import-form .records-scroll {
+  margin-bottom: 12px;
+  max-height: 60vh;
+}
+
+.import-columns select {
+  max-width: 260px;
+}
+
+.import-columns tbody tr,
+.import-preview tbody tr {
+  cursor: default;
+}
+
+.import-columns tbody tr:hover td,
+.import-preview tbody tr:hover td {
+  background: none;
+}
+
+.import-preview td:last-child {
+  min-width: 260px;
+  white-space: normal;
+}
+
+.import-preview tr.to-fix td:first-child {
+  box-shadow: inset 3px 0 0 #b3261e;
+}
+
+.import-error,
+.import-warning {
+  display: block;
+}
+
+.import-error {
+  color: #b3261e;
+}
+
+.import-warning {
+  color: var(--warning-text);
+}
+
+.import-values {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.import-values li {
+  border-top: 1px solid var(--border);
+  padding: 6px 0;
+}
+
+.import-summary {
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.import-flags {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+
+.import-show {
+  max-width: 280px;
+}
+
+.import-check .records-scroll {
+  max-height: 55vh;
+}
+
+.import-check .choice {
+  margin-top: 8px;
+}
+
+.import-done h3 {
+  margin-top: 0;
+}
+
+.import-done .form-actions a {
+  text-align: center;
+  text-decoration: none;
+}
+
+.import-batches {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+  padding-top: 8px;
+}
+
+.import-batches h3 {
+  font-size: 15px;
+  margin: 4px 0;
+}
