@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { LocalSeedMissingError } from './data/store';
 import type { AppUser, MapData } from './data/types';
@@ -26,6 +26,7 @@ import { ExportDialog } from './panel/ExportDialog';
 import { LayerPanel } from './panel/LayerPanel';
 import { Legend } from './panel/Legend';
 import { UnassignedPanel } from './panel/UnassignedPanel';
+import { PrintMapDialog } from './reports/PrintMapDialog';
 import { isFormOpen, useEditUi } from './state/edit-ui';
 import { useExportUi } from './state/export-ui';
 import { useMapUi } from './state/map-ui';
@@ -137,6 +138,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   const fields = useMemo(() => viewFields(data), [data]);
   // Over all records, not the filtered ones, so a filter can't change what a color means.
   const scale = useMemo(() => buildColorScale(colorBy, allRecords, data, fields), [colorBy, allRecords, data, fields]);
+  const [printing, setPrinting] = useState(false);
 
   const openBarangay = (id: number) => {
     ui.setShowUnassigned(false);
@@ -233,6 +235,19 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
               </svg>
               Export
             </button>
+            <button
+              type="button"
+              className="export-button"
+              onClick={() => {
+                ui.setPanelOpen(false);
+                setPrinting(true);
+              }}
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 9V3h10v6M7 18H4v-7h16v7h-3M7 14h10v7H7z" />
+              </svg>
+              Print map
+            </button>
             {!ui.insights && !otherPanel && (
               <button type="button" className="export-button insights-open-button" onClick={() => ui.setInsights('dashboard')}>
                 Dashboard
@@ -284,6 +299,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
       )}
       <PhotoDialog />
       <ExportDialog data={data} boundaries={boundaries} allRecords={allRecords} />
+      <PrintMapDialog open={printing} onClose={() => setPrinting(false)} data={data} mode={mode} shading={shading} scale={scale} markers={markers} />
     </main>
   );
 }

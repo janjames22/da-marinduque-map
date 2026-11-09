@@ -14,6 +14,7 @@ import type {
   FieldSchema,
   Icon,
   ImportBatch,
+  ReportSignatory,
   Intervention,
   InterventionBarangay,
   InterventionPhoto,
@@ -47,6 +48,8 @@ export interface LocalSeed {
     intervention_types: unknown[];
     intervention_type_statuses: unknown[];
     barangay_field_schema: unknown[];
+    // Not in a seed made before 0011.
+    report_signatories?: unknown[];
   };
   municipalities: unknown[];
   barangays: unknown[];
@@ -104,6 +107,7 @@ export function toMapData(seed: LocalSeed): MapData {
     savedViews: [],
     importBatches: batches,
     qaDismissals: [],
+    signatories: bySortOrder((seed.lookups.report_signatories ?? []) as ReportSignatory[]),
   };
 }
 
@@ -274,6 +278,8 @@ export async function createLocalStore({ boundaries, user }: LocalStoreOptions):
         beneficiaryTypes: bySortOrder(fixed.beneficiaryTypes),
         locationBases: bySortOrder(fixed.locationBases),
         types: bySortOrder(fixed.types),
+        // A browser's saved state from before reports had none.
+        signatories: bySortOrder(fixed.signatories ?? []),
         interventions,
         links,
         statusHistory,

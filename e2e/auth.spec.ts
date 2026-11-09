@@ -1045,3 +1045,71 @@ test.describe('QA and import', () => {
     ]);
   });
 });
+
+test.describe('reports', () => {
+  const downloadOf = async (page: Page, click: () => Promise<void>) => {
+    const [download] = await Promise.all([page.waitForEvent('download'), click()]);
+    return download;
+  };
+  const exportCalls = (fake: FakeSupabase) => fake.rpcCalls.filter(({ name }) => name === 'log_export').map(({ args }) => args);
+
+  test('a Viewer downloads each report under the site\'s security rules, each logged before it leaves', async ({ page }) => {
+    const fake = await signedIn(page, USERS.viewer);
+    await page.getByRole('link', { name: 'Reports' }).click();
+    await page.getByRole('navigation', { name: 'Reports' }).getByRole('link', { name: 'Inventory report' }).click();
+    const inventory = page.getByRole('region', { name: 'Inventory report', exact: true });
+    await expect(inventory.getByRole('status')).toContainText('records');
+    const pdf = await downloadOf(page, () => inventory.getByRole('button', { name: 'Download PDF' }).click());
+    expect(pdf.suggestedFilename()).toMatch(/^Inventory_Marinduque_\d{4}-\d{2}-\d{2}\.pdf$/);
+    const xlsx = await downloadOf(page, () => inventory.getByRole('button', { name: 'Download Excel' }).click());
+    expect(xlsx.suggestedFilename()).toMatch(/\.xlsx$/);
+
+    await page.getByRole('navigation', { name: 'Reports' }).getByRole('link', { name: 'Municipal profile' }).click();
+    await page.getByRole('region', { name: 'Municipal profile' }).getByLabel('Municipality').selectOption({ label: 'Boac' });
+    const profile = await downloadOf(page, () => page.getByRole('region', { name: 'Municipal profile' }).getByRole('button', { name: 'Download PDF' }).click());
+    expect(profile.suggestedFilename()).toMatch(/^Profile_Boac_/);
+
+    expect(exportCalls(fake)).toEqual([
+      expect.objectContaining({ p_format: 'pdf', p_file_name: pdf.suggestedFilename(), p_record_count: 199, p_filters: expect.objectContaining({ report: 'inventory' }) }),
+      expect.objectContaining({ p_format: 'xlsx', p_file_name: xlsx.suggestedFilename(), p_record_count: 199 }),
+      expect.objectContaining({ p_format: 'pdf', p_file_name: profile.suggestedFilename(), p_filters: { report: 'municipal profile', municipality: 'Boac' } }),
+    ]);
+  });
+
+  test('if the log can\'t be written, the report isn\'t downloaded, and the person is told', async ({ page }) => {
+    const fake = await signedIn(page, USERS.viewer);
+    fake.onRpc((call) => (call.name === 'log_export' ? { status: 500, body: { code: 'XX000', message: 'Database unavailable' } } : undefined));
+    let downloaded = false;
+    page.on('download', () => (downloaded = true));
+    await page.goto('/reports/inventory');
+    const inventory = page.getByRole('region', { name: 'Inventory report', exact: true });
+    await inventory.getByRole('button', { name: 'Download PDF' }).click();
+    await expect(inventory.getByRole('alert')).toBeVisible();
+    expect(downloaded).toBe(false);
+  });
+
+  test('the map prints under the site\'s security rules, and the print is logged', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'The toolbar is the same on a phone; once is enough here.');
+    const fake = await signedIn(page, USERS.encoder);
+    await page.getByRole('button', { name: 'Print map' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Print map' });
+    const download = await downloadOf(page, () => dialog.getByRole('button', { name: 'Download PDF' }).click());
+    expect(download.suggestedFilename()).toMatch(/^Map_Marinduque_Province_\d{4}-\d{2}-\d{2}\.pdf$/);
+    expect(exportCalls(fake)).toEqual([expect.objectContaining({ p_format: 'pdf', p_file_name: download.suggestedFilename(), p_filters: expect.objectContaining({ report: 'map' }) })]);
+  });
+
+  test('an Admin\'s change to a signature block goes to its table, by its id', async ({ page }) => {
+    const fake = await signedIn(page, USERS.admin);
+    await page.goto('/admin/signatures');
+    const list = page.getByRole('region', { name: 'Report signatures' });
+    await list.locator('.admin-row').filter({ hasText: 'Engr. Jan James P. Graza' }).getByRole('button', { name: /^Edit/ }).click();
+    const form = page.getByRole('form', { name: /^Edit Engr/ });
+    await form.getByLabel(/^Position/).fill('Engineer II');
+    await form.getByRole('button', { name: 'Save' }).click();
+    await expect(page.locator('.admin-notice')).toContainText('Saved');
+    const id = (fake.tables.report_signatories as { id: number; name: string }[]).find((row) => row.name === 'Engr. Jan James P. Graza')!.id;
+    expect(fake.restWrites.filter((write) => write.table === 'report_signatories')).toEqual([
+      { table: 'report_signatories', method: 'PATCH', id, values: { name: 'Engr. Jan James P. Graza', label: 'Prepared by', position: 'Engineer II' } },
+    ]);
+  });
+});

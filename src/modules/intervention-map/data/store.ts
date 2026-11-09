@@ -105,7 +105,7 @@ export interface ExportLogEntry {
   record_count: number;
 }
 
-export type LookupTable = 'programs' | 'categories' | 'category_groups' | 'statuses' | 'beneficiary_types' | 'location_bases' | 'icons';
+export type LookupTable = 'programs' | 'categories' | 'category_groups' | 'statuses' | 'beneficiary_types' | 'location_bases' | 'icons' | 'report_signatories';
 
 // One row of a list. Which of these apply depends on the list, and an update sends only what changes.
 export interface LookupValues {
@@ -119,6 +119,9 @@ export interface LookupValues {
   sort_order?: number;
   is_active?: boolean;
   counts_as_assessed?: boolean;
+  // A signature block's words above and below the name.
+  label?: string;
+  position?: string;
 }
 
 export interface TypeValues {

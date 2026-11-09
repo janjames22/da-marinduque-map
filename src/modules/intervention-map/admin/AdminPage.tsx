@@ -18,6 +18,7 @@ const SECTIONS = [
   { path: 'statuses', label: 'Statuses' },
   { path: 'lists', label: 'Other lists' },
   { path: 'barangay-fields', label: 'Barangay fields' },
+  { path: 'signatures', label: 'Report signatures' },
   { path: 'audit', label: 'Audit log' },
 ];
 
@@ -140,6 +141,20 @@ function AdminWorkspace({ data }: { data: MapData }) {
           />
           <Route path="/admin/lists" element={<OtherLists data={data} />} />
           <Route path="/admin/barangay-fields" element={<BarangayFieldsSection data={data} />} />
+          <Route
+            path="/admin/signatures"
+            element={
+              <LookupSection
+                title="Report signatures"
+                singular="signature"
+                description="The signature blocks at the foot of every report and printed map, left to right in this order. Archive one to leave it off."
+                table="report_signatories"
+                rows={data.signatories}
+                fields={['label', 'position']}
+                data={data}
+              />
+            }
+          />
           <Route path="/admin/audit" element={<AuditSection data={data} />} />
           <Route path="*" element={<Navigate to="/admin/users" replace />} />
         </Routes>

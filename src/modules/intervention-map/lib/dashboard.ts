@@ -3,7 +3,7 @@
 import type { Barangay, Intervention, MapData } from '../data/types';
 import { countByBarangay } from './choropleth';
 import { dismissedKeys, needsReview } from './display';
-import { foldText } from './view-fields';
+import { beneficiaryKey } from './text';
 
 export interface BarRow {
   key: string;
@@ -69,9 +69,8 @@ const TILE_LABELS: Record<string, string> = {
   ssip: 'SSIPs',
 };
 
-// An approximate count until there's a proper list of beneficiaries: "Bantad F.C.A." and "bantad fca"
-// are one, as case, marks, spaces and punctuation are left out.
-export const beneficiaryKey = (name: string | null) => foldText(name ?? '').replace(/[^\p{L}\p{N}]/gu, '');
+// An approximate count until there's a proper list of beneficiaries.
+export { beneficiaryKey } from './text';
 
 const ranked = (rows: BarRow[]) => rows.sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
 

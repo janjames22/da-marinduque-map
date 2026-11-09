@@ -90,6 +90,7 @@ const LIST_PAGES: Record<string, { label: string; link: string }> = {
   barangay_field_schema: { label: 'Barangay fields', link: '/admin/barangay-fields' },
   intervention_type_statuses: { label: 'A type\'s status list', link: '/admin/types' },
   profiles: { label: 'Person', link: '/admin/users' },
+  report_signatories: { label: 'Report signature', link: '/admin/signatures' },
 };
 
 export interface AuditTarget {

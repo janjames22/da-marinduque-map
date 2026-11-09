@@ -225,6 +225,16 @@ export interface SavedView {
   updated_at: string;
 }
 
+// One signature block at the foot of every report, such as "Prepared by", in the order they print.
+export interface ReportSignatory {
+  id: number;
+  label: string;
+  name: string;
+  position: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
 export interface MapData {
   icons: Icon[];
   programs: Program[];
@@ -248,6 +258,7 @@ export interface MapData {
   savedViews: SavedView[];
   importBatches: ImportBatch[];
   qaDismissals: QaDismissal[];
+  signatories: ReportSignatory[];
 }
 
 // One file brought in through the import wizard, or by the RAED seed's script. Its records can be taken

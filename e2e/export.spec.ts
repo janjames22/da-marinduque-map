@@ -167,7 +167,8 @@ test('a filter on the map narrows the map, the count and the file together', asy
 test('clearing the filters brings the rest back', async ({ page }) => {
   await open(page);
   await filterToGasan(page);
-  await withFilters(page, () => page.getByRole('button', { name: 'Clear filters' }).click());
+  // The layers panel's own, as the dashboard has one too while it's open.
+  await withFilters(page, () => page.getByRole('complementary', { name: 'Layers and filters' }).getByRole('button', { name: 'Clear filters' }).click());
   await toolbarExport(page).click();
   await expect(summary(page)).toHaveText(`${TOTAL} records`);
 });

@@ -4,6 +4,7 @@
 import type { FieldDefinition, Intervention, MapData } from '../data/types';
 import { manilaToday } from './dates';
 import { FLAG_LABELS, recordColor } from './display';
+import { foldText } from './text';
 
 // The choice that matches a record with no value at all.
 export const NOT_SET = '__not_set__';
@@ -82,15 +83,7 @@ export function readField(record: Intervention, fieldId: string): FieldValue {
   return String(value);
 }
 
-// Ignores case, spacing and marks such as the tilde in Kiñaman, so a search finds what a person means.
-export function foldText(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+export { foldText } from './text';
 
 export function isActiveFilter(filter: FieldFilter): boolean {
   switch (filter.kind) {

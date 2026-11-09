@@ -592,6 +592,46 @@ describe('import and QA', () => {
   });
 });
 
+describe('reports', () => {
+  it('every member reads the signature blocks, which start with the office\'s own', () => {
+    expect(data.signatories.length).toBeGreaterThan(0);
+    expect(data.signatories.every((signatory) => signatory.label && signatory.name)).toBe(true);
+  });
+
+  it('only an Admin adds or changes a signature block, and none can be deleted, on the hosted service', async () => {
+    // A test block of its own, so the real ones are never touched. The clean-up removes it by its label.
+    await admin.saveLookup('report_signatories', null, { label: 'E2E test signer', name: 'Live test signatory', position: 'Tester', sort_order: 99, is_active: false });
+    const added = (await admin.load()).signatories.find((signatory) => signatory.label === 'E2E test signer')!;
+    expect(added).toMatchObject({ name: 'Live test signatory', position: 'Tester', is_active: false });
+    await admin.saveLookup('report_signatories', added.id, { position: 'Tester II' });
+
+    await expect(encoder.saveLookup('report_signatories', added.id, { name: 'Changed by an Encoder' })).rejects.toThrow();
+    await expect(viewer.saveLookup('report_signatories', null, { label: 'E2E test viewer', name: 'Viewer' })).rejects.toThrow();
+    await encoderClient.from('report_signatories').update({ name: 'Changed directly' }).eq('id', added.id);
+    await adminClient.from('report_signatories').delete().eq('id', added.id);
+    const { data: rows } = await viewerClient.from('report_signatories').select('name, position').eq('id', added.id);
+    expect(rows).toEqual([{ name: 'Live test signatory', position: 'Tester II' }]);
+    const { data: forVisitor } = await visitor.from('report_signatories').select('id');
+    expect(forVisitor ?? []).toEqual([]);
+  });
+
+  it('logs a report downloaded as a PDF or a workbook, by any member, on the hosted service', async () => {
+    await viewer.logExport({ format: 'pdf', file_name: 'Inventory_Marinduque_live-test.pdf', filters: { report: 'inventory' }, record_count: 1 });
+    await encoder.logExport({ format: 'xlsx', file_name: 'Inventory_Marinduque_live-test.xlsx', filters: { report: 'inventory' }, record_count: 1 });
+    await expect(viewer.logExport({ format: 'docx', file_name: 'x.docx', filters: {}, record_count: 1 })).rejects.toThrow();
+    const db = await connectDb();
+    try {
+      const { rows } = await db.query<{ format: string }>(
+        `select context ->> 'format' as format from public.audit_log where action = 'export' and actor_id = any($1::uuid[]) and context ->> 'file_name' like 'Inventory_Marinduque_live-test%' order by id`,
+        [[accounts.viewer.id, accounts.encoder.id]],
+      );
+      expect(rows.map((row) => row.format)).toEqual(['pdf', 'xlsx']);
+    } finally {
+      await db.end();
+    }
+  });
+});
+
 describe('live signals', () => {
   const channels: SupabaseClient[] = [];
 

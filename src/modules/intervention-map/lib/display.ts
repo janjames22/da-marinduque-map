@@ -1,6 +1,7 @@
 import type { FieldDefinition, Icon, Intervention, MapData, StatusEntry } from '../data/types';
 import { formatPoint, googleMapsUrl } from './coordinates';
 import type { Permissions } from './permissions';
+import { beneficiaryKey } from './text';
 
 const byId = <T extends { id: number }>(items: T[], id: number | null): T | undefined =>
   id === null ? undefined : items.find((item) => item.id === id);
@@ -103,7 +104,10 @@ export function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (character) => ESCAPES[character]);
 }
 
-export type PopupAction = 'copy-coordinates' | 'photo' | 'edit' | 'status' | 'resolve' | 'history' | 'delete';
+export type PopupAction = 'copy-coordinates' | 'photo' | 'edit' | 'status' | 'resolve' | 'history' | 'delete' | 'beneficiary';
+
+// Where a beneficiary's profile is, under Reports.
+export const beneficiaryPath = (name: string) => `/reports/beneficiary/${encodeURIComponent(beneficiaryKey(name))}`;
 
 const actionButton = (action: PopupAction, label: string, extra = '') =>
   `<button type="button" class="popup-action" data-action="${action}"${extra}>${escapeHtml(label)}</button>`;
@@ -182,6 +186,9 @@ export function popupHtml(record: Intervention, data: MapData, permissions: Perm
     `</table>`,
     timeline ? `<h4>Status</h4><ol class="status-timeline">${timeline}</ol>` : '',
     locationActions,
+    record.beneficiary && beneficiaryKey(record.beneficiary)
+      ? `<div class="popup-actions"><a class="popup-action" data-action="beneficiary" href="${escapeHtml(beneficiaryPath(record.beneficiary))}">All for this beneficiary</a></div>`
+      : '',
     editActions ? `<div class="popup-actions">${editActions}</div>` : '',
     `</div>`,
   ].join('');

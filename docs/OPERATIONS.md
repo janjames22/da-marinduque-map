@@ -125,6 +125,7 @@ An Admin can change these from **Admin** in the header. Changes reach every open
 | **Statuses** | All the status names, and whether each **counts as assessed**: says a unit's condition has been checked. Each type picks its own list on its page, and which of them count as operational |
 | **Other lists** | Category groups, beneficiary types, location bases and icons |
 | **Barangay fields** | The baseline values on each barangay's profile |
+| **Report signatures** | The signature blocks at the foot of every report and printed map. See [Signature blocks](#signature-blocks) |
 
 - **Nothing is deleted:** lists and fields are archived, so existing records keep their meaning. An archived item leaves the choices for new records, stays on records that have it, and can be restored.
 - **What can't change:** a code or field key, once made. A saved field's kind. A type's geometry once it has records. A status stays on a type's list while any record is at it.
@@ -218,6 +219,19 @@ Every signed-in role can export, from the **Export** button on the map or **Expo
 - **Sample files:** `npm run export:samples` writes samples to `exports/samples/`, using the local dataset. Run `npm run build:local-seed` first.
 - **Exported files hold beneficiary names, so take care who gets them.** `exports/` is ignored by git.
 
+## Reports
+
+**Reports**, in the header, is for everyone signed in. Each report covers every record on the map, whatever the map's filters. It downloads as a PDF ready to print and sign, and the inventory also comes as Excel. Like an export, every download is recorded in the audit log, and if the log can't be written, nothing is downloaded.
+
+- **Municipal profile:** choose a municipality. One A4 page has its map, its figures, tables by program, status and category, and the barangays with no intervention yet.
+- **Beneficiary profile:** find a beneficiary by name or municipality, or open **All for this beneficiary** in a record's popup. It lists everything they received, where each is, and each one's status history. Names are matched ignoring case, spacing and punctuation, so check that every intervention listed belongs to them. The file name leaves the beneficiary's name out, as it can be a person's.
+- **Inventory report:** the layout of the RAED Consolidated Inventory Report, on legal paper, landscape. Choose a municipality, program or year, or none for the whole province. The Excel workbook has the same title, columns and rows, and prints the same way. Years, units and coordinates are numbers, so they sort.
+- **Print map:** beside **Export** on the map. It prints the map as it is on screen, with a title you can change, the filters, the legend, a north arrow, a scale bar, the date, the data sources and the signature blocks, on A4, Letter or Legal. Move and zoom the map first, and close the side panels for a wider map. If a basemap's tiles can't be copied, the map prints without them and says so.
+
+### Signature blocks
+
+Every report and printed map ends with signature blocks, left to right: a label, room to sign, the name, and the position. They start as "Prepared by: Engr. Jan James P. Graza, Agricultural and Biosystems Engineer" and "Noted by: Susana Arellano-Uy, RAgr., MPA, OIC Provincial Agriculturist". An Admin changes them in **Admin**, **Report signatures**: edit a name, position or label, add one such as "Approved by", move one up or down, or archive one to leave it off. Changes show on the next report made, and go in the audit log.
+
 ## Backups
 
 ```
@@ -270,6 +284,8 @@ A backup made before `0009_assessed.sql` doesn't say which statuses count as ass
 
 A backup made before `0010_import_qa.sql` has no dismissed flags and no undone imports. Restoring it leaves every flag open in the QA queue, and its imports as not undone.
 
+A backup made before `0011_reports.sql` has no signature blocks. Restoring it keeps the ones the project already has.
+
 ## Changing the database
 
 Run the migration before deploying the site that needs it. Otherwise, people can't use the new features until it's applied. For example, exports are refused until `0006_export.sql` is in.
@@ -296,7 +312,7 @@ npm run test:e2e:live
 Remove-Item Env:LIVE_URL
 ```
 
-These tests create temporary `e2e-test-` accounts, test records, imports, dismissed flags, list items and saved views, then remove them, including from the audit log. They make invite links rather than sending invite emails, so test the email itself as described in [Before inviting the MAOs](#before-inviting-the-maos). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
+These tests create temporary `e2e-test-` accounts, test records, imports, dismissed flags, list items, a test signature block and saved views, then remove them, including from the audit log. They also download each report and print the map. They make invite links rather than sending invite emails, so test the email itself as described in [Before inviting the MAOs](#before-inviting-the-maos). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
 
 **If a default view is set,** choose **Stop opening on this** before running `test:e2e:live`, and set it again afterwards. The tests never change a real default, but several of them expect the map to open on everything.
 

@@ -599,10 +599,14 @@ body,
   outline-offset: 1px;
 }
 
+/* On a narrow map the buttons wrap onto a second row, rather than running over the zoom buttons. */
 .map-toolbar {
   align-items: stretch;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+  justify-content: flex-end;
+  max-width: calc(100% - 64px);
   position: absolute;
   right: 10px;
   top: 10px;
@@ -2286,4 +2290,163 @@ form.admin-form[aria-label='Barangay fields'] {
 .import-batches h3 {
   font-size: 15px;
   margin: 4px 0;
+}
+
+/* Reports: the municipal profile, beneficiary profile and inventory report. */
+.reports-page .admin-section {
+  max-width: 1100px;
+}
+
+.report-section .report-picker {
+  margin-bottom: 12px;
+  max-width: 360px;
+}
+
+.report-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0;
+}
+
+.report-heading strong {
+  font-size: 15px;
+}
+
+.report-actions {
+  margin: 8px 0 12px;
+}
+
+.report-actions .primary-button,
+.report-actions .secondary-button {
+  margin: 0;
+  width: auto;
+}
+
+.report-overview {
+  align-items: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 3fr) minmax(180px, 2fr);
+}
+
+.report-map {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.report-figures {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.report-figures dt {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.report-figures dd {
+  font-size: 20px;
+  font-weight: 650;
+  margin: 0;
+}
+
+.report-figures dd.field-hint {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.report-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.report-legend li {
+  align-items: center;
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.report-legend .swatch {
+  border-radius: 50%;
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+}
+
+.report-tallies {
+  align-items: start;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin: 12px 0;
+}
+
+.report-table tbody tr {
+  cursor: default;
+}
+
+.report-table tbody tr:hover td {
+  background: none;
+}
+
+.report-table td.number {
+  text-align: right;
+}
+
+.report-tallies .report-table td:not(:first-child),
+.report-tallies .report-table td:first-child {
+  white-space: normal;
+}
+
+.report-block {
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+  padding-top: 8px;
+}
+
+.report-block h3 {
+  font-size: 15px;
+  margin: 4px 0 6px;
+}
+
+.report-block p {
+  margin: 4px 0;
+}
+
+.report-list,
+.signature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  margin: 8px 0 16px;
+  padding: 0;
+}
+
+.report-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.beneficiary-records {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 760px) {
+  .report-overview {
+    grid-template-columns: 1fr;
+  }
 }
