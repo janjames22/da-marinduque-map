@@ -79,39 +79,41 @@ Do all of this on the **Users** page: **Admin** in the header, then **Users**.
 | Remove access | **Deactivate** on their row |
 | Give access back | **Reactivate** on their row |
 
-- **Links:** a link works once and expires, so send it privately and soon. Getting a link works even before email is set up.
+- **Links:** a link works once and expires, so send it privately and soon. Getting a link works even when an email doesn't arrive.
 - **Role changes** apply the next time the person loads the map.
 - **People who leave:** deactivate them rather than deleting the account. Their name stays on what they encoded.
 - **There's always an Admin:** you can't change your own role or deactivate yourself, and the database refuses any change that would leave no active Admin. To step down, have another Admin do it.
 
 If the page can't reach its function, the same things can be done from this computer with `npm run users -- list`, `invite someone@example.com --role encoder --name "Full Name"`, `link`, `role`, `deactivate` and `reactivate`.
 
-### Before inviting the MAOs
+### Invite emails
 
-**Set up a custom SMTP sender first.** Supabase's built-in sender only delivers to your own Supabase team, and only 2 emails an hour, so invites to the MAOs would fail.
+**Email is set up.** Since 2026-11-09, invites and password resets go out through Gmail's SMTP server from `graza.janjames22@gmail.com`, and a test invite arrived. Invite the MAOs on the Users page with **Invite someone**, choosing to email it. If an invite doesn't turn up, ask them to look in spam and mark it as not spam, or use **Get a new link** on their row and send the link privately.
 
-The project has no email domain of its own, so use a **dedicated Gmail account with an app password**. It's free and needs no domain. Most free services need a domain you own: Resend does, and Brevo replaces a Gmail sender's address, which hurts delivery. If the office gets its own domain, Brevo's free plan (300 emails a day) is the better choice.
+- **Keep custom SMTP on.** Supabase's built-in sender only delivers to your own Supabase team, and only 2 emails an hour.
+- **The limit** is under Authentication > Rate Limits. Supabase starts it at 30 emails an hour, which is enough for the MAOs.
+- **The app password** stays in Supabase's settings. Don't put it in `.env.local` or anywhere in this project, and never paste it into a chat.
+- **If emails stop going out,** the app password may have been cancelled, which happens when the Gmail account's password changes. Make a new one (steps 2 and 3 below) and enter it in Supabase.
 
-1. **Create a new Gmail account just for this**, such as `da.marinduque.map@gmail.com`. An app password can reach the whole mailbox, so keep this separate from anyone's personal email.
+To set it up again, or move it to another account:
+
+1. **Use a Gmail account kept just for this.** An app password can reach the whole mailbox, so it's best kept apart from anyone's personal email.
 2. **Turn on 2-Step Verification** for that account, at [myaccount.google.com/security](https://myaccount.google.com/security). Google requires it for app passwords.
 3. **Create an app password**, at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords). Name it `Supabase`, and copy the 16 letters it shows.
 4. **In Supabase, go to Authentication > Emails > SMTP Settings**, turn on custom SMTP, and enter:
 
    | Setting | Value |
    |---|---|
-   | Sender email | The new Gmail address |
+   | Sender email | The Gmail address |
    | Sender name | `DA Marinduque Intervention Map` |
    | Host | `smtp.gmail.com` |
    | Port | `587` |
-   | Username | The new Gmail address |
+   | Username | The Gmail address |
    | Password | The 16 letters, without spaces |
 
-5. **Check the limit**, under Authentication > Rate Limits. It starts at 30 emails an hour, which is enough for the MAOs.
-6. **Test it.** On the Users page, invite an address that isn't on the map yet, choosing to email it. Confirm the email arrives, look in spam too, and confirm its link opens the page to set a password. Then deactivate that test account.
+5. **Test it.** On the Users page, invite an address that isn't on the map yet, choosing to email it. Confirm the email arrives, look in spam too, and confirm its link opens the page to set a password. Then deactivate that test account.
 
-The app password stays in Supabase's settings. Don't put it in `.env.local` or anywhere in this project, and never paste it into a chat. Changing the Gmail account's password cancels the app password, so make a new one and update Supabase if that happens.
-
-If invites land in spam, ask the MAOs to mark the first one as not spam. Google's own advice is to prefer other sign-in methods over app passwords, but Supabase's email settings only take a password. Only invites and password resets are sent, so the volume stays low.
+Gmail needs no email domain of the office's own. If the office gets one, Brevo's free plan (300 emails a day) is the better choice. Google's own advice is to prefer other sign-in methods over app passwords, but Supabase's email settings only take a password. Only invites and password resets are sent, so the volume stays low.
 
 ## Customizing the map
 
@@ -314,7 +316,7 @@ Remove-Item Env:LIVE_URL
 
 **Netlify's badge.** Netlify can add a "Powered by Netlify" badge script (`/.netlify/scripts/hud?variant=public`) to every page of a new deploy. Its setting is under **Project configuration → General → Powered by Netlify badge**. The site's security rules keep the badge from showing either way. The live tests that fail on anything blocked don't load that one script (see `e2e-live/netlify.ts`); anything else that's blocked still fails them.
 
-These tests create temporary `e2e-test-` accounts, test records, imports, dismissed flags, list items, a test signature block and saved views, then remove them, including from the audit log. They also download each report and print the map. They make invite links rather than sending invite emails, so test the email itself as described in [Before inviting the MAOs](#before-inviting-the-maos). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
+These tests create temporary `e2e-test-` accounts, test records, imports, dismissed flags, list items, a test signature block and saved views, then remove them, including from the audit log. They also download each report and print the map. They make invite links rather than sending invite emails, so test the email itself as described in [Invite emails](#invite-emails). If a run crashes, the next run cleans up what it left. The test records can appear briefly on the real map, so run these when nobody is encoding.
 
 **If a default view is set,** choose **Stop opening on this** before running `test:e2e:live`, and set it again afterwards. The tests never change a real default, but several of them expect the map to open on everything.
 
