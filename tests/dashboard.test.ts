@@ -172,6 +172,14 @@ describe('the key figures', () => {
     const numbers = buildDashboard([record(), record({ qa_flags: ['duplicate_point'] }), record({ qa_flags: ['no_coords'] }), record({ qa_flags: ['duplicate_point', 'barangay_mismatch'] })], data(), BARANGAYS);
     expect(numbers.needingQa).toBe(2);
   });
+
+  it('leaves out a flag someone dismissed, but not the other flags on that record', () => {
+    const dismissedOnly = record({ qa_flags: ['barangay_mismatch'] });
+    const dismissedAndAnother = record({ qa_flags: ['barangay_mismatch', 'no_barangay'] });
+    const dismissal = (intervention_id: string) => ({ intervention_id, flag: 'barangay_mismatch', reason: 'FCA office', dismissed_by: null, dismissed_at: '2026-11-09T00:00:00Z' });
+    const numbers = buildDashboard([dismissedOnly, dismissedAndAnother, record({ qa_flags: ['barangay_mismatch'] })], { ...data(), qaDismissals: [dismissal(dismissedOnly.id), dismissal(dismissedAndAnother.id)] }, BARANGAYS);
+    expect(numbers.needingQa).toBe(2);
+  });
 });
 
 describe('the charts', () => {

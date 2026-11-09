@@ -136,6 +136,8 @@ export interface Barangay {
 export interface Intervention {
   id: string;
   source_id?: string | null;
+  // The import it came in with, if any.
+  import_batch_id?: string | null;
   source_page?: number | null;
   intervention_type_id: number;
   category_id: number | null;
@@ -244,4 +246,32 @@ export interface MapData {
   dataSources: string[];
   members: Member[];
   savedViews: SavedView[];
+  importBatches: ImportBatch[];
+  qaDismissals: QaDismissal[];
+}
+
+// One file brought in through the import wizard, or by the RAED seed's script. Its records can be taken
+// back off the map together.
+export interface ImportBatch {
+  id: string;
+  file_name: string;
+  data_source: string;
+  intervention_type_id: number | null;
+  column_mapping: Record<string, unknown>;
+  counts: { records?: number; flagged?: number } & Record<string, unknown>;
+  // Null for the batches the RAED seed loaded by script.
+  imported_by: string | null;
+  imported_at: string;
+  undone_at: string | null;
+  undone_by: string | null;
+  undo_reason: string | null;
+}
+
+// A flag a person has looked at and accepted as it is. It lasts only while the flag does.
+export interface QaDismissal {
+  intervention_id: string;
+  flag: string;
+  reason: string;
+  dismissed_by: string | null;
+  dismissed_at: string;
 }

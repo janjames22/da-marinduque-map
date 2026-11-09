@@ -11,22 +11,46 @@ const AuthGate = lazy(() => import('./auth/AuthGate').then((module) => ({ defaul
 // Only loaded when opened, so the map doesn't carry the admin screens.
 const AdminPage = lazy(() => import('../modules/intervention-map/admin/AdminPage').then((module) => ({ default: module.AdminPage })));
 
-function AdminLink({ user }: { user: AppUser }) {
+const WorkPage = lazy(() => import('../modules/intervention-map/work/WorkPage').then((module) => ({ default: module.WorkPage })));
+
+// Which page is open: the map, the admin screens, or the QA queue and import.
+function usePage(): 'map' | 'admin' | 'work' {
   const inAdmin = useMatch('/admin/*') !== null;
-  if (user.role !== 'admin') return null;
+  const inQa = useMatch('/qa/*') !== null;
+  const inImport = useMatch('/import') !== null;
+  return inAdmin ? 'admin' : inQa || inImport ? 'work' : 'map';
+}
+
+// The way back to the map from another page, and the ways to the others this person can use.
+function PageLinks({ user }: { user: AppUser }) {
+  const page = usePage();
   return (
-    <Link className="header-button" to={inAdmin ? '/' : '/admin'}>
-      {inAdmin ? 'Back to the map' : 'Admin'}
-    </Link>
+    <>
+      {page !== 'map' && (
+        <Link className="header-button" to="/">
+          Back to the map
+        </Link>
+      )}
+      {page !== 'work' && user.role !== 'viewer' && (
+        <Link className="header-button" to="/qa">
+          QA and import
+        </Link>
+      )}
+      {page !== 'admin' && user.role === 'admin' && (
+        <Link className="header-button" to="/admin">
+          Admin
+        </Link>
+      )}
+    </>
   );
 }
 
 function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources: string[]): void }) {
-  const inAdmin = useMatch('/admin/*') !== null;
-  if (!inAdmin) return <MapPage key={user.id} user={user} onDataSources={onDataSources} />;
+  const page = usePage();
+  if (page === 'map') return <MapPage key={user.id} user={user} onDataSources={onDataSources} />;
   return (
     <Suspense fallback={<p className="page-message">Loading…</p>}>
-      <AdminPage key={user.id} user={user} />
+      {page === 'admin' ? <AdminPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
     </Suspense>
   );
 }
@@ -34,7 +58,7 @@ function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources:
 function UserMenu({ user, changePassword, signOut }: { user: AppUser; changePassword(): void; signOut(): void }) {
   return (
     <div className="user-menu">
-      <AdminLink user={user} />
+      <PageLinks user={user} />
       <span>
         {user.full_name ?? 'Signed in'} · {ROLE_LABELS[user.role]}
       </span>
@@ -97,7 +121,7 @@ export function App() {
         dataSources={dataSources}
         menu={
           <div className="user-menu">
-            <AdminLink user={local} />
+            <PageLinks user={local} />
           </div>
         }
       >

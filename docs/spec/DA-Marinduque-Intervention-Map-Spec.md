@@ -176,7 +176,8 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 | `municipalities` | id, name, psgc_code, boundary |
 | `intervention_photos` | id, intervention_id, storage_path, caption, taken_at, exif_location |
 | `saved_views` | id, name, owner_id, config (layers, filters, style, extent, basemap), is_shared, is_default. One person's names don't repeat, and at most one view is the default |
-| `import_batches` | id, file_name, data_source, intervention_type_id, column_mapping, counts, imported_by, imported_at |
+| `import_batches` | id, file_name, data_source, intervention_type_id, column_mapping, counts, imported_by, imported_at, undone_at, undone_by, undo_reason. `column_mapping` keeps how the file was read: its columns, the values chosen for names the lists didn't know, and the status for rows without one. The next file from the same source starts there. `imported_by` is empty for the RAED batches loaded by script |
+| `qa_dismissals` | intervention_id, flag, reason, dismissed_by, dismissed_at. A person looked at a flag and accepted it, such as a point at the FCA's office in the next barangay. It lasts only while the flag does |
 | `profiles` | id, full_name, role |
 | `audit_log` | id, table_name, record_id, action, old_row, new_row, actor_id, context, at. Covers every create, edit and delete, including admin changes. `context` holds extra detail, such as the evidence behind a correction |
 
@@ -194,6 +195,8 @@ Flags are recalculated by the database on every save. Values sent by a client ar
 | `barangay_unmatched` | A barangay name was given but isn't on the official list |
 | `duplicate_point` | Another point shares the exact coordinates. Informational, excluded from the "needs QA" count |
 | `beneficiary_name_check` | Manual review flag. Kept until a person clears it |
+
+A flag can be dismissed with a reason (`qa_dismissals`). The flag stays on the record, since it still describes the data, but it leaves the QA queue and the "needs review" count. If the data changes so the flag goes, and it later comes back, it is open again. Dismissing a `beneficiary_name_check` clears it.
 
 ### 4.7 Starting status lists
 
@@ -305,9 +308,15 @@ Records table:
 
 ### 5.6 Import
 
-- Upload CSV, XLSX, KML or KMZ. **Choose the intervention type** (or create one), then **map columns** to standard and custom fields.
-- Preview rows with QA flags, then commit as one batch, tagged with a `data_source`.
-- Never drop rows. Unmatched names are kept and flagged, with closest candidates shown.
+The wizard at `/import` is for Admins and Encoders. It has four steps, and nothing is saved until the last.
+
+1. **File:** upload a CSV, XLSX, KML or KMZ file, of 2,000 rows at most. Choose the intervention type (active point types) and say where the file came from, such as "ABEMIS export". A sheet's header is found under any title rows. A map file's placemarks become rows, with their points as Latitude and Longitude columns.
+2. **Columns:** map each column to a standard or custom field. The first guess comes from the last file from the same source and type, then from a field's own name, then from usual names such as Brgy., Qty and Name of FCA. Choose the status for rows without one, and the date the file's statuses were true.
+3. **Values:** list columns are category, program, municipality, status and dropdowns. For each value the lists don't know, choose what it is. The choices are remembered for the source.
+4. **Check:** every row gets the form's own checks and shows the QA flags it will get. Warnings mark what looks like a record already on the map (same category, beneficiary, year and barangay), an ID already imported from the same source, and a repeat within the file. Rows with something to fix can be left out, and so can rows already imported. The rest commit as one batch, tagged with its `data_source`, in one transaction that the database checks again.
+
+- An import can be undone as a whole, with a reason, while none of its records has been changed since. The person who imported it or an Admin can do this. Its records are deleted, so an Admin can still restore one. The RAED batches can't be undone this way.
+- Never drop rows. Unmatched barangay names are kept and flagged, with closest candidates shown.
 - Barangay names are matched within their municipality, ignoring differences in case, spacing, hyphens and Pob./Poblacion. ñ matches both n and ny.
 - The complete source row is kept in `source_raw`.
 - The ABEMIS export format should import directly. The RAED seed follows this same path, so future datasets of any type are handled the same way.
@@ -422,8 +431,9 @@ Chosen so a solo developer can build and host it cheaply.
 | `/barangays/:id` | Barangay profile (also opens as a panel on the map) |
 | `/records/:id` | A link to one record, such as from the audit log. Clears the filters and zooms to it, or opens its history if it isn't on the map |
 | `/records/new`, `/records/:id/edit` | Full form, for when the map isn't convenient |
-| `/import` | CSV / XLSX / KML / KMZ import wizard |
-| `/qa` | Data-quality queue (flags in §4.6, including Unassigned and Needs geotag) |
+| `/import` | CSV / XLSX / KML / KMZ import wizard, and earlier imports with Undo (Admins and Encoders) |
+| `/qa` | QA queue: every flagged record by flag and municipality. Quick fixes: set barangay, set location basis, update status, and dismiss with a reason. A link fixes the location on the map (Admins and Encoders) |
+| `/qa/condition` | Condition check: units at a status that doesn't count as assessed, Turned-over first, by municipality. Set the status found on a visit (Admins and Encoders) |
 | `/export` | Export options (also reachable from the map toolbar) |
 | `/reports` | Municipal, barangay and beneficiary profiles (later phase) |
 | `/admin` | Users, intervention types, form builder, lookups, audit log (`/admin/audit`) |
@@ -462,7 +472,7 @@ Layout: left panel for layers and filters, center map, right panel for the dashb
 | **5. Admin customization** | Type manager, form builder, lookups, baseline fields | A new type with custom fields can be created and used with no code change |
 | **6. Custom views, dashboard and audit log page** (built) | Color by and filter by any field; saved views; KPIs, charts and table; an Admin-only audit log page in `/admin`, for accountability in a government office: who changed what and when, with filters by user, record and date; the Edit form asks for a reason when a barangay changes, as Resolve flag and the move dialog do | A saved view restores layers, filters, style and extent; totals match the data; an Admin can find any change by user, record or date, and nobody else can open the page; changing a barangay in the Edit form needs a reason, which goes in the audit log |
 | **7. Export** | KML, KMZ, GeoJSON, CSV, XLSX, PNG/PDF for all geometries | KMZ opens in Google Earth Pro and Web with folders, styles and attributes |
-| **8. Import and QA** | Import wizard for any type, QA queue | An ABEMIS export imports without manual editing, and a new dataset of another type imports the same way |
+| **8. Import and QA** (built) | Import wizard for any point type, with remembered mappings, a checked preview and undo by batch; QA queue with quick fixes and dismissals; condition check for units not yet assessed; backup file names with the time | An ABEMIS export imports without manual editing, and a new dataset of another type imports the same way |
 | **9. Reports and ABE PDCS** | Profiles, print layouts, merge into ABE PDCS | |
 
 These were built in a different order: Export went first, then Admin customization, then Custom views. The project's history calls those phases 5, 6 and 7.

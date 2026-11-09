@@ -6,11 +6,11 @@
 //        npm run backup -- --photos    also downloads the photo files
 //
 // These files hold beneficiary names. backups/ is ignored by git, and they shouldn't be shared.
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Papa from 'papaparse';
-import { manilaToday } from '../src/modules/intervention-map/lib/dates';
+import { manilaStamp } from '../src/modules/intervention-map/lib/dates';
 import { adminClient, connectDb, loadEnv, run } from './lib/env';
 import type { Queryable } from './seed-interventions';
 
@@ -37,6 +37,7 @@ export const RECORD_TABLES = [
   'intervention_barangays',
   'intervention_photos',
   'status_history',
+  'qa_dismissals',
   'saved_views',
   'audit_log',
 ];
@@ -50,6 +51,10 @@ export interface Snapshot {
 export async function takeSnapshot(db: Queryable): Promise<Snapshot> {
   const tables: Snapshot['tables'] = {};
   for (const table of [...LOOKUP_TABLES, ...RECORD_TABLES]) {
+    // A table a migration hasn't made yet, such as qa_dismissals before 0010, so a backup taken just
+    // before the migration still works.
+    const { rows: present } = await db.query<{ present: boolean }>('select to_regclass($1) is not null as present', [`public.${table}`]);
+    if (!present[0].present) continue;
     // to_jsonb turns geometry into GeoJSON, which a restore can read back.
     const { rows } = await db.query<{ row: Record<string, unknown> }>(`select to_jsonb(t) as row from public.${table} t`);
     tables[table] = rows.map((row) => row.row);
@@ -147,12 +152,14 @@ export async function readableExports(db: Queryable): Promise<ReadableExports> {
   return { interventions: flattenAttributes(interventions), statusHistory, barangays: flattenAttributes(barangays) };
 }
 
+// The stamp is the date and time it was taken, so two backups on one day sit side by side. A backup
+// never overwrites another: it may be the only copy of something.
 export function writeBackup(directory: string, date: string, snapshot: Snapshot, exports: ReadableExports): string[] {
   mkdirSync(directory, { recursive: true });
   const written: string[] = [];
   const save = (name: string, text: string) => {
     const path = join(directory, name);
-    writeFileSync(path, text);
+    writeFileSync(path, text, { flag: 'wx' });
     written.push(path);
   };
 
@@ -195,7 +202,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const db = await connectDb();
     try {
       const snapshot = await takeSnapshot(db);
-      const date = manilaToday();
+      // To the minute, or the second if a backup already started this minute.
+      const now = new Date();
+      const date = existsSync(join(DEFAULT_DIR, `snapshot-${manilaStamp(now)}.json`)) ? manilaStamp(now, true) : manilaStamp(now);
       const written = writeBackup(DEFAULT_DIR, date, snapshot, await readableExports(db));
       for (const path of written) console.log(path);
 

@@ -115,6 +115,8 @@ const baseData = (interventions: Intervention[] = []): MapData =>
     dataSources: [],
     members: [],
     savedViews: [],
+    importBatches: [],
+    qaDismissals: [],
   }) as MapData;
 
 const NO_FILTERS: ViewFilters = { mode: 'count', pickedProgramId: null, pickedTypeId: null, hiddenTypeIds: [], programId: null, yearFrom: null, yearTo: null, municipalityId: null, barangayId: null };

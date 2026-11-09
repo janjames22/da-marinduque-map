@@ -6,6 +6,7 @@ import Papa from 'papaparse';
 import type { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readableExports, takeSnapshot, toCsv, writeBackup, type ReadableExports, type Snapshot } from '../scripts/backup';
+import { manilaStamp } from '../src/modules/intervention-map/lib/dates';
 import { findLeaks } from '../scripts/check-bundle';
 import { checkNoSecretInBrowserSettings } from '../scripts/lib/env';
 import { restoreSnapshot } from '../scripts/restore';
@@ -87,6 +88,13 @@ beforeAll(async () => {
   await db.query(`insert into saved_views (name, owner_id) values ('Encoder view', $1), ('Gone view', $2)`, [ENCODER, GONE]);
   await db.query(`update programs set color = '#123456' where code = 'rice'`);
   await db.query(`update interventions set updated_by = $1 where id = $2`, [GONE, NEW_RECORD]);
+  // Two flags someone looked at and accepted, one by a person whose account is gone by the restore.
+  await db.query(
+    `insert into qa_dismissals (intervention_id, flag, reason, dismissed_by)
+     select id, qa_flags[1], 'Checked on a visit', case when row_number() over (order by source_id) = 1 then $1::uuid else $2::uuid end
+     from interventions where deleted_at is null and qa_flags <> '{}' and not 'beneficiary_name_check' = any(qa_flags) order by source_id limit 2`,
+    [ENCODER, GONE],
+  );
 
   snapshot = JSON.parse(JSON.stringify(await takeSnapshot(db))) as Snapshot;
   exports = JSON.parse(JSON.stringify(await readableExports(db))) as ReadableExports;
@@ -98,7 +106,7 @@ afterAll(async () => {
 
 describe('backup files', () => {
   let directory: string;
-  const date = '2026-11-05';
+  const date = '2026-11-05-0930';
 
   beforeAll(() => {
     directory = mkdtempSync(join(tmpdir(), 'da-backup-'));
@@ -109,6 +117,25 @@ describe('backup files', () => {
 
   const csv = (name: string) => Papa.parse<Record<string, string>>(readFileSync(join(directory, name), 'utf8').replace(/^﻿/, ''), { header: true }).data;
   const geojson = (name: string) => JSON.parse(readFileSync(join(directory, name), 'utf8')) as GeoJSON.FeatureCollection;
+
+  it('names files by the Philippine date and time, so a second backup that day sits beside the first', () => {
+    // 01:42 UTC on the 8th is 09:42 the same day in Manila; 18:42 UTC on the 7th is already the 8th there.
+    expect(manilaStamp(new Date('2026-11-08T01:42:30Z'))).toBe('2026-11-08-0942');
+    expect(manilaStamp(new Date('2026-11-07T18:42:30Z'))).toBe('2026-11-08-0242');
+    expect(manilaStamp(new Date('2026-11-07T18:42:30Z'), true)).toBe('2026-11-08-024230');
+    expect(manilaStamp(new Date('2026-11-08T16:05:00Z'))).toBe('2026-11-09-0005');
+
+    writeBackup(directory, '2026-11-05-1415', snapshot, exports);
+    expect(readdirSync(directory).filter((name) => name.startsWith('snapshot-')).sort()).toEqual(['snapshot-2026-11-05-0930.json', 'snapshot-2026-11-05-1415.json']);
+    rmSync(join(directory, 'snapshot-2026-11-05-1415.json'));
+    for (const name of readdirSync(directory).filter((file) => file.includes('2026-11-05-1415'))) rmSync(join(directory, name));
+  });
+
+  it('never overwrites a backup already there', () => {
+    const before = readFileSync(join(directory, `snapshot-${date}.json`), 'utf8');
+    expect(() => writeBackup(directory, date, { ...snapshot, created_at: 'later' }, exports)).toThrow(/EEXIST/);
+    expect(readFileSync(join(directory, `snapshot-${date}.json`), 'utf8')).toBe(before);
+  });
 
   it('has CSV and GeoJSON for each export, with the date in every name', () => {
     expect(readdirSync(directory).sort()).toEqual([
@@ -229,6 +256,13 @@ describe('restoring into a new, empty database', () => {
     const check = await fresh.query<{ updated_by: string | null }>('select updated_by from interventions where id = $1', [NEW_RECORD]);
     expect(check.rows[0].updated_by).toBeNull();
 
+    // Dismissed flags come back, with their reasons, and the person where the account still exists.
+    const dismissals = await fresh.query<{ reason: string; dismissed_by: string | null }>('select reason, dismissed_by from qa_dismissals order by dismissed_by nulls last');
+    expect(dismissals.rows).toEqual([
+      { reason: 'Checked on a visit', dismissed_by: ENCODER },
+      { reason: 'Checked on a visit', dismissed_by: null },
+    ]);
+
     const views = await fresh.query<{ name: string }>('select name from saved_views');
     expect(views.rows).toEqual([{ name: 'Encoder view' }]);
     const profiles = await fresh.query<{ id: string }>('select id from profiles');
@@ -296,6 +330,21 @@ describe('restoring into a new, empty database', () => {
     await restoreSnapshot(fresh, snapshot, { replace: true });
   });
 
+  it('can restore a backup made before imports could be undone or flags dismissed', async () => {
+    const older = JSON.parse(JSON.stringify(snapshot)) as Snapshot;
+    delete older.tables.qa_dismissals;
+    for (const row of older.tables.import_batches) for (const column of ['undone_at', 'undone_by', 'undo_reason']) delete row[column];
+
+    await restoreSnapshot(fresh, older, { replace: true });
+    expect((await fresh.query<{ n: number }>('select count(*)::int as n from public.qa_dismissals')).rows[0].n).toBe(0);
+    const batches = await fresh.query<{ undone_at: string | null }>('select undone_at from public.import_batches');
+    expect(batches.rows.length).toBe(snapshot.tables.import_batches.length);
+    expect(batches.rows.every((row) => row.undone_at === null)).toBe(true);
+
+    await restoreSnapshot(fresh, snapshot, { replace: true });
+    expect((await fresh.query<{ n: number }>('select count(*)::int as n from public.qa_dismissals')).rows[0].n).toBe(2);
+  });
+
   it('changes nothing if the barangay list doesn\'t match', async () => {
     const before = await fingerprint(fresh);
     const wrong = { ...snapshot, barangays: [{ ...snapshot.barangays[0], psgc_code: 'WRONG' }, ...snapshot.barangays.slice(1)] };
@@ -312,6 +361,22 @@ describe('restoring into a new, empty database', () => {
 
     // The triggers were switched off inside the transaction, so they come back with it.
     await expect(fresh.query(`update interventions set year_funded = 2999 where id = $1`, [NEW_RECORD])).rejects.toThrow(/future/);
+  });
+
+  // Last, as it takes a table away: a database a migration hasn't reached, as just before 0010.
+  it('backs up and restores a database without a newer table, but won\'t drop rows it can\'t hold', async () => {
+    await fresh.exec('drop table public.qa_dismissals cascade');
+    const taken = await takeSnapshot(fresh);
+    expect('qa_dismissals' in taken.tables).toBe(false);
+    expect(taken.tables.interventions.length).toBe(200);
+
+    const before = await fingerprint(fresh);
+    await expect(restoreSnapshot(fresh, snapshot, { replace: true })).rejects.toThrow('This backup has qa_dismissals, which this database doesn\'t have yet. Run npm run db:migrate first.');
+    expect(await fingerprint(fresh)).toEqual(before);
+
+    const result = await restoreSnapshot(fresh, taken, { replace: true });
+    expect(result.restored.interventions).toBe(200);
+    expect(await fingerprint(fresh)).toEqual(before);
   });
 });
 

@@ -12,6 +12,14 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Papa from 'papaparse';
+import {
+  BarangayIndex,
+  closestBarangays,
+  type BarangayCandidate,
+  type PlaceName as Barangay,
+} from '../src/modules/intervention-map/lib/matching';
+
+export { barangayNameKeys, normalizeBarangayName, type BarangayCandidate } from '../src/modules/intervention-map/lib/matching';
 
 const DATA_DIR = resolve(import.meta.dirname, '..', 'data');
 export const SEED_CSV_PATH = resolve(DATA_DIR, 'source', 'seed_interventions.csv');
@@ -84,12 +92,6 @@ export interface Correction {
   confirmed_date: string;
 }
 
-export interface BarangayCandidate {
-  name: string;
-  municipality: string;
-  distance: number;
-}
-
 export interface UnmatchedBarangay {
   sourceId: string;
   municipality: string;
@@ -140,41 +142,6 @@ export function loadSeedFiles() {
   };
 }
 
-// Handles case, spacing, hyphens and Pob./Poblacion, and reads n-tilde as n. It never guesses at
-// spelling: names that still differ go to the unmatched report for a person to resolve.
-export function normalizeBarangayName(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/\bpoblacion\b/g, 'pob')
-    .replace(/\bpob\./g, 'pob')
-    .replace(/[-–—]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-// Every form a name can match under. n-tilde is written as both n and ny (Kinaman, Kinyaman).
-export function barangayNameKeys(name: string): string[] {
-  const composed = name.normalize('NFC');
-  const keys = [normalizeBarangayName(composed)];
-  if (/ñ/i.test(composed)) keys.push(normalizeBarangayName(composed.replace(/ñ/gi, 'ny')));
-  return keys;
-}
-
-function levenshtein(a: string, b: string): number {
-  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
-  for (let i = 1; i <= a.length; i++) {
-    const current = [i];
-    for (let j = 1; j <= b.length; j++) {
-      const substitution = previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
-      current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, substitution);
-    }
-    previous = current;
-  }
-  return previous[b.length];
-}
-
 function slug(text: string): string {
   return text
     .toLowerCase()
@@ -195,52 +162,6 @@ function flagsOf(row: SeedRow): string[] {
     .split(';')
     .map((flag) => flag.trim())
     .filter(Boolean);
-}
-
-interface Barangay {
-  id: number;
-  name: string;
-  municipality: string;
-}
-
-class BarangayIndex {
-  private keys = new Map<string, Barangay>();
-
-  constructor(barangays: Barangay[]) {
-    for (const barangay of barangays) {
-      for (const key of barangayNameKeys(barangay.name)) {
-        const fullKey = `${barangay.municipality}|${key}`;
-        const clash = this.keys.get(fullKey);
-        if (clash && clash.id !== barangay.id) {
-          throw new Error(`"${clash.name}" and "${barangay.name}" normalize to the same name`);
-        }
-        this.keys.set(fullKey, barangay);
-      }
-    }
-  }
-
-  find(municipality: string, name: string): Barangay | undefined {
-    for (const key of barangayNameKeys(name)) {
-      const match = this.keys.get(`${municipality}|${key}`);
-      if (match) return match;
-    }
-    return undefined;
-  }
-}
-
-function closestBarangays(name: string, municipality: string, barangays: Barangay[]) {
-  const target = normalizeBarangayName(name);
-  const ranked = barangays
-    .map((b) => ({
-      name: b.name,
-      municipality: b.municipality,
-      distance: levenshtein(target, normalizeBarangayName(b.name)),
-    }))
-    .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name));
-  return {
-    sameMunicipality: ranked.filter((c) => c.municipality === municipality).slice(0, CANDIDATES_SHOWN),
-    otherMunicipalities: ranked.filter((c) => c.municipality !== municipality).slice(0, CANDIDATES_SHOWN),
-  };
 }
 
 const sourceValue: Record<CorrectionField, (row: SeedRow) => string> = {
@@ -392,7 +313,7 @@ async function seedInTransaction(db: Queryable, rows: SeedRow[], corrections: Co
         sourceId: row.source_id,
         municipality: row.municipality,
         name: barangayName,
-        ...closestBarangays(barangayName, row.municipality, barangays),
+        ...closestBarangays(barangayName, row.municipality, barangays, CANDIDATES_SHOWN),
       });
     }
 

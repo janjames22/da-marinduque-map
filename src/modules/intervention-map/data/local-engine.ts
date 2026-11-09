@@ -14,12 +14,14 @@ import type {
   Barangay,
   Category,
   FieldSchema,
+  ImportBatch,
   Intervention,
   InterventionBarangay,
   InterventionPhoto,
   InterventionType,
   MapData,
   Municipality,
+  QaDismissal,
   SavedView,
   StatusEntry,
   TypeStatus,
@@ -34,6 +36,9 @@ export interface LocalRows {
   auditLog: AuditEntry[];
   // A browser's saved state from before views existed doesn't have this.
   savedViews?: SavedView[];
+  // Nor these, from before imports and dismissals.
+  importBatches?: ImportBatch[];
+  qaDismissals?: QaDismissal[];
   changeCount: number;
 }
 
@@ -135,6 +140,10 @@ function recomputeFlags(record: Intervention, rows: LocalRows, context: EngineCo
     rows.interventions,
     context.places,
   );
+  // A dismissal lasts only as long as its flag, as in the database.
+  if (rows.qaDismissals?.some((dismissal) => dismissal.intervention_id === record.id && !record.qa_flags.includes(dismissal.flag))) {
+    rows.qaDismissals = rows.qaDismissals.filter((dismissal) => dismissal.intervention_id !== record.id || record.qa_flags.includes(dismissal.flag));
+  }
 }
 
 // When a record arrives at, leaves or is deleted from a point, the others there need rechecking.
@@ -153,7 +162,11 @@ function syncLinks(rows: LocalRows, record: Intervention) {
   }
 }
 
-export function createIntervention(rows: LocalRows, context: EngineContext, input: InterventionValues, note?: ChangeNote): Intervention {
+// Where an imported record came from. Set before its flags are worked out, so a barangay the file names
+// but the list doesn't is flagged as unmatched, not missing.
+export type RecordOrigin = Partial<Pick<Intervention, 'data_source' | 'import_batch_id' | 'source_id' | 'barangay_raw'>>;
+
+export function createIntervention(rows: LocalRows, context: EngineContext, input: InterventionValues, note?: ChangeNote, origin: RecordOrigin = {}): Intervention {
   const values = { ...input, point: normalizePoint(input.point) };
   const type = typeOf(context, values.intervention_type_id);
   const errors = validateIntervention(values, null, { type, categories: context.categories, barangays: rows.barangays });
@@ -167,6 +180,7 @@ export function createIntervention(rows: LocalRows, context: EngineContext, inpu
     barangay_raw: null,
     status_id: null,
     data_source: MANUAL_DATA_SOURCE,
+    ...origin,
     qa_flags: [],
     geojson: geojsonOf(point),
     plotted_barangay_id: null,
@@ -307,7 +321,7 @@ export function addStatus(
   rows: LocalRows,
   context: EngineContext,
   interventionId: string,
-  status: { status_id: number; status_date: string; remarks: string | null; photo_id?: string | null },
+  status: { status_id: number; status_date: string; remarks: string | null; photo_id?: string | null; date_basis?: 'changed' | 'as_of'; source_note?: string | null },
   note?: ChangeNote,
 ): StatusEntry {
   const record = rows.interventions.find((r) => r.id === interventionId);
@@ -321,8 +335,8 @@ export function addStatus(
     intervention_id: interventionId,
     status_id: status.status_id,
     status_date: status.status_date,
-    date_basis: 'changed',
-    source_note: null,
+    date_basis: status.date_basis ?? 'changed',
+    source_note: status.source_note ?? null,
     remarks: status.remarks,
     photo_id: status.photo_id ?? null,
     created_at: context.now(),
@@ -360,7 +374,7 @@ export function auditForRecord(auditLog: AuditEntry[], interventionId: string): 
   return auditLog.filter(
     (entry) =>
       (entry.table_name === 'interventions' && entry.record_id === interventionId) ||
-      ((entry.table_name === 'status_history' || entry.table_name === 'intervention_photos') &&
+      ((entry.table_name === 'status_history' || entry.table_name === 'intervention_photos' || entry.table_name === 'qa_dismissals') &&
         (entry.new_row ?? entry.old_row)?.intervention_id === interventionId),
   );
 }
@@ -379,7 +393,7 @@ export function auditPage(auditLog: AuditEntry[], { actorId, noActor, recordIds,
     if (start !== null && at < start) return false;
     if (end !== null && at > end) return false;
     if (records) {
-      const owner = entry.table_name === 'interventions' ? entry.record_id : entry.table_name === 'status_history' || entry.table_name === 'intervention_photos' ? (entry.new_row ?? entry.old_row)?.intervention_id : null;
+      const owner = entry.table_name === 'interventions' ? entry.record_id : entry.table_name === 'status_history' || entry.table_name === 'intervention_photos' || entry.table_name === 'qa_dismissals' ? (entry.new_row ?? entry.old_row)?.intervention_id : null;
       if (typeof owner !== 'string' || !records.has(owner)) return false;
     }
     return true;

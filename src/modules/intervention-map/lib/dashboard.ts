@@ -2,7 +2,7 @@
 // counts for: one record can hold several machines.
 import type { Barangay, Intervention, MapData } from '../data/types';
 import { countByBarangay } from './choropleth';
-import { needsReview } from './display';
+import { dismissedKeys, needsReview } from './display';
 import { foldText } from './view-fields';
 
 export interface BarRow {
@@ -116,7 +116,7 @@ function operationalShare(records: Intervention[], data: Pick<MapData, 'typeStat
   return { percent: assessed === 0 ? null : Math.round((units / assessed) * 100), units, assessed, notAssessed, noStatus };
 }
 
-type DashboardData = Pick<MapData, 'types' | 'typeStatuses' | 'statuses' | 'municipalities' | 'programs' | 'categories' | 'links'>;
+type DashboardData = Pick<MapData, 'types' | 'typeStatuses' | 'statuses' | 'municipalities' | 'programs' | 'categories' | 'links'> & Partial<Pick<MapData, 'qaDismissals'>>;
 
 export function buildDashboard(records: Intervention[], data: DashboardData, barangays: Pick<Barangay, 'id'>[]): DashboardNumbers {
   const municipalityName = new Map(data.municipalities.map((m) => [m.id, m.name]));
@@ -133,6 +133,7 @@ export function buildDashboard(records: Intervention[], data: DashboardData, bar
 
   const names = new Set(records.map((record) => beneficiaryKey(record.beneficiary)).filter(Boolean));
   const counts = countByBarangay(records, data.links);
+  const dismissed = dismissedKeys(data.qaDismissals);
 
   const byMunicipality = ranked(tally(records, (record) => ({ key: String(record.municipality_id), label: municipalityName.get(record.municipality_id) ?? 'Unknown' })));
 
@@ -184,7 +185,8 @@ export function buildDashboard(records: Intervention[], data: DashboardData, bar
     operational: operationalShare(records, data),
     barangaysWithout: barangays.filter((barangay) => (counts.get(barangay.id) ?? 0) === 0).length,
     barangaysTotal: barangays.length,
-    needingQa: records.filter(needsReview).length,
+    // A flag a person has dismissed has been dealt with.
+    needingQa: records.filter((record) => needsReview(record, dismissed)).length,
     byMunicipality,
     byProgram,
     byYear,
