@@ -29,6 +29,7 @@ export const LOOKUP_TABLES = [
   'intervention_type_statuses',
   'categories',
   'barangay_field_schema',
+  'report_signatories',
 ];
 export const RECORD_TABLES = [
   'profiles',

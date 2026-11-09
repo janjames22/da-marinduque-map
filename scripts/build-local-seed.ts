@@ -24,6 +24,7 @@ const LOOKUP_TABLES = [
   'intervention_types',
   'intervention_type_statuses',
   'barangay_field_schema',
+  'report_signatories',
 ];
 
 export async function buildLocalSeed(db: Queryable) {

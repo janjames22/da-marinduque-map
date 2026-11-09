@@ -40,6 +40,7 @@ import type {
   Municipality,
   Program,
   QaDismissal,
+  ReportSignatory,
   SavedView,
   Status,
   StatusEntry,
@@ -115,6 +116,7 @@ const LOOKUP_RULES: Record<LookupTable, LookupRules> = {
   beneficiary_types: {},
   location_bases: { needsColor: true },
   icons: { isIcon: true },
+  report_signatories: { isSignatory: true },
 };
 
 const LOOKUP_ROWS: Record<LookupTable, keyof MapData> = {
@@ -125,6 +127,7 @@ const LOOKUP_ROWS: Record<LookupTable, keyof MapData> = {
   beneficiary_types: 'beneficiaryTypes',
   location_bases: 'locationBases',
   icons: 'icons',
+  report_signatories: 'signatories',
 };
 
 function createPeopleApi(backend: SupabaseBackend): PeopleApi | undefined {
@@ -250,6 +253,7 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         members,
         savedViews,
         qaDismissals,
+        signatories,
       ] = await Promise.all([
         all<Icon>('icons'),
         all<Program>('programs', '*', ['sort_order', 'id']),
@@ -275,6 +279,7 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         backend.rpc<Member[]>('member_names', {}),
         all<SavedView>('saved_views', 'id,name,owner_id,config,is_shared,is_default,created_at,updated_at', ['name', 'id']),
         all<QaDismissal>('qa_dismissals', '*', ['dismissed_at', 'intervention_id', 'flag']),
+        all<ReportSignatory>('report_signatories', '*', ['sort_order', 'id']),
       ]);
 
       loaded = {
@@ -300,6 +305,7 @@ export function createSupabaseStore(backend: SupabaseBackend, user: AppUser): Da
         savedViews,
         importBatches: batches,
         qaDismissals,
+        signatories,
       };
       return loaded;
     },

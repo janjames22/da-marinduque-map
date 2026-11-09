@@ -1,5 +1,5 @@
-// One editable list: programs, categories, statuses and the rest. Rows are archived, never deleted,
-// so existing records keep their meaning.
+// One editable list: programs, categories, statuses, report signatures and the rest. Rows are archived,
+// never deleted, so existing records keep their meaning.
 import { useMemo, useState, type FormEvent } from 'react';
 import type { LookupTable, LookupValues } from '../data/store';
 import type { Icon, MapData } from '../data/types';
@@ -20,9 +20,12 @@ export interface LookupRow {
   sort_order?: number;
   is_active?: boolean;
   counts_as_assessed?: boolean;
+  label?: string;
+  position?: string;
 }
 
-type LookupField = 'color' | 'icon' | 'type' | 'group' | 'image' | 'assessed';
+// label and position are a signature block's words above and below the name.
+type LookupField = 'color' | 'icon' | 'type' | 'group' | 'image' | 'assessed' | 'label' | 'position';
 
 interface LookupSectionProps {
   title: string;
@@ -48,6 +51,8 @@ interface FormValues {
   intervention_type_id: string;
   category_group_id: string;
   counts_as_assessed: boolean;
+  label: string;
+  position: string;
 }
 
 const optionalId = (value: string) => (value === '' ? null : Number(value));
@@ -82,6 +87,8 @@ function LookupForm({
     intervention_type_id: text(row?.intervention_type_id),
     category_group_id: text(row?.category_group_id),
     counts_as_assessed: row?.counts_as_assessed ?? true,
+    label: row?.label ?? '',
+    position: row?.position ?? '',
   });
   const update = (changes: Partial<FormValues>) => setValues((current) => ({ ...current, ...changes }));
   const has = (field: LookupField) => fields.includes(field);
@@ -105,7 +112,13 @@ function LookupForm({
 
   return (
     <form className="edit-form admin-form" onSubmit={submit} noValidate aria-label={title}>
+      {has('label') && (
+        <TextField label="Label" required value={values.label} onChange={(label) => update({ label })} error={errors.label} hint='Printed above the name, such as "Prepared by" or "Noted by".' />
+      )}
       <TextField label="Name" required value={values.name} onChange={(name) => update({ name })} error={errors.name} />
+      {has('position') && (
+        <TextField label="Position (optional)" value={values.position} onChange={(position) => update({ position })} error={errors.position} hint="Printed under the name." />
+      )}
       {has('type') && (
         <SelectField
           label="Intervention type"
@@ -201,6 +214,8 @@ export function LookupSection({
     if (fields.includes('type')) values.intervention_type_id = optionalId(form.intervention_type_id);
     if (fields.includes('group')) values.category_group_id = optionalId(form.category_group_id);
     if (fields.includes('assessed')) values.counts_as_assessed = form.counts_as_assessed;
+    if (fields.includes('label')) values.label = form.label.trim();
+    if (fields.includes('position')) values.position = form.position.trim();
     if (!row) {
       if (hasCode) values.code = newCode(form.name, rows.map((r) => r.code ?? ''));
       if (canReorder) values.sort_order = active.length + 1;
@@ -255,6 +270,8 @@ export function LookupSection({
           <strong>{row.name}</strong>
           <span className="field-hint">
             {[
+              fields.includes('label') ? row.label : null,
+              fields.includes('position') ? row.position || null : null,
               fields.includes('type') ? (type?.name ?? 'Any type') : null,
               fields.includes('group') ? (group?.name ?? 'No group') : null,
               count === undefined ? null : plural(count, usageWord),

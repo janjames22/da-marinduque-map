@@ -12,13 +12,15 @@ const AuthGate = lazy(() => import('./auth/AuthGate').then((module) => ({ defaul
 const AdminPage = lazy(() => import('../modules/intervention-map/admin/AdminPage').then((module) => ({ default: module.AdminPage })));
 
 const WorkPage = lazy(() => import('../modules/intervention-map/work/WorkPage').then((module) => ({ default: module.WorkPage })));
+const ReportsPage = lazy(() => import('../modules/intervention-map/reports/ReportsPage').then((module) => ({ default: module.ReportsPage })));
 
 // Which page is open: the map, the admin screens, or the QA queue and import.
-function usePage(): 'map' | 'admin' | 'work' {
+function usePage(): 'map' | 'admin' | 'work' | 'reports' {
   const inAdmin = useMatch('/admin/*') !== null;
   const inQa = useMatch('/qa/*') !== null;
   const inImport = useMatch('/import') !== null;
-  return inAdmin ? 'admin' : inQa || inImport ? 'work' : 'map';
+  const inReports = useMatch('/reports/*') !== null;
+  return inAdmin ? 'admin' : inQa || inImport ? 'work' : inReports ? 'reports' : 'map';
 }
 
 // The way back to the map from another page, and the ways to the others this person can use.
@@ -29,6 +31,11 @@ function PageLinks({ user }: { user: AppUser }) {
       {page !== 'map' && (
         <Link className="header-button" to="/">
           Back to the map
+        </Link>
+      )}
+      {page !== 'reports' && (
+        <Link className="header-button" to="/reports">
+          Reports
         </Link>
       )}
       {page !== 'work' && user.role !== 'viewer' && (
@@ -50,7 +57,7 @@ function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources:
   if (page === 'map') return <MapPage key={user.id} user={user} onDataSources={onDataSources} />;
   return (
     <Suspense fallback={<p className="page-message">Loading…</p>}>
-      {page === 'admin' ? <AdminPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
+      {page === 'admin' ? <AdminPage key={user.id} user={user} /> : page === 'reports' ? <ReportsPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
     </Suspense>
   );
 }

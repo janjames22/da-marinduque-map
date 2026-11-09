@@ -176,6 +176,7 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 | `municipalities` | id, name, psgc_code, boundary |
 | `intervention_photos` | id, intervention_id, storage_path, caption, taken_at, exif_location |
 | `saved_views` | id, name, owner_id, config (layers, filters, style, extent, basemap), is_shared, is_default. One person's names don't repeat, and at most one view is the default |
+| `report_signatories` | id, label, name, position, sort_order, is_active. The signature blocks at the foot of every report and printed map, left to right in order. Starts with "Prepared by: Engr. Jan James P. Graza, Agricultural and Biosystems Engineer" and "Noted by: Susana Arellano-Uy, RAgr., MPA, OIC Provincial Agriculturist". Admins edit them; archived, never deleted |
 | `import_batches` | id, file_name, data_source, intervention_type_id, column_mapping, counts, imported_by, imported_at, undone_at, undone_by, undo_reason. `column_mapping` keeps how the file was read: its columns, the values chosen for names the lists didn't know, and the status for rows without one. The next file from the same source starts there. `imported_by` is empty for the RAED batches loaded by script |
 | `qa_dismissals` | intervention_id, flag, reason, dismissed_by, dismissed_at. A person looked at a flag and accepted it, such as a point at the FCA's office in the next barangay. It lasts only while the flag does |
 | `profiles` | id, full_name, role |
@@ -335,7 +336,7 @@ The wizard at `/import` is for Admins and Encoders. It has four steps, and nothi
 | **KMZ** | Zipped `doc.kml` + custom icons (+ optional photos) | Google Earth (preferred, keeps icons) |
 | GeoJSON | Current filtered features | QGIS, web GIS |
 | CSV / XLSX | Table with all fields, including custom fields | Reports, ABEMIS updating |
-| PNG / PDF | Printable map with title, legend, north arrow, scale, date, "Prepared by" | Reports, presentations |
+| PDF | **Print map:** the current map view with title, filters, legend, north arrow, scale bar, date, data sources and the signature blocks, on A4, Letter or Legal, either way round | Reports, presentations |
 | Shapefile (optional) | Zipped .shp/.shx/.dbf/.prj, one file per geometry kind | ArcGIS/QGIS users |
 
 Every export works for any layer and any geometry, and respects the active filters. The file name includes the scope and date, e.g. `Marinduque_FarmMachinery_RiceProgram_2026-11-04.kmz`.
@@ -388,12 +389,16 @@ Notes:
 - A record appears once in an export, under its primary barangay, even if it crosses several.
 - Unlocated records are left out of KML/KMZ and listed in the file's "Read me" folder.
 
-### 5.8 Reports (later phase)
+### 5.8 Reports
 
-- One-page municipal profile: map plus summary table, printable as PDF.
-- Printable barangay profile.
-- Beneficiary profile: all interventions received by an FCA.
-- Year-end inventory report in the same layout as the RAED consolidated report.
+Reports are at `/reports`, for everyone signed in. Each covers every record on the map, whatever the map's filters, and downloads as a PDF made in the browser. Every download goes in the audit log as an export, before the file is handed over.
+
+- **Municipal profile:** one A4 page. It has a vector map of the municipality, with barangays shaded by whether they have an intervention and points colored by program. Beside the map are the figures: interventions, units by type, beneficiaries (approx.), % operational and barangays with no intervention. Below are tables by program, status and category, and the gap list of barangays with no intervention yet.
+- **Beneficiary profile:** everything one FCA or other beneficiary received, with a map, each intervention's place and coordinates, and its status history. Names are matched as the dashboard's "Beneficiaries (approx.)" matches them, until there's a proper list. It opens from a record's popup too.
+- **Inventory report:** in the layout of the RAED Consolidated Inventory Report. It's on legal paper, landscape, with a cover giving the title, who prepared it, the date and the data source, then a ruled table for each type. Machinery uses Machine Name, Year Funded, Banner Program, Beneficiary, Status, Region, Province, Municipality, Barangay, Latitude and Longitude. A project type such as SPIS uses Project Type, Project Title, Banner Program, Year Funded, Beneficiary, Region, Province, Municipality, Barangay, Latitude, Longitude and Stage. A Qty column is added when a record holds several units. It can be filtered by municipality, program and year, and comes as a PDF or an Excel workbook that prints legal and landscape.
+- **Print map:** see §5.7.
+- **Signature blocks:** on every report and printed map, from `report_signatories`.
+- Not built: a printable barangay profile, which was in the first plan.
 
 ---
 
@@ -435,8 +440,11 @@ Chosen so a solo developer can build and host it cheaply.
 | `/qa` | QA queue: every flagged record by flag and municipality. Quick fixes: set barangay, set location basis, update status, and dismiss with a reason. A link fixes the location on the map (Admins and Encoders) |
 | `/qa/condition` | Condition check: units at a status that doesn't count as assessed, Turned-over first, by municipality. Set the status found on a visit (Admins and Encoders) |
 | `/export` | Export options (also reachable from the map toolbar) |
-| `/reports` | Municipal, barangay and beneficiary profiles (later phase) |
-| `/admin` | Users, intervention types, form builder, lookups, audit log (`/admin/audit`) |
+| `/reports` | Reports overview, with the signature blocks that print |
+| `/reports/municipality/:id` | Municipal profile, on screen and as a PDF |
+| `/reports/beneficiary`, `/reports/beneficiary/:key` | Beneficiaries, and one beneficiary's profile, on screen and as a PDF |
+| `/reports/inventory` | Inventory report, as a PDF or Excel |
+| `/admin` | Users, intervention types, form builder, lookups, report signatures (`/admin/signatures`), audit log (`/admin/audit`) |
 | `/login` | Auth |
 
 Layout: left panel for layers and filters, center map, right panel for the dashboard and records table, which a profile or form takes over for a while. On mobile, tabs switch between Map, Dashboard and List. They give way to a profile or form, which have their own way out, so the map beside them keeps its room.
@@ -473,7 +481,7 @@ Layout: left panel for layers and filters, center map, right panel for the dashb
 | **6. Custom views, dashboard and audit log page** (built) | Color by and filter by any field; saved views; KPIs, charts and table; an Admin-only audit log page in `/admin`, for accountability in a government office: who changed what and when, with filters by user, record and date; the Edit form asks for a reason when a barangay changes, as Resolve flag and the move dialog do | A saved view restores layers, filters, style and extent; totals match the data; an Admin can find any change by user, record or date, and nobody else can open the page; changing a barangay in the Edit form needs a reason, which goes in the audit log |
 | **7. Export** | KML, KMZ, GeoJSON, CSV, XLSX, PNG/PDF for all geometries | KMZ opens in Google Earth Pro and Web with folders, styles and attributes |
 | **8. Import and QA** (built) | Import wizard for any point type, with remembered mappings, a checked preview and undo by batch; QA queue with quick fixes and dismissals; condition check for units not yet assessed; backup file names with the time | An ABEMIS export imports without manual editing, and a new dataset of another type imports the same way |
-| **9. Reports and ABE PDCS** | Profiles, print layouts, merge into ABE PDCS | |
+| **9. Reports and ABE PDCS** (built; ABE PDCS proposed only) | Municipal and beneficiary profiles, the inventory report in the RAED layout as PDF and Excel, print map, signature blocks edited in Admin. ABE PDCS: the options are written up in `docs/ABE-PDCS-INTEGRATION.md`, and nothing is merged | Each report downloads ready to print and sign, and is logged |
 
 These were built in a different order: Export went first, then Admin customization, then Custom views. The project's history calls those phases 5, 6 and 7.
 

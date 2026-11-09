@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useMap } from 'react-leaflet';
+import { useNavigate, type NavigateFunction } from 'react-router-dom';
 import L from './leaflet-setup';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -133,6 +134,9 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
   latest.current = data;
   const latestPermissions = useRef(permissions);
   latestPermissions.current = permissions;
+  const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   const iconFor = useMemo(() => {
     const cache = new Map<string, L.DivIcon>();
@@ -231,7 +235,7 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
           const current = latest.current.interventions.find((r) => r.id === id) ?? record;
           const element = document.createElement('div');
           element.innerHTML = popupHtml(current, latest.current, latestPermissions.current);
-          element.addEventListener('click', (event) => void onPopupClick(event, current));
+          element.addEventListener('click', (event) => void onPopupClick(event, current, navigateRef.current));
           return element;
         },
         // The top padding keeps a popup clear of the zoom buttons and the phone's layers button.
@@ -312,12 +316,18 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
   return null;
 }
 
-async function onPopupClick(event: MouseEvent, record: Intervention) {
+async function onPopupClick(event: MouseEvent, record: Intervention, navigate: NavigateFunction) {
   const button = (event.target as HTMLElement).closest<HTMLElement>('[data-action]');
   if (!button) return;
   const action = button.dataset.action as PopupAction;
 
   switch (action) {
+    case 'beneficiary':
+      // A link, so it can open in a new tab too. A plain click stays in the app.
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
+      event.preventDefault();
+      navigate(button.getAttribute('href') ?? '/reports/beneficiary');
+      break;
     case 'copy-coordinates': {
       const copied = await copyText(button.dataset.coordinates ?? '');
       button.textContent = copied ? 'Copied' : 'Could not copy';

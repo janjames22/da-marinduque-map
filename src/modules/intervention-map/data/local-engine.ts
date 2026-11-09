@@ -51,7 +51,7 @@ export interface EngineContext {
   // The lists and forms themselves, which an Admin can change.
   lists: Pick<
     MapData,
-    'icons' | 'programs' | 'categoryGroups' | 'categories' | 'statuses' | 'beneficiaryTypes' | 'locationBases' | 'types' | 'typeStatuses' | 'barangayFields' | 'barangayFieldsVersion'
+    'icons' | 'programs' | 'categoryGroups' | 'categories' | 'statuses' | 'beneficiaryTypes' | 'locationBases' | 'types' | 'typeStatuses' | 'barangayFields' | 'barangayFieldsVersion' | 'signatories'
   >;
   places: PlaceIndex;
   now(): string;

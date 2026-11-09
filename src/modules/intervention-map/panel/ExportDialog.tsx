@@ -15,6 +15,7 @@ import {
 } from '../export/records';
 import { useExportUi } from '../state/export-ui';
 import { useMapUi } from '../state/map-ui';
+import { downloadFile } from '../lib/download';
 import { useStore } from '../state/store-context';
 import type { Boundaries } from '../state/use-map-data';
 
@@ -32,17 +33,6 @@ const isGoogleEarth = (format: ExportFormat) => format === 'kmz' || format === '
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 const MAP_VIEW_LINE = 'Only the current map view';
-
-function download(bytes: Uint8Array, fileName: string, mimeType: string) {
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: mimeType }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}
 
 interface ExportDialogProps {
   data: MapData;
@@ -122,7 +112,7 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
         filters: { ...filters, layers: isGoogleEarth(format) ? layers : undefined },
         record_count: records.length,
       });
-      download(file.bytes, file.fileName, file.mimeType);
+      downloadFile(file.bytes, file.fileName, file.mimeType);
       closeExport();
     } catch (error) {
       setFailure((error as Error).message);

@@ -104,7 +104,7 @@ export async function restoreSnapshot(db: Queryable, snapshot: Snapshot, { repla
       for (const table of CLEARED_TABLES.filter(here)) await db.query(`delete from public.${table}`);
     }
 
-    for (const table of LOOKUP_TABLES) await loadRows(db, table, snapshot.tables[table], 'update');
+    for (const table of LOOKUP_TABLES.filter(here)) await loadRows(db, table, snapshot.tables[table] ?? [], 'update');
 
     const { rows: accounts } = await db.query<{ id: string }>('select id from auth.users');
     const known = new Set(accounts.map((account) => account.id));
@@ -141,7 +141,7 @@ export async function restoreSnapshot(db: Queryable, snapshot: Snapshot, { repla
     );
 
     // Rows were loaded with their old ids, so the next new row must start after them.
-    for (const table of [...LOOKUP_TABLES, 'audit_log']) {
+    for (const table of [...LOOKUP_TABLES, 'audit_log'].filter(here)) {
       const { columns } = await tableShape(db, table);
       if (!columns.some((column) => column.name === 'id' && column.identity !== '')) continue;
       await db.query(

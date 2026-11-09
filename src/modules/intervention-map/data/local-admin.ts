@@ -16,6 +16,7 @@ const LISTS: Record<LookupTable, { key: keyof EngineContext['lists']; rules: Loo
   beneficiary_types: { key: 'beneficiaryTypes', rules: {}, defaults: { sort_order: 0, is_active: true } },
   location_bases: { key: 'locationBases', rules: { needsColor: true }, defaults: { sort_order: 0, is_active: true } },
   icons: { key: 'icons', rules: { isIcon: true }, defaults: { is_active: true } },
+  report_signatories: { key: 'signatories', rules: { isSignatory: true }, defaults: { sort_order: 0, is_active: true, position: '' } },
 };
 
 const nextId = (rows: { id: number }[]) => rows.reduce((highest, row) => Math.max(highest, row.id), 0) + 1;
@@ -31,7 +32,12 @@ export function saveLookup(rows: LocalRows, context: EngineContext, table: Looku
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);
 
   const name = values.name?.trim();
-  const clean = { ...values, ...(name === undefined ? {} : { name }) };
+  const clean = {
+    ...values,
+    ...(name === undefined ? {} : { name }),
+    ...(values.label === undefined ? {} : { label: values.label.trim() }),
+    ...(values.position === undefined ? {} : { position: values.position.trim() }),
+  };
 
   if (current) {
     const before = { ...current };

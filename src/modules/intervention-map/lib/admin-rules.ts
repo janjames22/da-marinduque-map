@@ -121,10 +121,15 @@ export function iconProblem(svg: string): string | null {
 export interface LookupRules {
   needsColor?: boolean;
   isIcon?: boolean;
+  // A signature block: it needs a label, its lengths are limited, and one person can sign twice.
+  isSignatory?: boolean;
 }
 
+// Mirrors report_signatories' checks.
+export const SIGNATORY_LIMITS = { label: 60, name: 120, position: 160 };
+
 export function validateLookup(
-  values: { name?: string; color?: string; image?: string },
+  values: { name?: string; color?: string; image?: string; label?: string; position?: string },
   rows: { id: number; name: string }[],
   id: number | null,
   rules: LookupRules = {},
@@ -132,7 +137,14 @@ export function validateLookup(
   const errors: FieldErrors = {};
   const name = (values.name ?? '').trim();
   if (name === '') errors.name = 'Enter a name.';
-  else if (rows.some((row) => row.name === name && row.id !== id)) errors.name = 'That name is already used.';
+  else if (!rules.isSignatory && rows.some((row) => row.name === name && row.id !== id)) errors.name = 'That name is already used.';
+  if (rules.isSignatory) {
+    const label = (values.label ?? '').trim();
+    if (label === '') errors.label = 'Enter a label, such as "Prepared by".';
+    else if (label.length > SIGNATORY_LIMITS.label) errors.label = `Keep the label to ${SIGNATORY_LIMITS.label} characters.`;
+    if (name.length > SIGNATORY_LIMITS.name) errors.name = `Keep the name to ${SIGNATORY_LIMITS.name} characters.`;
+    if ((values.position ?? '').trim().length > SIGNATORY_LIMITS.position) errors.position = `Keep the position to ${SIGNATORY_LIMITS.position} characters.`;
+  }
   if (rules.needsColor && !isColor(values.color ?? '')) errors.color = 'Choose a color.';
   if (rules.isIcon) {
     const problem = iconProblem(values.image ?? '');

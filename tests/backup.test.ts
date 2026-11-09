@@ -331,12 +331,17 @@ describe('restoring into a new, empty database', () => {
   });
 
   it('can restore a backup made before imports could be undone or flags dismissed', async () => {
+    // A backup now has the signature blocks.
+    expect(snapshot.tables.report_signatories.map((row) => row.label)).toEqual(['Prepared by', 'Noted by']);
     const older = JSON.parse(JSON.stringify(snapshot)) as Snapshot;
     delete older.tables.qa_dismissals;
+    delete older.tables.report_signatories;
     for (const row of older.tables.import_batches) for (const column of ['undone_at', 'undone_by', 'undo_reason']) delete row[column];
 
     await restoreSnapshot(fresh, older, { replace: true });
     expect((await fresh.query<{ n: number }>('select count(*)::int as n from public.qa_dismissals')).rows[0].n).toBe(0);
+    // The signature blocks the database has stay, as a backup from before them has nothing to say.
+    expect((await fresh.query<{ label: string }>('select label from public.report_signatories order by sort_order')).rows.map((row) => row.label)).toEqual(['Prepared by', 'Noted by']);
     const batches = await fresh.query<{ undone_at: string | null }>('select undone_at from public.import_batches');
     expect(batches.rows.length).toBe(snapshot.tables.import_batches.length);
     expect(batches.rows.every((row) => row.undone_at === null)).toBe(true);

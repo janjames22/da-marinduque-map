@@ -47,6 +47,12 @@ export async function removeTestLists(db: Queryable) {
   const { rows } = await db.query<{ id: number }>(`select id from public.intervention_types where code like 'e2e-test-%'`);
   const types = rows.map((row) => String(row.id));
   await db.query(`delete from public.programs where code like 'e2e-test-%'`);
+  // Signature blocks are never deleted by the website, so only the live tests' own leave, by their label.
+  // A database from before 0011 has none.
+  const { rows: present } = await db.query<{ present: boolean }>(`select to_regclass('public.report_signatories') is not null as present`);
+  const { rows: signers } = present[0].present
+    ? await db.query<{ id: number }>(`delete from public.report_signatories where label like 'E2E test%' returning id`)
+    : { rows: [] as { id: number }[] };
   await db.query(`delete from public.intervention_type_statuses where intervention_type_id in (select id from public.intervention_types where code like 'e2e-test-%')`);
   await db.query(`delete from public.intervention_types where code like 'e2e-test-%'`);
   await db.query(
@@ -55,8 +61,9 @@ export async function removeTestLists(db: Queryable) {
        and (
          (table_name in ('programs', 'intervention_types') and old_row ->> 'code' like 'e2e-test-%')
          or (table_name = 'intervention_type_statuses' and old_row ->> 'intervention_type_id' = any($1::text[]))
+         or (table_name = 'report_signatories' and record_id = any($2::text[]))
        )`,
-    [types],
+    [types, signers.map((signer) => String(signer.id))],
   );
 }
 
