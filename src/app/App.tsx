@@ -4,6 +4,7 @@ import { dataMode } from '../modules/intervention-map/data/app-config';
 import { localUser } from '../modules/intervention-map/data/create-store';
 import type { AppUser } from '../modules/intervention-map/data/types';
 import { MapPage } from '../modules/intervention-map/MapPage';
+import { HomePage } from '../modules/intervention-map/overview/HomePage';
 import { AuthLayout } from './auth/AuthLayout';
 import { movedAddress, pageFor } from './routes';
 import { AppShell, type Account } from './shell/AppShell';
@@ -14,6 +15,8 @@ const AuthGate = lazy(() => import('./auth/AuthGate').then((module) => ({ defaul
 const AdminPage = lazy(() => import('../modules/intervention-map/admin/AdminPage').then((module) => ({ default: module.AdminPage })));
 
 const WorkPage = lazy(() => import('../modules/intervention-map/work/WorkPage').then((module) => ({ default: module.WorkPage })));
+// The charts load with the Dashboard, so Home and the map don't carry them.
+const DashboardPage = lazy(() => import('../modules/intervention-map/overview/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const ReportsPage = lazy(() => import('../modules/intervention-map/reports/ReportsPage').then((module) => ({ default: module.ReportsPage })));
 
 function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources: string[]): void }) {
@@ -24,9 +27,10 @@ function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources:
 
   const page = pageFor(location.pathname);
   if (page === 'map') return <MapPage key={user.id} user={user} onDataSources={onDataSources} />;
+  if (page === 'home') return <HomePage key={user.id} user={user} onDataSources={onDataSources} />;
   return (
     <Suspense fallback={<p className="page-message">Loading…</p>}>
-      {page === 'admin' ? <AdminPage key={user.id} user={user} /> : page === 'reports' ? <ReportsPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
+      {page === 'dashboard' ? <DashboardPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'admin' ? <AdminPage key={user.id} user={user} /> : page === 'reports' ? <ReportsPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
     </Suspense>
   );
 }

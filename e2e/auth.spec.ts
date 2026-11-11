@@ -47,7 +47,7 @@ test.afterEach(() => {
   expect(violations).toEqual([]);
 });
 
-async function signedIn(page: Page, user: (typeof USERS)[keyof typeof USERS], path = '/') {
+async function signedIn(page: Page, user: (typeof USERS)[keyof typeof USERS], path = '/map') {
   const fake = await installFakeSupabase(page);
   await page.goto(path);
   await signIn(page, user);
@@ -75,7 +75,7 @@ test.describe('before signing in', () => {
 
   test('says when the email or password is wrong, and stays on the form', async ({ page }) => {
     await installFakeSupabase(page);
-    await page.goto('/');
+    await page.goto('/map');
     await signIn(page, USERS.encoder, 'wrong password');
     await expect(signInForm(page).getByRole('alert')).toHaveText('Wrong email or password.');
     await expect(shapes(page)).toHaveCount(0);
@@ -83,7 +83,7 @@ test.describe('before signing in', () => {
 
   test('explains that accounts are by invitation, with no sign-up option', async ({ page }) => {
     await installFakeSupabase(page);
-    await page.goto('/');
+    await page.goto('/map');
     await expect(signInForm(page)).toContainText('Accounts are by invitation');
     await expect(page.getByRole('button', { name: /sign up|register|create account/i })).toHaveCount(0);
   });
@@ -92,7 +92,7 @@ test.describe('before signing in', () => {
 test.describe('accounts without access', () => {
   test('tells someone with no role, shows no data, and lets them sign out', async ({ page }) => {
     const fake = await installFakeSupabase(page);
-    await page.goto('/');
+    await page.goto('/map');
     await signIn(page, USERS.stranger);
     await expect(page.getByRole('heading', { name: 'This account has no access yet' })).toBeVisible();
     expect(fake.restCalls.filter((name) => name !== 'profiles')).toEqual([]);
@@ -102,7 +102,7 @@ test.describe('accounts without access', () => {
 
   test('tells a deactivated person', async ({ page }) => {
     const fake = await installFakeSupabase(page);
-    await page.goto('/');
+    await page.goto('/map');
     await signIn(page, USERS.former);
     await expect(page.getByRole('heading', { name: 'This account has been deactivated' })).toBeVisible();
     expect(fake.restCalls.filter((name) => name !== 'profiles')).toEqual([]);
@@ -110,7 +110,7 @@ test.describe('accounts without access', () => {
 });
 
 test.describe('invite and reset links', () => {
-  test('an invite asks for a password, checks it, then opens the map', async ({ page }) => {
+  test('an invite asks for a password, checks it, then opens Home', async ({ page }) => {
     const fake = await installFakeSupabase(page);
     await page.goto(`/${inviteHash(USERS.encoder, 'invite')}`);
     const form = page.getByRole('form', { name: 'Set password' });
@@ -135,7 +135,8 @@ test.describe('invite and reset links', () => {
 
     await form.getByLabel('Repeat it').fill('a good long password');
     await form.getByRole('button', { name: 'Save password' }).click();
-    await expect(shapes(page)).toHaveCount(SHAPES);
+    // The invite link goes to the site's address, which is Home.
+    await expect(page.getByRole('heading', { level: 1, name: 'Welcome, Enzo' })).toBeVisible();
     expect(fake.passwordUpdates).toEqual(['a good long password']);
   });
 
@@ -193,7 +194,7 @@ test.describe('signed in', () => {
   test('says so if the data can\'t load', async ({ page }) => {
     const fake = await installFakeSupabase(page);
     fake.failReads(true);
-    await page.goto('/');
+    await page.goto('/map');
     await signIn(page, USERS.viewer);
     await expect(page.getByRole('heading', { name: 'The map could not load' })).toBeVisible();
     await expect(page.getByRole('alert')).toContainText('Database unavailable');
@@ -747,7 +748,7 @@ test.describe('saved views', () => {
   test('everyone opens on the default, after signing in too', async ({ page }) => {
     const fake = await installFakeSupabase(page);
     fake.tables.saved_views.push(sharedView({ is_default: true }));
-    await page.goto('/');
+    await page.goto('/map');
     await signIn(page, USERS.viewer);
     await expect(shapes(page)).toHaveCount(SHAPES);
     await expect(page.getByText('Opened on the shared view "Gasan first".')).toBeVisible();
@@ -923,7 +924,7 @@ test.describe('live updates', () => {
 
 test('stays signed out for a person who was never given the password', async ({ page }) => {
   await installFakeSupabase(page);
-  await page.goto('/');
+  await page.goto('/map');
   await signIn(page, USERS.admin, `${PASSWORD}x`);
   await expect(signInForm(page).getByRole('alert')).toBeVisible();
 });

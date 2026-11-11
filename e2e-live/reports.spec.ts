@@ -27,7 +27,7 @@ test('a Viewer downloads each report and prints the map, with nothing blocked', 
     if (/Content Security Policy|Refused to/.test(message.text())) blocked.push(message.text());
   });
   // The real basemap loads here, so the printed map is the one on screen.
-  await page.goto('/');
+  await page.goto('/map');
   await page.getByLabel('Email').fill(account.email);
   await page.getByLabel('Password', { exact: true }).fill(account.password);
   await page.getByRole('button', { name: 'Sign in' }).click();

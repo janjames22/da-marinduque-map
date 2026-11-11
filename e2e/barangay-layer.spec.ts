@@ -44,18 +44,18 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('barangay base layer', () => {
   test('draws all 218 barangays', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/map');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
   });
 
   test('shows the coverage and the unassigned count in the legend', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/map');
     await expect(legend(page)).toContainText('93 of 218 barangays have records');
     await expect(legend(page)).toContainText('Unassigned: 9 records');
   });
 
   test('a real click on the map opens that barangay', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/map');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
 
     const box = await page.locator('.map').boundingBox();
@@ -79,7 +79,7 @@ test.describe('barangay base layer', () => {
 
 test.describe('barangay profile', () => {
   test('opens for a barangay with no interventions', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/map');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await clickBarangay(page, emptyBarangay.id);
 
@@ -171,7 +171,7 @@ test.describe('markers', () => {
 
 test.describe('choropleth modes', () => {
   test.beforeEach(async ({ page, isMobile }) => {
-    await page.goto('/');
+    await page.goto('/map');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await openPanel(page, isMobile);
   });
@@ -251,7 +251,7 @@ test.describe('choropleth modes', () => {
 
 test.describe('layer panel', () => {
   test.beforeEach(async ({ page, isMobile }) => {
-    await page.goto('/');
+    await page.goto('/map');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await openPanel(page, isMobile);
   });
@@ -294,7 +294,7 @@ test.describe('layer panel', () => {
 
 test.describe('unassigned records', () => {
   test('lists the 9 records with no linked barangay', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/map');
     await page.getByRole('button', { name: 'Unassigned: 9 records' }).click();
     const panel = page.getByLabel('Unassigned records');
     await expect(panel.locator('.record-row')).toHaveCount(9);

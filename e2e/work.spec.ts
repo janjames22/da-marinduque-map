@@ -92,7 +92,7 @@ const HEADER = ['Ref No', 'Recipient Group', 'Equipment', 'Program', 'Year', 'Mu
 test.describe('who is offered it', () => {
   for (const role of ['admin', 'encoder']) {
     test(`an ${role === 'admin' ? 'Admin' : 'Encoder'} gets a link there and back`, async ({ page }) => {
-      await open(page, '/', role);
+      await open(page, '/map', role);
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
       const nav = await sidebar(page);
       await expect(nav.getByRole('link', { name: 'Users' })).toHaveCount(role === 'admin' ? 1 : 0);
@@ -111,7 +111,7 @@ test.describe('who is offered it', () => {
   }
 
   test('a Viewer isn\'t, even by going straight to the address', async ({ page }) => {
-    await open(page, '/', 'viewer');
+    await open(page, '/map', 'viewer');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await expect((await sidebar(page)).getByRole('link', { name: 'QA queue' })).toHaveCount(0);
     await page.keyboard.press('Escape');

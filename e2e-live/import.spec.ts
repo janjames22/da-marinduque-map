@@ -32,7 +32,7 @@ test('a file imported in the wizard reaches another person\'s map, and undoing i
   const accounts = readAccounts();
   const blocked: string[] = [];
 
-  const map = await open(browser, accounts.viewer, '/');
+  const map = await open(browser, accounts.viewer, '/map');
   await expect(map.locator('.barangay-shape')).toHaveCount(218, { timeout: 30_000 });
   await expect(map.locator('[data-kpi="records"] .kpi-value')).toBeVisible({ timeout: 30_000 });
   const before = await records(map);

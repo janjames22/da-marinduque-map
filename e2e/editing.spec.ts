@@ -59,7 +59,7 @@ const readout = (page: Page) => page.getByTestId('location-readout');
 const select = (scope: Page | Locator, name: string) => scope.getByRole('combobox', { name: new RegExp(`^${name}`) });
 const warning = (page: Page, code: string) => page.locator(`[data-warning="${code}"]`);
 
-async function ready(page: Page, path = '/') {
+async function ready(page: Page, path = '/map') {
   await page.goto(path);
   await expect(page.locator('.barangay-shape')).toHaveCount(218);
 }

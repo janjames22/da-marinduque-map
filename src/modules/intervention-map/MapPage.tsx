@@ -105,6 +105,15 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
     }
   }, [recordLink?.params.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Home's "Add intervention" opens the map ready to place a new point, as the map's own button does.
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('add') !== '1') return;
+    navigate(MAP_PATH, { replace: true });
+    if (!canEdit) return;
+    useMapUi.getState().setPanelOpen(false);
+    openPanel({ kind: 'add' }, { picking: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const firstProgram = data.programs.filter((p) => p.is_active).sort((a, b) => a.sort_order - b.sort_order)[0];
     const firstType = data.types.filter((t) => t.is_active).sort((a, b) => a.sort_order - b.sort_order)[0];

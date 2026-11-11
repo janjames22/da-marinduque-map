@@ -65,7 +65,7 @@ test.describe('who is offered them', () => {
   const WHO: Record<string, string> = { admin: 'an Admin', encoder: 'an Encoder', viewer: 'a Viewer' };
   for (const role of ['admin', 'encoder', 'viewer']) {
     test(`${WHO[role]} gets Reports, with the signature blocks that print`, async ({ page }) => {
-      await open(page, '/', role);
+      await open(page, '/map', role);
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
       await (await sidebar(page)).getByRole('link', { name: 'Reports' }).click();
       await expect(page).toHaveURL(/\/reports$/);
@@ -179,7 +179,7 @@ test.describe('the reports', () => {
   });
 
   test('the map prints as it is, with its title, legend, scale, date, sources and signatures', async ({ page }) => {
-    await open(page, '/');
+    await open(page, '/map');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await page.getByRole('button', { name: 'Print map' }).click();
     const dialog = page.getByRole('dialog', { name: 'Print map' });

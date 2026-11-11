@@ -37,7 +37,7 @@ const toolbarExport = (page: Page) => page.getByRole('button', { name: 'Export',
 const summary = (page: Page) => dialog(page).locator('.export-count');
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
-async function open(page: Page, path = '/', role?: string) {
+async function open(page: Page, path = '/map', role?: string) {
   if (role) await page.addInitScript((value) => localStorage.setItem('da-local-role', value), role);
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.fulfill({ status: 204 }));
   await page.goto(path);

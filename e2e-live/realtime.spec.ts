@@ -13,7 +13,7 @@ async function open(browser: Browser, account: TestAccount, options: Parameters<
   const context = await browser.newContext(options);
   const page = await context.newPage();
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.abort());
-  await page.goto('/');
+  await page.goto('/map');
   await page.getByLabel('Email').fill(account.email);
   await page.getByLabel('Password', { exact: true }).fill(account.password);
   await page.getByRole('button', { name: 'Sign in' }).click();
@@ -109,7 +109,7 @@ test('each role is offered only what it can do, signed in for real', async ({ br
   await expect(encoder.getByRole('button', { name: /Deleted records/ })).toHaveCount(0);
 
   const stranger = await browser.newPage();
-  await stranger.goto('/');
+  await stranger.goto('/map');
   await stranger.getByLabel('Email').fill(accounts.stranger.email);
   await stranger.getByLabel('Password', { exact: true }).fill(accounts.stranger.password);
   await stranger.getByRole('button', { name: 'Sign in' }).click();
@@ -118,7 +118,7 @@ test('each role is offered only what it can do, signed in for real', async ({ br
 
 test('a wrong password is refused', async ({ page }) => {
   const accounts = readAccounts();
-  await page.goto('/');
+  await page.goto('/map');
   await page.getByLabel('Email').fill(accounts.encoder.email);
   await page.getByLabel('Password', { exact: true }).fill('not the password');
   await page.getByRole('button', { name: 'Sign in' }).click();

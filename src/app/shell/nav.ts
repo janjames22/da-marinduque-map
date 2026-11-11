@@ -2,7 +2,7 @@
 // keeps each person from seeing links to pages they can't use.
 import type { UserRole } from '../../modules/intervention-map/data/types';
 
-export type NavIcon = 'map' | 'qa' | 'condition' | 'import' | 'reports' | 'users' | 'types' | 'lists' | 'signatures' | 'audit';
+export type NavIcon = 'home' | 'dashboard' | 'map' | 'qa' | 'condition' | 'import' | 'reports' | 'users' | 'types' | 'lists' | 'signatures' | 'audit';
 
 export interface NavItem {
   label: string;
@@ -20,7 +20,11 @@ export interface NavGroup {
 
 const OVERVIEW: NavGroup = {
   label: 'Overview',
-  items: [{ label: 'Map', to: '/map', icon: 'map', matches: ['/map'] }],
+  items: [
+    { label: 'Home', to: '/', icon: 'home', matches: ['/'], exact: true },
+    { label: 'Dashboard', to: '/dashboard', icon: 'dashboard', matches: ['/dashboard'] },
+    { label: 'Map', to: '/map', icon: 'map', matches: ['/map'] },
+  ],
 };
 
 const RECORDS: NavGroup = {

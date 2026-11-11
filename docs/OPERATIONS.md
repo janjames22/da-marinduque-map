@@ -166,6 +166,19 @@ On a computer these sit beside the map, and on a phone the **Map**, **Dashboard*
 
 **Show table** on each chart gives the same numbers as a table. **Export this table** exports all the rows found, on every page, in their order, and is logged like any other export. The search shows in the dialog, the audit log and a KML or KMZ's "Read me". It's left out of the file name, as it can be someone's name.
 
+### Home and the Dashboard page
+
+**Home** (`/`) is where everyone lands after signing in. It shows the headline figures for the whole province, whatever the map's filters, and a card for each type. Encoders and Admins also see what's waiting for them: records needing QA, records waiting for verified coordinates, and units with no condition recorded yet.
+
+**Dashboard** (`/dashboard`) has the same figures as the panel beside the map, on a page of its own, and adds:
+
+- **Filters shared with the map.** A filter set on the Dashboard is on the map too, and the other way round.
+- **Units by category group**, as one bar.
+- **CSV on every chart.** Each chart's table downloads as a CSV, logged like any other export.
+- **Awaiting coordinate verification.** This lists the records with no coordinates, or coordinates outside Marinduque, by municipality. They're counted in every total but not drawn on the map. **Download verification sheet** gives the region a CSV in the same columns as `data/corrections/for-field-verification.csv`. When the region confirms a location, fix it from the QA queue. The record then goes on the map and leaves this list.
+
+The Farm-to-Market Roads card says "Data to follow" until that type is switched on in Admin (Phase 16).
+
 ## Coloring, filtering and saved views
 
 - **Color markers by** and **Filter by another field**, in the layers panel, offer every field, including each type's custom fields. Text that belongs to one record, such as a beneficiary's name, can be filtered but not used for color.

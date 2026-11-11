@@ -16,18 +16,26 @@ const ROW_HEIGHT = 30;
 const BAR_THICKNESS = 16;
 const COLUMN_MAX_WIDTH = 24;
 
-const plural = (count: number, word: string) => `${count.toLocaleString('en-US')} ${word}${count === 1 ? '' : 's'}`;
+export const plural = (count: number, word: string) => `${count.toLocaleString('en-US')} ${word}${count === 1 ? '' : 's'}`;
 
-function ChartCard({ title, note, table, children }: { title: string; note?: string; table: ReactNode; children: ReactNode }) {
+// The Dashboard page adds a CSV of the same table, logged as an export.
+export function ChartCard({ title, note, table, children, onCsv }: { title: string; note?: string; table: ReactNode; children: ReactNode; onCsv?(): void }) {
   const [asTable, setAsTable] = useState(false);
   return (
     <figure className="chart-card" aria-label={title}>
       <figcaption>
         <h3>{title}</h3>
-        <button type="button" className="link-button" aria-pressed={asTable} onClick={() => setAsTable(!asTable)}>
-          {asTable ? 'Show chart' : 'Show table'}
-          <span className="visually-hidden"> for {title}</span>
-        </button>
+        <span className="chart-card-actions">
+          <button type="button" className="link-button" aria-pressed={asTable} onClick={() => setAsTable(!asTable)}>
+            {asTable ? 'Show chart' : 'Show table'}
+            <span className="visually-hidden"> for {title}</span>
+          </button>
+          {onCsv && (
+            <button type="button" className="link-button" onClick={onCsv}>
+              CSV<span className="visually-hidden"> of {title}</span>
+            </button>
+          )}
+        </span>
       </figcaption>
       {note && <p className="field-hint">{note}</p>}
       {asTable ? table : children}
@@ -35,7 +43,7 @@ function ChartCard({ title, note, table, children }: { title: string; note?: str
   );
 }
 
-function RowsTable({ rows, heading }: { rows: BarRow[]; heading: string }) {
+export function RowsTable({ rows, heading }: { rows: BarRow[]; heading: string }) {
   return (
     <table className="chart-table">
       <thead>
@@ -101,8 +109,8 @@ function BarLabel({ x, y, payload, width }: { x?: number | string; y?: number | 
   );
 }
 
-// Ranked bars, each named on its axis, with its value at the tip.
-function HorizontalBars({ rows, labelWidth = 104 }: { rows: BarRow[]; labelWidth?: number }) {
+// Ranked bars, each named on its axis, with its value at the tip. With onSelect, a bar can be clicked.
+export function HorizontalBars({ rows, labelWidth = 104, onSelect }: { rows: BarRow[]; labelWidth?: number; onSelect?(key: string): void }) {
   return (
     <ResponsiveContainer width="100%" height={rows.length * ROW_HEIGHT + 4}>
       <BarChart layout="vertical" data={rows} margin={{ top: 2, right: 36, bottom: 2, left: 0 }}>
@@ -117,7 +125,15 @@ function HorizontalBars({ rows, labelWidth = 104 }: { rows: BarRow[]; labelWidth
           tick={(props: { x?: number | string; y?: number | string; payload?: { value?: string } }) => <BarLabel {...props} width={labelWidth - 8} />}
         />
         <Tooltip cursor={{ fill: HOVER_WASH }} isAnimationActive={false} content={(props) => <ChartTooltip active={props.active} payload={props.payload as readonly TooltipEntry[]} label={props.label as string} />} />
-        <Bar dataKey="value" barSize={BAR_THICKNESS} radius={[0, 4, 4, 0]} isAnimationActive={false} fill={MEASURE_COLOR}>
+        <Bar
+          dataKey="value"
+          barSize={BAR_THICKNESS}
+          radius={[0, 4, 4, 0]}
+          isAnimationActive={false}
+          fill={MEASURE_COLOR}
+          cursor={onSelect ? 'pointer' : undefined}
+          onClick={onSelect ? (item: { payload?: BarRow }) => item.payload && onSelect(item.payload.key) : undefined}
+        >
           {rows.map((row) => (
             <Cell key={row.key} fill={row.color ?? MEASURE_COLOR} />
           ))}
@@ -128,7 +144,7 @@ function HorizontalBars({ rows, labelWidth = 104 }: { rows: BarRow[]; labelWidth
   );
 }
 
-function YearColumns({ rows }: { rows: BarRow[] }) {
+export function YearColumns({ rows }: { rows: BarRow[] }) {
   return (
     <ResponsiveContainer width="100%" height={190}>
       <BarChart data={rows} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
@@ -150,7 +166,7 @@ function StackSegment(props: { x?: number; y?: number; width?: number; height?: 
   return <Rectangle x={x} y={y} width={width} height={height} fill={fill} stroke={SURFACE} strokeWidth={2} radius={last ? [0, 4, 4, 0] : 0} />;
 }
 
-function StatusStacks({ rows, series }: { rows: StatusRow[]; series: StatusSeries[] }) {
+export function StatusStacks({ rows, series }: { rows: StatusRow[]; series: StatusSeries[] }) {
   const chartRows = rows.map((row) => ({
     label: row.label,
     order: series.filter((entry) => (row.values[entry.key] ?? 0) > 0).map((entry) => `values.${entry.key}`),
@@ -180,7 +196,7 @@ function StatusStacks({ rows, series }: { rows: StatusRow[]; series: StatusSerie
   );
 }
 
-function StatusTable({ rows, series }: { rows: StatusRow[]; series: StatusSeries[] }) {
+export function StatusTable({ rows, series }: { rows: StatusRow[]; series: StatusSeries[] }) {
   return (
     <div className="chart-table-scroll">
       <table className="chart-table">
@@ -226,7 +242,7 @@ function Tile({ id, label, value, note }: { id: string; label: string; value: st
 }
 
 // "Operational: 32 of 32 assessed", then what isn't counted, such as "163 turned-over, not yet assessed".
-function operationalNotes(operational: OperationalShare): string[] {
+export function operationalNotes(operational: OperationalShare): string[] {
   const lines = [operational.assessed === 0 ? 'No unit assessed yet' : `Operational: ${operational.units.toLocaleString('en-US')} of ${operational.assessed.toLocaleString('en-US')} assessed`];
   const waiting = operational.notAssessed.map((status) => `${status.units.toLocaleString('en-US')} ${status.label.toLowerCase()}`);
   if (waiting.length > 0) lines.push(`${waiting.join(', ')}, not yet assessed`);
