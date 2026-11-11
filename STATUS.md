@@ -21,8 +21,9 @@ _Last updated: 2026-11-11_
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
   - ABE PDCS integration is only a proposal. The options are written up and nothing is merged.
   - Drawing lines and polygons on the map isn't built yet. Editing works for points only.
-  - The UI/UX roadmap is a draft. Its open questions (§13) need answers, and the PDF report still has to be compared with the seed data.
-- **Next:** Phase 10, the design brief, in [`docs/UI-UX-ROADMAP.md`](docs/UI-UX-ROADMAP.md) §12. No app code changes until the Figma design is signed off in Phase 11.
+  - 27 records stay off the map until the region verifies their location: 26 with no coordinates, 1 outside Marinduque. See [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §2.
+  - UI/UX roadmap questions still open: Q-2 (who designs in Figma, and is there a Dev Mode seat), Q-5 (FMR data format), Q-6 (basemap provider).
+- **Next:** Phase 11, the Figma design system and mock-ups, in [`docs/UI-UX-ROADMAP.md`](docs/UI-UX-ROADMAP.md) §12. The frames to draw are listed in [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §9. No app code changes until the design is signed off.
 
 ## Phases completed
 
@@ -41,6 +42,7 @@ The phases were built in a different order from the spec's §9. Export came befo
 | 8. Import and QA | `phase-8-import`, `phase-8-fixes` | 2026-11-09 | Import wizard, QA queue, condition check, backup names with the time, Undo after import |
 | 9. Reports | `phase-9-reports`, `phase-9-fixes` | 2026-11-09 | Reports, print map, signature blocks, ABE PDCS write-up |
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
+| 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
 
 ## Work log
 
@@ -48,6 +50,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 10 done: added `docs/DESIGN-BRIEF.md`, approved by the owner. The PDF report (2026-10-21) matches the seed data: 199 records, 195 Farm Machinery, 4 SSIP, every municipality. Branch `docs-design-brief`.
 - Added `docs/UI-UX-ROADMAP.md`: the plan to restyle the app after the agri-dms sample, in Phases 10 to 17, with Figma as the design source, preview gates, and the rule that records without coordinates are counted on the dashboard and kept off the map.
 - Cloned the repo locally and added this `STATUS.md` to track status and work.
 
