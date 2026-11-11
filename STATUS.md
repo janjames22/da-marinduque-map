@@ -24,7 +24,7 @@ _Last updated: 2026-11-11_
   - 27 records stay off the map until the region verifies their location: 26 with no coordinates, 1 outside Marinduque. See [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §2.
   - UI/UX roadmap questions still open: Q-5 (FMR data format), Q-6 (basemap provider).
 - **In progress:** Phase 11. The owner chose to have Claude draw the design on a claude.ai design canvas instead of building it in Figma. Figma's MCP server can draw in a file only on a paid plan. The six desktop screens are drawn: [Intervention Map Design](https://claude.ai/artifact/LvSgChD6pwXb7nXuZsv2Ze) (private to the owner). They follow `design/tokens.json` and use real report numbers.
-- **Next:** the owner reviews the six screens and leaves comments on the canvas. Then Claude draws the phone screens, and Phase 11 closes with the owner's sign-off. A Figma copy is optional. No app code changes until then.
+- **Next:** the owner reviews the six desktop and six phone screens and leaves comments on the canvas. Phase 11 closes with the owner's sign-off. A Figma copy is optional. No app code changes until then.
 
 ## Phases completed
 
@@ -52,6 +52,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 11: Claude drew the six phone screens (390 px) on the same canvas: Sign in, Home, Home with the menu open, Dashboard, Map with the selected record in a bottom sheet, and Intervention detail.
 - Phase 11: Claude drew the six desktop screens (Sign in, Home, Dashboard, Map, Interventions list, Intervention detail) and a shared sidebar on a claude.ai design canvas, on the owner's choice over a paid Figma plan. The Map screen uses the real municipality boundaries. Waiting for the owner's review.
 - Phase 11 started: added the Figma kit in `design/`, approved by the owner at Gate 1. Tokens in W3C format for Tokens Studio, a browser preview of the look, and a build guide with every component and frame, filled with real report numbers. Map and chart colors stay as they are in the app. Branch `design-figma-kit`.
 - Phase 10 done: added `docs/DESIGN-BRIEF.md`, approved by the owner. The PDF report (2026-10-21) matches the seed data: 199 records, 195 Farm Machinery, 4 SSIP, every municipality. Branch `docs-design-brief`.
