@@ -15,7 +15,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-11_
 
-- **Branch:** `phase-14-map-style`, pushed. It isn't merged into `main` until Gate 2.
+- **Branch:** `main`, in sync with `origin/main`. Phase 14 is merged.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -29,7 +29,8 @@ _Last updated: 2026-11-11_
 - **Built:** Phase 12, the foundation, through both gates on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
 - **Live:** Phase 12 is on https://da-marinduque-map.netlify.app since 2026-11-11. The owner deployed it with `npm run deploy`, because Claude Code's permissions don't let Claude deploy to production. Checked signed out: the security headers are on, Inter loads, and the only blocked script is Netlify's own badge, which is known since Phase 9.
 - **Live:** Phase 13, the Home and Dashboard pages, is on https://da-marinduque-map.netlify.app since 2026-11-11 (deploy `6af47bcaae5f3dff886714f1`). Checked signed out: the security headers are on and Inter loads. The only blocked script is Netlify's badge, as before.
-- **In progress:** Phase 14, the map restyle. Built, and it passed Gate 1 on 2026-11-11. **Waiting for Gate 2:** the owner checks the private draft at https://6af48ddca59cf133e29abd01--da-marinduque-map.netlify.app with their usual login.
+- **Phase 14 approved, live deploy pending:** the map restyle passed both gates on 2026-11-11 and is merged into `main`. It goes live when the owner runs `npm run deploy`.
+- **Next:** Phase 15, the remaining pages in the new design: the Interventions list, record detail, forms, QA queue, import, reports and admin.
 - **Report PDFs keep the full header:** "Department of Agriculture – Provincial Agriculture Office, Marinduque" stays on the reports, as official documents. Only the app's screens use the shorter office name. The owner decided this on 2026-11-11.
 
 ## Phases completed
@@ -61,6 +62,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 14 passed Gate 2 and is merged into `main`. Going live waits for the owner to run `npm run deploy`.
 - Phase 14 built and through Gate 1, on branch `phase-14-map-style`. The owner's brief was that the map overwhelmed users:
   - **Calmer map:** a Light grey basemap by default (Esri World Light Gray, with labels; OpenStreetMap and the others are still offered), the area outside Marinduque dimmed, lighter barangay shading and lines, green group markers with a halo, and card-style buttons, legend, popup and zoom controls.
   - **Less at once:** the dashboard panel beside the map starts closed and opens from its button, remembered per person. A header shows "X of Y records are on the map", with a link to the list of records waiting for coordinates. The layers card has Filters first, then layers and shading, then Map style and Shortcuts.
