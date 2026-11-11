@@ -5,6 +5,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 - Spec: [`docs/spec/DA-Marinduque-Intervention-Map-Spec.md`](docs/spec/DA-Marinduque-Intervention-Map-Spec.md). §9 covers build phases and §10 covers acceptance criteria.
 - Running and deploying: [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
 - ABE PDCS options: [`docs/ABE-PDCS-INTEGRATION.md`](docs/ABE-PDCS-INTEGRATION.md)
+- UI/UX roadmap: [`docs/UI-UX-ROADMAP.md`](docs/UI-UX-ROADMAP.md). Phases 10 to 17, with a preview before each commit and each deployment.
 
 **Keep this file current.** Every piece of work updates it in the same commit, and gets pushed to GitHub right away (see [How we commit and push](#how-we-commit-and-push)).
 
@@ -20,7 +21,8 @@ _Last updated: 2026-11-11_
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
   - ABE PDCS integration is only a proposal. The options are written up and nothing is merged.
   - Drawing lines and polygons on the map isn't built yet. Editing works for points only.
-- **Next:** not decided yet. Add it here when it is.
+  - The UI/UX roadmap is a draft. Its open questions (§13) need answers, and the PDF report still has to be compared with the seed data.
+- **Next:** Phase 10, the design brief, in [`docs/UI-UX-ROADMAP.md`](docs/UI-UX-ROADMAP.md) §12. No app code changes until the Figma design is signed off in Phase 11.
 
 ## Phases completed
 
@@ -45,6 +47,8 @@ The phases were built in a different order from the spec's §9. Export came befo
 New entries go at the top. Each entry gets the date, what was done, and the commit or branch.
 
 ### 2026-11-11
+
+- Added `docs/UI-UX-ROADMAP.md`: the plan to restyle the app after the agri-dms sample, in Phases 10 to 17, with Figma as the design source, preview gates, and the rule that records without coordinates are counted on the dashboard and kept off the map.
 - Cloned the repo locally and added this `STATUS.md` to track status and work.
 
 ---
