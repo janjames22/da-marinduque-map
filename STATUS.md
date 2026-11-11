@@ -28,7 +28,7 @@ _Last updated: 2026-11-11_
 - **Office name, decided at sign-off:** "Intervention Map" with "Provincial Agriculture Office Marinduque" underneath, and the footer line "Provincial Agriculture Office, Marinduque". "Department of Agriculture –" is dropped.
 - **Built:** Phase 12, the foundation, through both gates on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
 - **Live:** Phase 12 is on https://da-marinduque-map.netlify.app since 2026-11-11. The owner deployed it with `npm run deploy`, because Claude Code's permissions don't let Claude deploy to production. Checked signed out: the security headers are on, Inter loads, and the only blocked script is Netlify's own badge, which is known since Phase 9.
-- **In progress:** Phase 13, the Home and Dashboard pages. Built, and it passed Gate 1 on 2026-11-11. Next is the Gate 2 draft.
+- **In progress:** Phase 13, the Home and Dashboard pages. Built, and it passed Gate 1 on 2026-11-11. **Waiting for Gate 2:** the owner checks the private draft at https://6af47ac1471c9089aea2f7ab--da-marinduque-map.netlify.app with their usual login. When it's approved, merge into `main`, and the owner runs `npm run deploy`.
 - **Next after that:** Phase 14, the map restyle. The owner's brief from Gate 1 is that the map overwhelms users, and it should be simple and clean but detailed, like the canvas's Map screen. See `docs/UI-UX-ROADMAP.md` §12.
 
 ## Phases completed
