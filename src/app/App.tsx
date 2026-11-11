@@ -18,6 +18,7 @@ const WorkPage = lazy(() => import('../modules/intervention-map/work/WorkPage').
 // The charts load with the Dashboard, so Home and the map don't carry them.
 const DashboardPage = lazy(() => import('../modules/intervention-map/overview/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const ReportsPage = lazy(() => import('../modules/intervention-map/reports/ReportsPage').then((module) => ({ default: module.ReportsPage })));
+const RecordsPage = lazy(() => import('../modules/intervention-map/records/RecordsPage').then((module) => ({ default: module.RecordsPage })));
 
 function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources: string[]): void }) {
   const location = useLocation();
@@ -30,7 +31,7 @@ function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources:
   if (page === 'home') return <HomePage key={user.id} user={user} onDataSources={onDataSources} />;
   return (
     <Suspense fallback={<p className="page-message">Loading…</p>}>
-      {page === 'dashboard' ? <DashboardPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'admin' ? <AdminPage key={user.id} user={user} /> : page === 'reports' ? <ReportsPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
+      {page === 'dashboard' ? <DashboardPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'records' ? <RecordsPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'admin' ? <AdminPage key={user.id} user={user} /> : page === 'reports' ? <ReportsPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
     </Suspense>
   );
 }

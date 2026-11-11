@@ -81,9 +81,13 @@ interface RecordsTableProps {
   data: MapData;
   state: TableState;
   onChange(changes: Partial<TableState>): void;
+  // The Interventions page opens the record's own page. Beside the map, a row shows the record there.
+  onOpen?(record: Intervention): void;
+  // Marks the records that aren't on the map, where there's no map beside the table to show it.
+  markUnplotted?: boolean;
 }
 
-export function RecordsTable({ records, data, state, onChange }: RecordsTableProps) {
+export function RecordsTable({ records, data, state, onChange, onOpen, markUnplotted = false }: RecordsTableProps) {
   const rows = useMemo(() => toRows(records, data), [records, data]);
 
   const table = useReactTable({
@@ -115,6 +119,10 @@ export function RecordsTable({ records, data, state, onChange }: RecordsTablePro
   }, [pageIndex, lastPage, pageSize, onChange]);
 
   const goTo = (record: Intervention) => {
+    if (onOpen) {
+      onOpen(record);
+      return;
+    }
     const ui = useMapUi.getState();
     if (globalThis.matchMedia?.('(max-width: 800px)').matches) ui.setInsights(null);
     if (isOnMap(record)) {
@@ -131,7 +139,8 @@ export function RecordsTable({ records, data, state, onChange }: RecordsTablePro
     useExportUi.getState().openTableExport({
       recordIds: matching.map((row) => row.original.record.id),
       search: state.search.trim() || null,
-      onlyMapView: ui.limitToMapView,
+      // Away from the map (the Interventions page) there's no map view to keep to.
+      onlyMapView: onOpen ? false : ui.limitToMapView,
     });
   };
 
@@ -186,6 +195,7 @@ export function RecordsTable({ records, data, state, onChange }: RecordsTablePro
                         <button type="button" className="link-button">
                           {row.original.name}
                         </button>
+                        {markUnplotted && !isOnMap(row.original.record) && <span className="unplotted-badge">No coordinates yet</span>}
                       </td>
                     ) : (
                       <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>

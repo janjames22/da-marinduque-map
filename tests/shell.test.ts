@@ -7,12 +7,11 @@ const labels = (role: Parameters<typeof navGroups>[0]) => navGroups(role).flatMa
 describe('addresses', () => {
   it('sends the old map addresses to their new place', () => {
     expect(movedAddress('/barangays/12')).toBe('/map/barangays/12');
-    expect(movedAddress('/records/0b5e-41')).toBe('/map/records/0b5e-41');
-    expect(movedAddress('/records/0b5e-41/')).toBe('/map/records/0b5e-41');
+    expect(movedAddress('/barangays/12/')).toBe('/map/barangays/12');
   });
 
   it('leaves the current addresses alone', () => {
-    for (const path of ['/', '/dashboard', '/map', '/map/', '/map/barangays/12', '/map/records/abc', '/qa', '/qa/condition', '/import', '/reports', '/reports/inventory', '/admin', '/admin/types/3']) {
+    for (const path of ['/', '/dashboard', '/map', '/map/', '/map/barangays/12', '/map/records/abc', '/records', '/records/0b5e-41', '/qa', '/qa/condition', '/import', '/reports', '/reports/inventory', '/admin', '/admin/types/3']) {
       expect(movedAddress(path), path).toBeNull();
     }
   });
@@ -27,6 +26,8 @@ describe('addresses', () => {
     expect(pageFor('/')).toBe('home');
     expect(pageFor('/dashboard')).toBe('dashboard');
     expect(pageFor('/map/records/abc')).toBe('map');
+    expect(pageFor('/records')).toBe('records');
+    expect(pageFor('/records/0b5e-41')).toBe('records');
     expect(pageFor('/qa/condition')).toBe('work');
     expect(pageFor('/import')).toBe('work');
     expect(pageFor('/reports/beneficiary/x')).toBe('reports');
@@ -36,9 +37,9 @@ describe('addresses', () => {
 
 describe('the sidebar', () => {
   it('shows each role only the pages it can use', () => {
-    expect(labels('viewer')).toEqual(['Home', 'Dashboard', 'Map', 'Reports']);
-    expect(labels('encoder')).toEqual(['Home', 'Dashboard', 'Map', 'QA queue', 'Condition check', 'Import', 'Reports']);
-    expect(labels('admin')).toEqual(['Home', 'Dashboard', 'Map', 'QA queue', 'Condition check', 'Import', 'Reports', 'Users', 'Types and fields', 'Lists', 'Signature blocks', 'Audit log']);
+    expect(labels('viewer')).toEqual(['Home', 'Dashboard', 'Map', 'Interventions', 'Reports']);
+    expect(labels('encoder')).toEqual(['Home', 'Dashboard', 'Map', 'Interventions', 'QA queue', 'Condition check', 'Import', 'Reports']);
+    expect(labels('admin')).toEqual(['Home', 'Dashboard', 'Map', 'Interventions', 'QA queue', 'Condition check', 'Import', 'Reports', 'Users', 'Types and fields', 'Lists', 'Signature blocks', 'Audit log']);
   });
 
   it('marks the page that is open, and only that one', () => {

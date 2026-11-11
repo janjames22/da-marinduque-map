@@ -659,7 +659,7 @@ test.describe('the dashboard and records table', () => {
   });
 
   test('a link straight to a record still opens it after signing in', async ({ page }) => {
-    await signedIn(page, USERS.viewer, `/records/${record.id}`);
+    await signedIn(page, USERS.viewer, `/map/records/${record.id}`);
     await expect(page.locator('.record-popup').filter({ hasText: record.beneficiary })).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/map$/);
   });

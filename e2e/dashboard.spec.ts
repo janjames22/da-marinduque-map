@@ -1020,7 +1020,7 @@ test.describe('saved views', () => {
 
 test.describe('a link to one record', () => {
   test('shows it, whatever filters were on', async ({ page, isMobile }) => {
-    await ready(page, `/records/${onMapRecord.id}`);
+    await ready(page, `/map/records/${onMapRecord.id}`);
     await expect(popup(page).filter({ hasText: onMapRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/map$/);
     if (isMobile) await expect(panel(page)).toHaveCount(0);
@@ -1028,7 +1028,7 @@ test.describe('a link to one record', () => {
 
   // Zooming can't separate two markers on one spot, and the map is still settling as it first opens.
   test('shows one on the same spot as another, as the map opens', async ({ page }) => {
-    await ready(page, `/records/${sharedPointRecord.id}`);
+    await ready(page, `/map/records/${sharedPointRecord.id}`);
     await expect(popup(page).filter({ hasText: sharedPointRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
   });
 
@@ -1041,13 +1041,13 @@ test.describe('a link to one record', () => {
   });
 
   test('one that isn\'t on the map opens its history', async ({ page }) => {
-    await ready(page, `/records/${unlocatedRecord.id}`);
+    await ready(page, `/map/records/${unlocatedRecord.id}`);
     await expect(page.getByLabel('Change history')).toBeVisible();
     await expect(page.getByText(/This record isn't on the map/)).toBeVisible();
   });
 
   test('one that doesn\'t exist says so', async ({ page }) => {
-    await ready(page, '/records/00000000-0000-4000-8000-000000000000');
+    await ready(page, '/map/records/00000000-0000-4000-8000-000000000000');
     await expect(page.getByText(/That record wasn't found/)).toBeVisible();
     await expect(page).toHaveURL(/\/map$/);
   });
