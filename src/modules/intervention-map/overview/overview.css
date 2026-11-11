@@ -399,6 +399,8 @@
   flex: 1 1 130px;
   flex-direction: column;
   gap: 6px;
+  /* A long program name mustn't push its box past the card on a phone. */
+  min-width: 0;
 }
 
 .filter-field.is-wide {
@@ -411,6 +413,7 @@
 
 .filter-field select {
   background: var(--bg-surface);
+  max-width: 100%;
   border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
   color: var(--text-primary);

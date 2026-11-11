@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Intervention } from '../data/types';
 import type { ChoroplethMode, Shading } from '../lib/choropleth';
 import { DEFAULT_COLOR_BY, type ColorScale } from '../lib/view-fields';
@@ -42,8 +42,19 @@ function MarkerLegend({ scale, markers }: { scale: ColorScale; markers: Interven
 }
 
 export function Legend({ mode, shading, totalBarangays, unassigned, scale, markers, onShowUnassigned }: LegendProps) {
+  // Phones only: the legend starts folded into a small button, so the map has the screen.
+  const [open, setOpen] = useState(false);
   return (
-    <div className="legend" aria-label="Map legend">
+    <div className={`legend${open ? ' is-open' : ''}`} aria-label="Map legend">
+      <button type="button" className="legend-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="legend-toggle-swatches" aria-hidden="true">
+          {(mode === 'off' ? [] : shading.legend.slice(-3)).map((entry) => (
+            <span key={entry.label} style={{ background: entry.color }} />
+          ))}
+        </span>
+        {open ? 'Hide legend' : 'Legend'}
+      </button>
+      <div className="legend-body">
       {mode !== 'off' && (
         <>
           <h2 className="legend-title">{shading.title}</h2>
@@ -72,6 +83,7 @@ export function Legend({ mode, shading, totalBarangays, unassigned, scale, marke
         </button>
       )}
       <MarkerLegend scale={scale} markers={markers} />
+      </div>
     </div>
   );
 }

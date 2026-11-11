@@ -61,6 +61,13 @@ const panel = (page: Page) => page.getByRole('complementary', { name: 'Dashboard
 const tabs = (page: Page) => page.getByRole('navigation', { name: 'Views' });
 const layers = (page: Page) => page.getByRole('complementary', { name: 'Layers and filters' });
 const legend = (page: Page) => page.getByLabel('Map legend');
+
+// On a phone the legend starts folded into a button. On a computer it's always open.
+async function openLegend(page: Page) {
+  await expect(legend(page)).toBeVisible();
+  const toggle = legend(page).getByRole('button', { name: 'Legend', exact: true });
+  if (await toggle.isVisible()) await toggle.click();
+}
 const kpi = (page: Page, id: string) => page.locator(`[data-kpi="${id}"] .kpi-value`);
 const chart = (page: Page, name: string) => page.getByRole('figure', { name });
 const rows = (page: Page) => page.locator('.records-table tbody tr');
@@ -759,6 +766,7 @@ test.describe('coloring markers by any field', () => {
 
   test('recolors the markers and explains them, with how many of each', async ({ page, isMobile }) => {
     await ready(page);
+    await openLegend(page);
     await expect(legend(page).getByText('Markers by program')).toBeVisible();
 
     await colorBy(page, 'Status', isMobile);
@@ -777,6 +785,7 @@ test.describe('coloring markers by any field', () => {
 
   test('a number goes in ranges, and a filter doesn\'t repaint what\'s left', async ({ page, isMobile }) => {
     await ready(page);
+    await openLegend(page);
     await colorBy(page, 'Year funded', isMobile);
     await showMap(page, isMobile);
     const markers = legend(page).getByRole('list', { name: 'Marker colors by Year funded' });
@@ -795,6 +804,7 @@ test.describe('coloring markers by any field', () => {
     await addCustomFields(page);
     await colorBy(page, 'Drive', isMobile);
     await showMap(page, isMobile);
+    await openLegend(page);
     const markers = legend(page).getByRole('list', { name: 'Marker colors by Drive' });
     await expect(markers.locator('li').filter({ hasText: 'Solar' })).toContainText('2');
     await expect(markers.locator('li').filter({ hasText: 'Diesel' })).toContainText('1');
@@ -1020,7 +1030,7 @@ test.describe('saved views', () => {
 
 test.describe('a link to one record', () => {
   test('shows it, whatever filters were on', async ({ page, isMobile }) => {
-    await ready(page, `/records/${onMapRecord.id}`);
+    await ready(page, `/map/records/${onMapRecord.id}`);
     await expect(popup(page).filter({ hasText: onMapRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/map$/);
     if (isMobile) await expect(panel(page)).toHaveCount(0);
@@ -1028,7 +1038,7 @@ test.describe('a link to one record', () => {
 
   // Zooming can't separate two markers on one spot, and the map is still settling as it first opens.
   test('shows one on the same spot as another, as the map opens', async ({ page }) => {
-    await ready(page, `/records/${sharedPointRecord.id}`);
+    await ready(page, `/map/records/${sharedPointRecord.id}`);
     await expect(popup(page).filter({ hasText: sharedPointRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
   });
 
@@ -1041,13 +1051,13 @@ test.describe('a link to one record', () => {
   });
 
   test('one that isn\'t on the map opens its history', async ({ page }) => {
-    await ready(page, `/records/${unlocatedRecord.id}`);
+    await ready(page, `/map/records/${unlocatedRecord.id}`);
     await expect(page.getByLabel('Change history')).toBeVisible();
     await expect(page.getByText(/This record isn't on the map/)).toBeVisible();
   });
 
   test('one that doesn\'t exist says so', async ({ page }) => {
-    await ready(page, '/records/00000000-0000-4000-8000-000000000000');
+    await ready(page, '/map/records/00000000-0000-4000-8000-000000000000');
     await expect(page.getByText(/That record wasn't found/)).toBeVisible();
     await expect(page).toHaveURL(/\/map$/);
   });

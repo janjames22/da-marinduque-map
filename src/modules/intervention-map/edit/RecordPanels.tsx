@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { ConflictError } from '../data/store';
 import type { AuditEntry, Intervention, MapData } from '../data/types';
 import { auditChanges, auditHeadline } from '../lib/audit-display';
+import { manilaDate } from '../lib/dates';
 import { encodedPlace, isOnMap, recordName } from '../lib/display';
 import { openRecordPanel } from './open-panel';
 import { useEditUi } from '../state/edit-ui';
@@ -98,7 +99,7 @@ export function DeletedPanel({ data }: { data: MapData }) {
             <li key={record.id} className="record-row">
               <span className="record-name">{recordName(record, data)}</span>
               <div className="record-meta">{[record.beneficiary, record.year_funded, encodedPlace(record, data)].filter(Boolean).join(' · ')}</div>
-              <div className="record-meta">Deleted {record.deleted_at?.slice(0, 10)}</div>
+              <div className="record-meta">Deleted {record.deleted_at && manilaDate(record.deleted_at)}</div>
               <div className="form-actions">
                 <button type="button" className="secondary-button" onClick={() => void restore(record)}>
                   Restore

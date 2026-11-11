@@ -180,7 +180,7 @@ export function AdminPage({ user }: { user: AppUser }) {
 
 function AdminLoader({ user }: { user: AppUser }) {
   const state = useMapData(user);
-  if (state.status === 'loading') return <p className="page-message">Loading…</p>;
+  if (state.status === 'loading') return <p className="page-message is-loading">Loading…</p>;
   if (state.status === 'error') {
     return (
       <div className="page-message" role="alert">

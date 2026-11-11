@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Intervention, MapData } from '../data/types';
 import type { ChoroplethMode } from '../lib/choropleth';
@@ -70,6 +71,14 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
 
   return (
     <aside className={`panel panel-left${ui.panelOpen ? ' is-open' : ''}`} aria-label="Layers and filters">
+      {/* On a phone the panel is a sheet over the map, closed from its own header. */}
+      <div className="sheet-header">
+        <span className="sheet-handle" aria-hidden="true" />
+        <h2 className="sheet-title">Layers and filters</h2>
+        <button type="button" className="sheet-close" aria-label="Close layers" onClick={() => ui.setPanelOpen(false)}>
+          <X aria-hidden="true" />
+        </button>
+      </div>
       <section>
         <h2 className="section-title">Filters</h2>
         {ui.mode !== 'program' && (

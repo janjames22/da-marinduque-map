@@ -96,14 +96,9 @@ test('Export stands out, right beside "+ Add intervention"', async ({ page }) =>
   await open(page);
   const add = (await page.locator('.add-record-button').boundingBox())!;
   const button = (await toolbarExport(page).boundingBox())!;
-  if (await page.getByRole('button', { name: 'Layers and filters' }).isVisible()) {
-    // Stacked on a phone, at the same width.
-    expect(button.y - (add.y + add.height)).toBeLessThanOrEqual(8);
-    expect(button.width).toBeCloseTo(add.width, 0);
-  } else {
-    expect(Math.abs(button.y - add.y)).toBeLessThan(1);
-    expect(button.x - (add.x + add.width)).toBeLessThanOrEqual(8);
-  }
+  // In one row, on a computer and on a phone, where Export is an icon button.
+  expect(Math.abs(button.y - add.y)).toBeLessThan(1);
+  expect(button.x - (add.x + add.width)).toBeLessThanOrEqual(8);
   expect(button.height).toBeCloseTo(add.height, 0);
   // A white card button beside the green one, as in the Phase 11 design.
   await expect(toolbarExport(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)');

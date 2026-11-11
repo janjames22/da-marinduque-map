@@ -6,7 +6,7 @@ import type { AppUser, Intervention, MapData, QaDismissal } from '../data/types'
 import { useSaving, Feedback } from '../admin/parts';
 import { SelectField, TextField } from '../edit/FormParts';
 import { formatPoint } from '../lib/coordinates';
-import { manilaToday } from '../lib/dates';
+import { manilaDate, manilaToday } from '../lib/dates';
 import { statusChoices } from '../lib/form-values';
 import { FLAG_LABELS, recordName } from '../lib/display';
 import { closestBarangays } from '../lib/matching';
@@ -32,7 +32,6 @@ const ACTIONS: Record<string, Action[]> = {
 const FIX_ON_MAP = new Set(['out_of_province', 'no_coords', 'muni_mismatch', 'barangay_mismatch', 'beneficiary_name_check', 'duplicate_point']);
 const ACTION_LABELS: Record<Action, string> = { barangay: 'Set barangay', basis: 'Set location basis', status: 'Update status', dismiss: 'Dismiss' };
 
-const dateOnly = (timestamp: string) => timestamp.slice(0, 10);
 
 function detail(record: Intervention, flag: string, data: MapData): string | null {
   const encodedBarangay = data.barangays.find((barangay) => barangay.id === record.barangay_id)?.name;
@@ -205,7 +204,7 @@ function DismissedNote({ dismissal, data, user, onPutBack }: { dismissal: QaDism
   const who = personName(data, user, dismissal.dismissed_by);
   return (
     <p className="field-hint">
-      Dismissed by {who} on {dateOnly(dismissal.dismissed_at)}: {dismissal.reason}{' '}
+      Dismissed by {who} on {manilaDate(dismissal.dismissed_at)}: {dismissal.reason}{' '}
       <button type="button" className="link-button" onClick={onPutBack}>
         Put back in the queue
       </button>

@@ -22,6 +22,13 @@ const barangayNamed = (name: string) => seed.barangays.find((b) => b.name === na
 const recordById = (n: string) => seed.interventions.find((r) => r.source_id === `RAED-2026-10-21-${n}`)!;
 
 const legend = (page: Page) => page.getByLabel('Map legend');
+
+// On a phone the legend starts folded into a button. On a computer it's always open.
+async function openLegend(page: Page) {
+  await expect(legend(page)).toBeVisible();
+  const toggle = legend(page).getByRole('button', { name: 'Legend', exact: true });
+  if (await toggle.isVisible()) await toggle.click();
+}
 const profile = (page: Page) => page.getByLabel(/^Profile of barangay/);
 
 // A select inside its label adds its options to the label's text, so these go by accessible name.
@@ -298,6 +305,7 @@ test.describe('layer panel', () => {
 test.describe('unassigned records', () => {
   test('lists the 9 records with no linked barangay', async ({ page }) => {
     await page.goto('/map');
+    await openLegend(page);
     await page.getByRole('button', { name: 'Unassigned: 9 records' }).click();
     const panel = page.getByLabel('Unassigned records');
     await expect(panel.locator('.record-row')).toHaveCount(9);

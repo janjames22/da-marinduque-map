@@ -1,6 +1,6 @@
 // The frame around every signed-in page: the sidebar, the top bar and the sources line. On a phone
 // the sidebar is a drawer, opened from the top bar.
-import { ChartColumn, ChevronDown, FileText, FileUp, Gauge, History, House, KeyRound, List, ListChecks, LogOut, Map as MapIcon, MapPin, Menu, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
+import { ChartColumn, ChevronDown, ClipboardList, FileText, FileUp, Gauge, History, House, KeyRound, List, ListChecks, LogOut, Map as MapIcon, MapPin, Menu, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { AppUser } from '../../modules/intervention-map/data/types';
@@ -12,6 +12,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   home: House,
   dashboard: ChartColumn,
   map: MapIcon,
+  records: ClipboardList,
   qa: ListChecks,
   condition: Gauge,
   import: FileUp,

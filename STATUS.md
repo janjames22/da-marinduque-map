@@ -15,7 +15,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-12_
 
-- **Branch:** `main`, in sync with `origin/main`. Phase 15a is being built on `phase-15a-records`.
+- **Branch:** `main`, in sync with `origin/main`. Phase 15a, with the owner's phone fixes and faster page changes, passed Gate 1 on `phase-15a-records` and is waiting for Gate 2.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -30,7 +30,7 @@ _Last updated: 2026-11-12_
 - **Live:** Phase 12 is on https://da-marinduque-map.netlify.app since 2026-11-11. The owner deployed it with `npm run deploy`, because Claude Code's permissions don't let Claude deploy to production. Checked signed out: the security headers are on, Inter loads, and the only blocked script is Netlify's own badge, which is known since Phase 9.
 - **Live:** Phase 13, the Home and Dashboard pages, is on https://da-marinduque-map.netlify.app since 2026-11-11 (deploy `6af47bcaae5f3dff886714f1`). Checked signed out: the security headers are on and Inter loads. The only blocked script is Netlify's badge, as before.
 - **Live:** Phase 14, the map restyle, is on https://da-marinduque-map.netlify.app since 2026-11-12 (deploy `6af4953cc6a4eec06e04faca`). Checked signed out: the security headers are on, Inter loads, and the new map code is served. The only blocked script is Netlify's badge, as before.
-- **Next:** Phase 15, the remaining pages in the new design, in three parts: 15a the Interventions list and record page (being built), 15b the QA queue, Condition check, Import and Reports, 15c the Admin pages, forms, and removing the old styles.
+- **Next:** Phase 15, the remaining pages in the new design, in three parts: 15a the Interventions list and record page (through Gate 1), 15b the QA queue, Condition check, Import and Reports, 15c the Admin pages, forms, and removing the old styles.
 - **Report PDFs keep the full header:** "Department of Agriculture – Provincial Agriculture Office, Marinduque" stays on the reports, as official documents. Only the app's screens use the shorter office name. The owner decided this on 2026-11-11.
 
 ## Phases completed
@@ -62,8 +62,19 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Phase 15a, second round, through Gate 1. The owner tried the live map on a phone and found the buttons overlapping, the layers panel covering the map, and each page slow to open:
+  - **Phone map:** one row of buttons over the map (Layers; + Add, Export and Print as icon buttons), the layers panel as a sheet that slides up with the map dimmed behind it and its own close button, the legend folded into a Legend button, zoom at the bottom right, Map / Dashboard / List as one rounded switch, and the sources on one line. Styles in `src/app/map-phone.css`; the computer layout is unchanged.
+  - **Transitions:** the sheet slides, the backdrop fades, panels rise in, the legend fades open, buttons give when pressed, and pages fade in. All off when the device asks for less motion.
+  - **Speed:** the data loads once per sign-in and every page shares it (`useMapData` keeps one session, with live updates), instead of each page loading the boundaries and every table again. The other pages' code is fetched in the background once the first page is up, and "Loading…" only shows after 0.3 s. On the local dev server, Home, Interventions and the Map now open in about 0.3 to 0.5 s.
+  - **Checks:** typecheck, 1,120 unit tests, and the full e2e run with 670 passed. Five phone tests were updated for the folded legend and the one-row toolbar.
 - Phase 14 is live (deploy `6af4953cc6a4eec06e04faca`), deployed by the owner from `main`. The Phase 15a work was set aside first, so only Phase 14 went out.
-- Known bug found by the tests after midnight: a few dates (QA dismissals, last sign-in, deleted records) show the UTC date, so between midnight and 8 a.m. Philippine time they show the day before. The fix goes in with Phase 15a.
+- Known bug found by the tests after midnight: a few dates (QA dismissals, last sign-in, deleted records) show the UTC date, so between midnight and 8 a.m. Philippine time they show the day before. Fixed on `phase-15a-records` with one helper, `manilaDate()`.
+- Phase 15a built and through Gate 1, on branch `phase-15a-records`:
+  - **Interventions list** at `/records`: every record, with the same filters as the Dashboard and the map, a count per type, search, sorting and Export this table. Records without coordinates carry a "No coordinates yet" badge. Add intervention (Encoders and Admins) opens the map.
+  - **Record page** at `/records/:id`: details with the custom fields, location with Google Maps and map links, status history, QA flags and photos. A record without coordinates says it is not on the map, links to the list for the region to verify, and gives editors "Enter verified coordinates". A missing record gets a not-found message.
+  - **Addresses and sidebar:** `/records/:id` is now the record page and no longer redirects to the map, which keeps `/map/records/:id`. Interventions is first under Records, and Viewers get it too.
+  - **Also fixed:** the Program filter stuck out of its card on phones, on the Dashboard too.
+  - **Checks:** typecheck, 1,120 unit tests, and the full e2e run with 668 passed. Its only 2 failures were the date bug, and those tests pass after the fix.
 
 ### 2026-11-11
 

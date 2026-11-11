@@ -118,7 +118,7 @@ export function AuthGate({ children }: { children(session: SignedIn): ReactNode 
 
   switch (state.status) {
     case 'loading':
-      return <p className="page-message">Loading…</p>;
+      return <p className="page-message is-loading">Loading…</p>;
     case 'signed-out':
       return (
         <AuthLayout>

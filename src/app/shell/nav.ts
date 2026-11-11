@@ -2,7 +2,7 @@
 // keeps each person from seeing links to pages they can't use.
 import type { UserRole } from '../../modules/intervention-map/data/types';
 
-export type NavIcon = 'home' | 'dashboard' | 'map' | 'qa' | 'condition' | 'import' | 'reports' | 'users' | 'types' | 'lists' | 'signatures' | 'audit';
+export type NavIcon = 'home' | 'dashboard' | 'map' | 'records' | 'qa' | 'condition' | 'import' | 'reports' | 'users' | 'types' | 'lists' | 'signatures' | 'audit';
 
 export interface NavItem {
   label: string;
@@ -27,14 +27,20 @@ const OVERVIEW: NavGroup = {
   ],
 };
 
+const INTERVENTIONS: NavItem = { label: 'Interventions', to: '/records', icon: 'records', matches: ['/records'] };
+
 const RECORDS: NavGroup = {
   label: 'Records',
   items: [
+    INTERVENTIONS,
     { label: 'QA queue', to: '/qa', icon: 'qa', matches: ['/qa'], exact: true },
     { label: 'Condition check', to: '/qa/condition', icon: 'condition', matches: ['/qa/condition'] },
     { label: 'Import', to: '/import', icon: 'import', matches: ['/import'] },
   ],
 };
+
+// A viewer can read the records but not check or bring them in.
+const RECORDS_TO_READ: NavGroup = { label: 'Records', items: [INTERVENTIONS] };
 
 const REPORTS: NavGroup = {
   label: 'Reports',
@@ -55,7 +61,7 @@ const ADMINISTRATION: NavGroup = {
 export function navGroups(role: UserRole): NavGroup[] {
   if (role === 'admin') return [OVERVIEW, RECORDS, REPORTS, ADMINISTRATION];
   if (role === 'encoder') return [OVERVIEW, RECORDS, REPORTS];
-  return [OVERVIEW, REPORTS];
+  return [OVERVIEW, RECORDS_TO_READ, REPORTS];
 }
 
 export function isCurrent(item: NavItem, pathname: string): boolean {

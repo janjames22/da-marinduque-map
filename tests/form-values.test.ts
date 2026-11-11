@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AuditEntry, FieldSchema, Intervention, InterventionType, MapData } from '../src/modules/intervention-map/data/types';
 import { auditChanges, auditHeadline } from '../src/modules/intervention-map/lib/audit-display';
-import { manilaToday, manilaYear, isValidDate } from '../src/modules/intervention-map/lib/dates';
+import { manilaDate, manilaToday, manilaYear, isValidDate } from '../src/modules/intervention-map/lib/dates';
 import { attributesFromText, attributesToText, buildPatch, formFromRecord, valuesFromForm, valuesFromRecord } from '../src/modules/intervention-map/lib/form-values';
 import { possibleDuplicates } from '../src/modules/intervention-map/lib/qa';
 import { validateAttributes, validateIntervention, validateStatus } from '../src/modules/intervention-map/lib/validation';
@@ -188,6 +188,12 @@ describe('dates', () => {
   it('uses the Philippine date', () => {
     expect(manilaToday(new Date('2026-12-31T16:30:00Z'))).toBe('2027-01-01');
     expect(manilaYear(new Date('2026-12-31T16:30:00Z'))).toBe(2027);
+  });
+
+  it('gives the Philippine date of a saved time, not the UTC one', () => {
+    expect(manilaDate('2026-11-11T16:30:00+00:00')).toBe('2026-11-12');
+    expect(manilaDate('2026-11-11T15:59:59Z')).toBe('2026-11-11');
+    expect(manilaDate('2026-11-12')).toBe('2026-11-12');
   });
 
   it('rejects dates that don\'t exist', () => {

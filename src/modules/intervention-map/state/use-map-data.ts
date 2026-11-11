@@ -33,56 +33,99 @@ function shareUnchanged(previous: MapData | null, next: MapData): MapData {
   return merged as MapData;
 }
 
-export function useMapData(user: AppUser): MapDataState {
-  const [state, setState] = useState<MapDataState>({ status: 'loading' });
-  const setConnection = useConnection((current) => current.setLive);
+// One load per signed-in person, shared by every page. Before Phase 15a each page loaded the
+// boundaries and every table again as it opened, which is what made moving between pages slow.
+// Live updates keep the shared copy current while the person moves around.
+interface Session {
+  user: AppUser;
+  state: MapDataState;
+  listeners: Set<(state: MapDataState) => void>;
+  stop(): void;
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    let unsubscribe = () => {};
-    let stopWatching = () => {};
+let session: Session | null = null;
 
-    (async () => {
-      const [province, municipalities, barangays] = await Promise.all([
-        fetchBoundary('province'),
-        fetchBoundary('municipalities'),
-        fetchBoundary('barangays'),
-      ]);
-      const store = await createStore({ boundaries: { barangays, municipalities }, user });
-      const data = await store.load();
-      if (cancelled) return;
+function openSession(user: AppUser, setConnection: (live: boolean) => void): Session {
+  // The same person keeps their session. A new sign-in, or a failed load, starts again.
+  if (session && session.user === user && session.state.status !== 'error') return session;
+  session?.stop();
 
-      setConnection(true);
-      const places = buildPlaceIndex({ barangays, municipalities }, data);
-      const boundaries = { province, municipalities, barangays };
-      setState({ status: 'ready', data, boundaries, store, places });
-
-      // Only the latest reload may land, so an older, slower one can't overwrite it.
-      let latestLoad = 0;
-      unsubscribe = store.subscribe(() => {
-        const thisLoad = ++latestLoad;
-        store
-          .load()
-          .then((next) => {
-            if (cancelled || thisLoad !== latestLoad) return;
-            setState((current) =>
-              current.status === 'ready' ? { ...current, data: shareUnchanged(current.data, next) } : current,
-            );
-          })
-          // What's on screen stays until a later reload works. The connection notice explains why.
-          .catch(() => {});
-      });
-      stopWatching = store.watchConnection?.(setConnection) ?? stopWatching;
-    })().catch((error: Error) => {
-      if (!cancelled) setState({ status: 'error', error });
-    });
-
-    return () => {
+  let cancelled = false;
+  let unsubscribe = () => {};
+  let stopWatching = () => {};
+  const current: Session = {
+    user,
+    state: { status: 'loading' },
+    listeners: new Set(),
+    stop: () => {
       cancelled = true;
       unsubscribe();
       stopWatching();
+    },
+  };
+  const publish = (next: MapDataState) => {
+    current.state = next;
+    for (const listener of current.listeners) listener(next);
+  };
+
+  (async () => {
+    const [province, municipalities, barangays] = await Promise.all([
+      fetchBoundary('province'),
+      fetchBoundary('municipalities'),
+      fetchBoundary('barangays'),
+    ]);
+    const store = await createStore({ boundaries: { barangays, municipalities }, user });
+    const data = await store.load();
+    if (cancelled) return;
+
+    setConnection(true);
+    const places = buildPlaceIndex({ barangays, municipalities }, data);
+    const boundaries = { province, municipalities, barangays };
+    publish({ status: 'ready', data, boundaries, store, places });
+
+    // Only the latest reload may land, so an older, slower one can't overwrite it.
+    let latestLoad = 0;
+    unsubscribe = store.subscribe(() => {
+      const thisLoad = ++latestLoad;
+      store
+        .load()
+        .then((next) => {
+          if (cancelled || thisLoad !== latestLoad) return;
+          const ready = current.state;
+          if (ready.status === 'ready') publish({ ...ready, data: shareUnchanged(ready.data, next) });
+        })
+        // What's on screen stays until a later reload works. The connection notice explains why.
+        .catch(() => {});
+    });
+    stopWatching = store.watchConnection?.(setConnection) ?? stopWatching;
+  })().catch((error: Error) => {
+    if (!cancelled) publish({ status: 'error', error });
+  });
+
+  session = current;
+  return current;
+}
+
+export function useMapData(user: AppUser): MapDataState {
+  const setConnection = useConnection((current) => current.setLive);
+  // A page opened after the first has the data at once, with no "Loading…".
+  const [state, setState] = useState<MapDataState>(() => openSession(user, setConnection).state);
+
+  useEffect(() => {
+    const current = openSession(user, setConnection);
+    current.listeners.add(setState);
+    setState(current.state);
+    return () => {
+      current.listeners.delete(setState);
     };
   }, [user, setConnection]);
 
   return state;
+}
+
+// On signing out: stop the live updates and forget the data, so the next person starts fresh.
+export function closeMapDataSession(user: AppUser) {
+  if (session?.user !== user) return; // someone newer already has it
+  session.stop();
+  session = null;
 }
