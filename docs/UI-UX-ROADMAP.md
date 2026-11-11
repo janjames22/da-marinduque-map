@@ -223,7 +223,7 @@ Figures from the seed file `data/source/seed_interventions.csv` (report dated 20
 | Torrijos | 36 | 1 |
 | **Total** | **199** | **26** |
 
-> **To check in Phase 10:** the PDF in `Downloads` could not be opened when this roadmap was written, so these figures were not compared against it. If that PDF is newer than 2026-10-21, re-import it before designing with the numbers.
+> **Confirmed in Phase 10:** the PDF report is the 2026-10-21 version, and every figure above matches it. See [`DESIGN-BRIEF.md`](DESIGN-BRIEF.md) §2.
 
 FMR appears in the design from the start as a disabled layer and an empty dashboard card labelled "Data to follow", so adding it later doesn't change the layout.
 
@@ -485,13 +485,13 @@ Phase numbers continue from the project history, which ends at Phase 9.
 
 | # | Question | Needed by |
 |---|---|---|
-| Q-1 | Is the PDF in `Downloads` the 2026-10-21 report, or a newer one? | Phase 10 |
+| Q-1 | Is the PDF in `Downloads` the 2026-10-21 report, or a newer one? | **Answered:** the 2026-10-21 report, matching the seed data |
 | Q-2 | Who designs in Figma, and is a Dev Mode seat available for the MCP server? | Phase 11 |
-| Q-3 | What name and logo does the system use: "agri-dms", "Intervention Map", or both? | Phase 11 |
-| Q-4 | Should the map stay the landing page for Viewers? | Phase 10 |
+| Q-3 | What name and logo does the system use: "agri-dms", "Intervention Map", or both? | **Answered:** "Intervention Map", in agri-dms's logo tile |
+| Q-4 | Should the map stay the landing page for Viewers? | **Answered:** no, everyone lands on Home |
 | Q-5 | In what format will the FMR data arrive, and with which fields? | Phase 16 |
 | Q-6 | Which basemap provider is acceptable to the office? | Phase 14 |
-| Q-7 | Will this system later sit inside agri-dms, or stay separate with the same look? | Phase 10 |
+| Q-7 | Will this system later sit inside agri-dms, or stay separate with the same look? | **Answered:** separate, with the same design, kept ready to become a module |
 
 ---
 
@@ -514,4 +514,5 @@ A phase is done when all of these hold:
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 2026-11-11 | Phase 10 done: data confirmed against the PDF, Q-1, Q-3, Q-4 and Q-7 answered |
 | 0.1 | 2026-11-11 | First draft |
