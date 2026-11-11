@@ -15,7 +15,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-11_
 
-- **Branch:** `phase-12-ux-foundation`, pushed, not merged into `main` until Gate 2
+- **Branch:** `main`, in sync with `origin/main`. Phase 12 is merged.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -27,7 +27,8 @@ _Last updated: 2026-11-11_
 - **Built:** Phases 10 and 11 of the UI/UX roadmap. The design is signed off: 6 desktop and 6 phone screens on the [Intervention Map Design](https://claude.ai/artifact/LvSgChD6pwXb7nXuZsv2Ze) canvas (private to the owner), with its source backed up in [`design/canvas/`](design/canvas/README.md).
 - **Office name, decided at sign-off:** "Intervention Map" with "Provincial Agriculture Office Marinduque" underneath, and the footer line "Provincial Agriculture Office, Marinduque". "Department of Agriculture –" is dropped.
 - **In progress:** Phase 12, the foundation. It's built, and it passed Gate 1 (the owner's local preview) on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
-- **Waiting for Gate 2:** the owner checks the private draft at https://6af46f36d1b297e398bd44b9--da-marinduque-map.netlify.app with their usual login. It uses the real database, and the live site is unchanged. When it's approved, merge into `main` and run `npm run deploy`. Then comes Phase 13: the Home and Dashboard pages.
+- **Gate 2 approved, live deploy pending:** the owner approved the draft on 2026-11-11, and Phase 12 is merged into `main`. The live site is still the old version until the owner runs `npm run deploy`, because Claude Code's permissions don't allow Claude to deploy to production.
+- **Next:** Phase 13, the Home and Dashboard pages, as drawn on the design canvas.
 
 ## Phases completed
 
@@ -55,6 +56,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 12 Gate 2 approved by the owner, and merged into `main` (`68b573f`). Going live waits for the owner to run `npm run deploy`.
 - Phase 12 Gate 2 draft is up: https://6af46f36d1b297e398bd44b9--da-marinduque-map.netlify.app.
   - **Setup on this computer:** `.env.local` is in place, `npm run check:supabase` passes all 16 checks (1,167 records, 2 Admins), and the folder is linked to the `da-marinduque-map` Netlify site.
   - **Draft checked signed out:** it loads under the real security headers, Inter loads, and there are no console errors.
