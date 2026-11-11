@@ -29,7 +29,7 @@ _Last updated: 2026-11-11_
 - **Built:** Phase 12, the foundation, through both gates on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
 - **Live:** Phase 12 is on https://da-marinduque-map.netlify.app since 2026-11-11. The owner deployed it with `npm run deploy`, because Claude Code's permissions don't let Claude deploy to production. Checked signed out: the security headers are on, Inter loads, and the only blocked script is Netlify's own badge, which is known since Phase 9.
 - **Live:** Phase 13, the Home and Dashboard pages, is on https://da-marinduque-map.netlify.app since 2026-11-11 (deploy `6af47bcaae5f3dff886714f1`). Checked signed out: the security headers are on and Inter loads. The only blocked script is Netlify's badge, as before.
-- **In progress:** Phase 14, the map restyle. Built, and it passed Gate 1 on 2026-11-11. Next is the Gate 2 draft.
+- **In progress:** Phase 14, the map restyle. Built, and it passed Gate 1 on 2026-11-11. **Waiting for Gate 2:** the owner checks the private draft at https://6af48ddca59cf133e29abd01--da-marinduque-map.netlify.app with their usual login.
 - **Report PDFs keep the full header:** "Department of Agriculture – Provincial Agriculture Office, Marinduque" stays on the reports, as official documents. Only the app's screens use the shorter office name. The owner decided this on 2026-11-11.
 
 ## Phases completed
