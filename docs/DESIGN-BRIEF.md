@@ -91,11 +91,11 @@ Other location issues, already in the QA queue:
 
 ## 3. Decisions
 
-Decided by the owner on 2026-11-11.
+Decided by the owner on 2026-11-11. At the Phase 11 sign-off, the owner changed D-1's second line from "Marinduque PAO" to the full office name, and dropped "Department of Agriculture –" from the footer.
 
 | # | Question | Decision | Why |
 |---|---|---|---|
-| D-1 | What does the sidebar call the system? | **"Intervention Map"**, with "Marinduque PAO" underneath, in agri-dms's logo tile | The two systems read as one family. Each one's name says what it does |
+| D-1 | What does the sidebar call the system? | **"Intervention Map"**, with "Provincial Agriculture Office Marinduque" underneath, in agri-dms's logo tile | The two systems read as one family. Each one's name says what it does |
 | D-2 | Where does each person land after signing in? | **Home, for everyone** | One rule is simpler to explain. The map is one click away, and Home shows Viewers the headline numbers at once |
 | D-3 | Will this system sit inside agri-dms later? | **Stay separate, with the same design.** Keep it ready to become a module | The spec already asks for a module that can later join the ABE Project Data Consolidation System. Merging now would mean a shared login and database, which is out of scope |
 

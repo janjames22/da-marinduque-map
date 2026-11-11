@@ -23,8 +23,9 @@ _Last updated: 2026-11-11_
   - Drawing lines and polygons on the map isn't built yet. Editing works for points only.
   - 27 records stay off the map until the region verifies their location: 26 with no coordinates, 1 outside Marinduque. See [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §2.
   - UI/UX roadmap questions still open: Q-5 (FMR data format), Q-6 (basemap provider).
-- **In progress:** Phase 11. The owner chose to have Claude draw the design on a claude.ai design canvas instead of building it in Figma. Figma's MCP server can draw in a file only on a paid plan. The six desktop screens are drawn: [Intervention Map Design](https://claude.ai/artifact/LvSgChD6pwXb7nXuZsv2Ze) (private to the owner). They follow `design/tokens.json` and use real report numbers.
-- **Next:** the owner reviews the six desktop and six phone screens and leaves comments on the canvas. Phase 11 closes with the owner's sign-off. A Figma copy is optional. No app code changes until then.
+- **Built:** Phases 10 and 11 of the UI/UX roadmap. The design is signed off: 6 desktop and 6 phone screens on the [Intervention Map Design](https://claude.ai/artifact/LvSgChD6pwXb7nXuZsv2Ze) canvas (private to the owner), with its source backed up in [`design/canvas/`](design/canvas/README.md).
+- **Office name, decided at sign-off:** "Intervention Map" with "Provincial Agriculture Office Marinduque" underneath, and the footer line "Provincial Agriculture Office, Marinduque". "Department of Agriculture –" is dropped.
+- **Next:** Phase 12, the foundation, in [`docs/UI-UX-ROADMAP.md`](docs/UI-UX-ROADMAP.md) §12: tokens as CSS variables, Inter font, icons, the new sidebar and top bar, the sign-in screen, and the `/map` address with redirects. It's the first phase that changes app code, so both preview gates apply.
 
 ## Phases completed
 
@@ -44,7 +45,7 @@ The phases were built in a different order from the spec's §9. Export came befo
 | 9. Reports | `phase-9-reports`, `phase-9-fixes` | 2026-11-09 | Reports, print map, signature blocks, ABE PDCS write-up |
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
 | 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
-| 11. Figma kit (first half of Phase 11) | `design-figma-kit` | 2026-11-11 | `design/tokens.json`, `design/kit-preview.html`, `design/FIGMA-GUIDE.md`. The Figma design itself is still to come |
+| 11. Design | `design-figma-kit`, `design-canvas-signoff` | 2026-11-11 | Tokens, kit preview and Figma guide, then 12 screens on a claude.ai design canvas, signed off by the owner. Source in `design/canvas/` |
 
 ## Work log
 
@@ -52,6 +53,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 11 done: the owner signed off the design, including their own edits (office name written out on Sign in, smaller ID and item text in the Interventions list). The office wording now reads the same on every screen and in the docs. The canvas source is backed up in `design/canvas/`. Branch `design-canvas-signoff`.
 - Phase 11: Claude drew the six phone screens (390 px) on the same canvas: Sign in, Home, Home with the menu open, Dashboard, Map with the selected record in a bottom sheet, and Intervention detail.
 - Phase 11: Claude drew the six desktop screens (Sign in, Home, Dashboard, Map, Interventions list, Intervention detail) and a shared sidebar on a claude.ai design canvas, on the owner's choice over a paid Figma plan. The Map screen uses the real municipality boundaries. Waiting for the owner's review.
 - Phase 11 started: added the Figma kit in `design/`, approved by the owner at Gate 1. Tokens in W3C format for Tokens Studio, a browser preview of the look, and a build guide with every component and frame, filled with real report numbers. Map and chart colors stay as they are in the app. Branch `design-figma-kit`.

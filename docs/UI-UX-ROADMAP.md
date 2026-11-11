@@ -514,6 +514,7 @@ A phase is done when all of these hold:
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 2026-11-11 | Phase 11 done: the design was drawn on a claude.ai design canvas instead of in Figma and signed off. Source in `design/canvas/`. Office name written out in full |
 | 0.3 | 2026-11-11 | Phase 11 kit: tokens moved to `design/tokens.json`, map and chart colors kept as they are (M-4, M-7), Q-2 answered |
 | 0.2 | 2026-11-11 | Phase 10 done: data confirmed against the PDF, Q-1, Q-3, Q-4 and Q-7 answered |
 | 0.1 | 2026-11-11 | First draft |

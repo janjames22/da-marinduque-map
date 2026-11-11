@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dashboard on a phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+a{color:#1b6b3f}a:hover{color:#14532d}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 844px; background: #f7f6f3; font-family: Inter, system-ui, sans-serif; color: #1f1e1c; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums;">
+  <header style="height: 60px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 4px; background: #0f3f22; color: #ffffff;">
+    <a href="PhoneDrawer.dc.html" aria-label="Open the menu" style="width: 44px; height: 44px; border-radius: 8px; color: #ffffff; display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></a>
+    <strong style="flex: 1 1 auto; font-size: 16px; font-weight: 600;">Dashboard</strong>
+    <button type="button" aria-label="Account: Juan dela Cruz, Admin" style="width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><span style="width: 32px; height: 32px; border-radius: 50%; background: #1b6b3f; box-shadow: 0 0 0 2px #c3e6cf; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">JD</span></button>
+  </header>
+
+  <main style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <h1 style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 700;">Dashboard</h1>
+      <p style="margin: 0; color: #52514e;">All 199 records, including 27 not on the map yet. Data as of Nov 11, 2026.</p>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button type="button" style="flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"></path></svg>Filters</button>
+      <button type="button" style="flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg>Export</button>
+    </div>
+
+    <section aria-label="Totals" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+      <div style="background: linear-gradient(140deg, #0f3f22, #14532d); color: #ffffff; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px;">
+        <span style="color: #c3e6cf; font-weight: 500;">Total interventions</span>
+        <span style="font-size: 32px; line-height: 40px; font-weight: 700;">199</span>
+        <span style="font-size: 12px; line-height: 16px; color: #c3e6cf;">199 units</span>
+      </div>
+      <sc-for list="{{tiles}}" as="tile" hint-placeholder-count="6">
+        <div style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px;">
+          <span style="color: #52514e; font-weight: 500;">{{tile.label}}</span>
+          <span style="font-size: 32px; line-height: 40px; font-weight: 700;">{{tile.value}}</span>
+          <span style="font-size: 12px; line-height: 16px; color: #52514e;">{{tile.note}}</span>
+        </div>
+      </sc-for>
+      <div style="border: 1px dashed #8a8883; border-radius: 12px; background: #f7f6f3; padding: 16px; display: flex; flex-direction: column; gap: 4px; color: #52514e;">
+        <span style="font-weight: 500;">Farm-to-Market Roads</span>
+        <span style="font-size: 16px; line-height: 40px; font-weight: 600; color: #1f1e1c;">Data to follow</span>
+        <span style="font-size: 12px; line-height: 16px;">Roads and km</span>
+      </div>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;"><div style="display: flex; flex-direction: column; gap: 2px;"><h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Units by category group</h2><span style="color: #52514e;">Share of all 199 units</span></div><button type="button" style="height: 44px; padding: 0 8px; border: 0; background: transparent; color: #1b6b3f; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;">Table</button></div>
+      <div role="img" aria-label="Units by category group" style="display: flex; gap: 2px; height: 14px; border-radius: 999px; overflow: hidden;">
+        <sc-for list="{{groupsMix}}" as="g" hint-placeholder-count="7"><span style="flex: {{g.value}} 1 0; background: {{g.color}};"></span></sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px;">
+        <sc-for list="{{groupsMix}}" as="g" hint-placeholder-count="7">
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; flex: none; border-radius: 50%; background: {{g.color}};"></span><span style="flex: 1 1 auto; color: #52514e;">{{g.label}}</span><strong style="font-weight: 600;">{{g.value}}</strong></div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;"><div style="display: flex; flex-direction: column; gap: 2px;"><h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Units by municipality</h2><span style="color: #52514e;">Tap a bar to filter</span></div><button type="button" style="height: 44px; padding: 0 8px; border: 0; background: transparent; color: #1b6b3f; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;">Table</button></div>
+      <sc-for list="{{munis}}" as="row" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><span style="display: flex; justify-content: space-between;"><span>{{row.label}}</span><strong style="font-weight: 600;">{{row.value}}</strong></span><span style="height: 12px; background: #f2f9f4; border-radius: 4px;"><span style="display: block; height: 12px; width: {{row.pct}}; background: #1b6b3f; border-radius: 4px;"></span></span></div>
+      </sc-for>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;"><div style="display: flex; flex-direction: column; gap: 2px;"><h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Status by municipality</h2><span style="color: #52514e;">Status colors are set by Admins</span></div><button type="button" style="height: 44px; padding: 0 8px; border: 0; background: transparent; color: #1b6b3f; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;">Table</button></div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; line-height: 16px; color: #52514e;">
+        <sc-for list="{{statusKeys}}" as="k" hint-placeholder-count="4"><span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: {{k.color}};"></span>{{k.label}}</span></sc-for>
+      </div>
+      <sc-for list="{{statusRows}}" as="row" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><span style="display: flex; justify-content: space-between;"><span>{{row.label}}</span><strong style="font-weight: 600;">{{row.total}}</strong></span><span style="display: flex; gap: 1px; height: 12px; width: {{row.pct}}; border-radius: 4px; overflow: hidden;"><sc-for list="{{row.parts}}" as="p" hint-placeholder-count="2"><span style="flex: {{p.value}} 1 0; background: {{p.color}};"></span></sc-for></span></div>
+      </sc-for>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;"><div style="display: flex; flex-direction: column; gap: 2px;"><h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Units by program</h2><span style="color: #52514e;">Banner programs in the report</span></div><button type="button" style="height: 44px; padding: 0 8px; border: 0; background: transparent; color: #1b6b3f; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;">Table</button></div>
+      <sc-for list="{{programs}}" as="row" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><span style="display: flex; justify-content: space-between;"><span>{{row.label}}</span><strong style="font-weight: 600;">{{row.value}}</strong></span><span style="height: 12px; background: #f2f9f4; border-radius: 4px;"><span style="display: block; height: 12px; width: {{row.pct}}; background: #1b6b3f; border-radius: 4px;"></span></span></div>
+      </sc-for>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;"><div style="display: flex; flex-direction: column; gap: 2px;"><h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Units by year funded</h2><span style="color: #52514e;">2014 to 2026</span></div><button type="button" style="height: 44px; padding: 0 8px; border: 0; background: transparent; color: #1b6b3f; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;">Table</button></div>
+      <div style="display: flex; align-items: flex-end; gap: 4px; height: 150px; border-bottom: 1px solid #dcdbd6;">
+        <sc-for list="{{years}}" as="y" hint-placeholder-count="13">
+          <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; height: 100%;"><span style="font-size: 10px; line-height: 12px; color: #52514e;">{{y.value}}</span><span style="width: 100%; height: {{y.h}}; background: #1b6b3f; border-radius: 3px 3px 0 0;"></span></div>
+        </sc-for>
+      </div>
+      <div style="display: flex; gap: 4px; margin-top: -8px;">
+        <sc-for list="{{years}}" as="y" hint-placeholder-count="13"><span style="flex: 1 1 0; text-align: center; font-size: 10px; line-height: 12px; color: #52514e;">{{y.short}}</span></sc-for>
+      </div>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 2px;"><h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Awaiting coordinate verification</h2><span style="color: #52514e;">27 records, counted above but not on the map</span></div>
+      <sc-for list="{{coordGroups}}" as="g" hint-placeholder-count="2">
+        <div style="padding-top: 4px; font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">{{g.label}} · {{g.count}}</div>
+        <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3">
+          <a href="PhoneRecord.dc.html" style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid #dcdbd6; border-radius: 8px; color: #1f1e1c; text-decoration: none;">
+            <span style="display: flex; justify-content: space-between; gap: 8px;"><strong style="font-weight: 600;">{{r.item}}</strong><span style="font-size: 12px; color: #52514e; white-space: nowrap;">{{r.short}}</span></span>
+            <span style="color: #52514e;">{{r.who}} · {{r.brgy}}</span>
+            <span style="display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; min-height: 24px; padding: 2px 10px; border-radius: 999px; font-size: 12px; line-height: 16px; font-weight: 600; background: #efede8; color: #52514e;"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>{{r.issue}}</span>
+          </a>
+        </sc-for>
+      </sc-for>
+      <button type="button" style="height: 48px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;">Show the other 23, in 4 municipalities</button>
+      <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 8px; border: 0; background: #1b6b3f; color: #ffffff; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg>Download verification sheet</button>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":2460}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const bars = (rows) => {
+      const max = Math.max(...rows.map((r) => r.value));
+      return rows.map((r) => ({ ...r, pct: Math.round((r.value / max) * 100) + '%' }));
+    };
+    const groupColors = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6'];
+    const mix = [['Irrigation', 64], ['Land preparation', 53], ['Postharvest', 45], ['Processing', 22], ['Crop care', 8], ['Harvesting', 5], ['Planting', 2]];
+    const status = [{ key: 'Turned-over', color: '#2e7d32' }, { key: 'Serviceable', color: '#43a047' }, { key: 'Inventory', color: '#546e7a' }, { key: 'Completed', color: '#00897b' }];
+    const statusData = [['Santa Cruz', [38, 10, 0, 0]], ['Boac', [29, 8, 0, 1]], ['Torrijos', [28, 8, 0, 0]], ['Gasan', [27, 4, 2, 0]], ['Mogpog', [24, 1, 0, 0]], ['Buenavista', [17, 1, 0, 1]]];
+    const years = [[2014, 8], [2015, 1], [2016, 13], [2017, 26], [2018, 3], [2019, 6], [2020, 13], [2021, 5], [2022, 36], [2023, 22], [2024, 19], [2025, 44], [2026, 3]];
+    const row = (n, item, who, brgy, issue) => ({ short: '…-' + n, item, who, brgy, issue });
+    return {
+      tiles: [
+        { label: 'Farm Machinery', value: '195', note: 'Units' },
+        { label: 'SSIP', value: '4', note: 'Units' },
+        { label: '% operational', value: '100%', note: 'Of 32 assessed units' },
+        { label: 'Beneficiaries', value: '151', note: 'Approximate, by name' },
+        { label: 'Barangays with none yet', value: '121', note: 'of 218' },
+        { label: 'Awaiting coordinates', value: '27', note: '14% of records' },
+      ],
+      groupsMix: mix.map(([label, value], i) => ({ label, value, color: groupColors[i] })),
+      munis: bars([{ label: 'Santa Cruz', value: 48 }, { label: 'Boac', value: 38 }, { label: 'Torrijos', value: 36 }, { label: 'Gasan', value: 33 }, { label: 'Mogpog', value: 25 }, { label: 'Buenavista', value: 19 }]),
+      statusKeys: status.map((s) => ({ label: s.key, color: s.color })),
+      statusRows: statusData.map(([label, values]) => {
+        const total = values.reduce((a, b) => a + b, 0);
+        return { label, total, pct: Math.round((total / 48) * 100) + '%', parts: values.map((value, i) => ({ value, color: status[i].color })).filter((p) => p.value > 0) };
+      }),
+      programs: bars([{ label: 'Rice', value: 62 }, { label: 'High Value Crop Development', value: 59 }, { label: 'Corn', value: 38 }, { label: 'Organic Agriculture', value: 30 }, { label: 'Livestock', value: 9 }, { label: 'Urban and Peri-Urban', value: 1 }]),
+      years: years.map(([year, value]) => ({ value, short: "'" + String(year).slice(2), h: Math.max(2, Math.round((value / 44) * 110)) + 'px' })),
+      coordGroups: [
+        { label: 'Boac', count: 3, rows: [row('178', 'Hand Tractor (Walking-type)', 'Jrc-Mandama Farmers Association', 'Ihatub', 'No coordinates yet'), row('192', 'Hand Tractor (Walking-type)', 'Balimbing Farmers Association', 'no barangay', 'No coordinates, no barangay'), row('197', 'Solar-Powered Irrigation System', 'Gintong Butil Organic Farm Association', 'Ihatub', 'No coordinates yet')] },
+        { label: 'Buenavista', count: 1, rows: [row('193', 'Hand Tractor (Walking-type)', 'Caigangan Irrigators Association', 'Caigangan', 'No coordinates yet')] },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

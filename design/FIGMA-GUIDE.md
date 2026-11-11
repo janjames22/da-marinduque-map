@@ -127,7 +127,7 @@ Build them in this order, each as a component with variants. Measurements are in
 | 9 | Segmented bar | Height 14, radius `pill`, 2 px gaps between parts, a legend grid underneath: dot, name, number and percent | |
 | 10 | Table | Column headings Caption strong, secondary, 10 12 padding, 1 px bottom border. Rows 48 high, 0 12 padding, 1 px `border/card` dividers. Numbers right-aligned. Footer: "1–25 of 199" on the left, previous and next buttons on the right | Default, row hover (`bg/surface-muted`), empty state |
 | 11 | Filter bar | Card, padding 16, labelled selects in a row with 16 gaps. On phones it collapses to a "Filters" button | |
-| 12 | Sidebar | Width 248, gradient `bg/sidebar-start` → `bg/sidebar-end`, padding 20 12. Brand: 40 × 40 logo tile (`bg/logo-tile`, radius `sm`, `map-pin` icon in green 900), "Intervention Map" (16 Semibold, white), "Marinduque PAO" (Caption, `text/on-dark-muted`). Group headings Caption strong in `text/on-dark-muted`, 16 12 6 padding | Link item: height 40, radius `sm`, 20 px icon, 12 gap, white Body small Medium. States: default, hover (white at 8%), current (white fill, green 900 text), focus (2 px `focus/ring-on-dark`) |
+| 12 | Sidebar | Width 248, gradient `bg/sidebar-start` → `bg/sidebar-end`, padding 20 12. Brand: 40 × 40 logo tile (`bg/logo-tile`, radius `sm`, `map-pin` icon in green 900), "Intervention Map" (16 Semibold, white), "Provincial Agriculture Office Marinduque" (Caption, `text/on-dark-muted`). Group headings Caption strong in `text/on-dark-muted`, 16 12 6 padding | Link item: height 40, radius `sm`, 20 px icon, 12 gap, white Body small Medium. States: default, hover (white at 8%), current (white fill, green 900 text), focus (2 px `focus/ring-on-dark`) |
 | 13 | Top bar | Height 64, 1 px bottom border, right-aligned: 36 px initials circle (fill `action/primary`), name (Body small strong) over role (Caption, secondary), menu chevron | Desktop, phone (menu button on the left) |
 | 14 | Page header | Title, one line of note text (Body small secondary, 4 gap), primary action on the right | |
 | 15 | Empty state | 40 px icon in a 64 px icon tile, one line of title, one line of help, optional button. Centered in its card | |
@@ -160,7 +160,7 @@ The content below is real data from the RAED report of 2026-10-21. The app will 
 
 | Part | Content |
 |---|---|
-| Left half | Sidebar gradient. Logo tile with "Intervention Map" and "Marinduque PAO". Headline (Title, white): "Every DA intervention in Marinduque, on one map." Three steps in a row with icons and thin connecting lines: **Mapped** "Field or office", **Checked** "QA queue", **Reported** "Reports and exports". At the bottom: "Department of Agriculture – Provincial Agriculture Office, Marinduque" |
+| Left half | Sidebar gradient. Logo tile with "Intervention Map" and "Provincial Agriculture Office Marinduque". Headline (Title, white): "Every DA intervention in Marinduque, on one map." Three steps in a row with icons and thin connecting lines: **Mapped** "Field or office", **Checked** "QA queue", **Reported** "Reports and exports". At the bottom: "Provincial Agriculture Office, Marinduque" |
 | Right half | Page fill. "Sign in" (Title). Email (required), Password (required), a full-width primary button "Sign in" |
 | States to show | Wrong password: a danger notice above the button, "That email and password don't match." |
 | Phone | Only the right half, with the logo and name above "Sign in" |

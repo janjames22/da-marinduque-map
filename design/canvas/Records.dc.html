@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Interventions</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f3}
+*{box-sizing:border-box}
+a{color:#1b6b3f}a:hover{color:#14532d}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #f7f6f3; font-family: Inter, system-ui, sans-serif; color: #1f1e1c; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums;">
+  <div style="flex: 1 1 248px; max-width: 100%; display: flex; background: linear-gradient(170deg, #0f3f22, #1b6b3f);">
+    <dc-import name="Sidebar" current="records" hint-size="248px,960px"></dc-import>
+  </div>
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+    <header style="height: 64px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 0 32px; border-bottom: 1px solid #dcdbd6;">
+      <span style="width: 36px; height: 36px; border-radius: 50%; background: #1b6b3f; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;">JD</span>
+      <span style="display: flex; flex-direction: column;"><strong style="font-weight: 600;">Juan dela Cruz</strong><span style="font-size: 12px; line-height: 16px; color: #52514e;">Admin</span></span>
+      <button type="button" aria-label="Account menu" style="width: 44px; height: 44px; border: 0; background: transparent; border-radius: 8px; color: #52514e; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+    </header>
+
+    <main style="width: 100%; max-width: 1200px; margin: 0 auto; padding: 32px; display: flex; flex-direction: column; gap: 24px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 700;">Interventions</h1>
+          <p style="margin: 0; color: #52514e;">199 records · 195 Farm Machinery, 4 SSIP</p>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg>Export</button>
+          <a href="Record.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 8px; background: #1b6b3f; color: #ffffff; font-weight: 600; text-decoration: none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add intervention</a>
+        </div>
+      </div>
+
+      <form aria-label="Search and filters" style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;">
+        <div style="flex: 3 1 280px; display: flex; flex-direction: column; gap: 6px;"><label for="r-search" style="font-weight: 500;">Search</label><input id="r-search" type="search" placeholder="Name, beneficiary or ID" style="height: 44px; border: 1px solid #8a8883; border-radius: 8px; padding: 0 12px; font: 400 16px Inter, system-ui, sans-serif; color: #1f1e1c; background: #ffffff;"></div>
+        <div style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 6px;"><label for="r-type" style="font-weight: 500;">Type</label><select id="r-type" style="height: 44px; border: 1px solid #8a8883; border-radius: 8px; padding: 0 12px; font: 400 16px Inter, system-ui, sans-serif; background: #ffffff; color: #1f1e1c;"><option>All types</option></select></div>
+        <div style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 6px;"><label for="r-muni" style="font-weight: 500;">Municipality</label><select id="r-muni" style="height: 44px; border: 1px solid #8a8883; border-radius: 8px; padding: 0 12px; font: 400 16px Inter, system-ui, sans-serif; background: #ffffff; color: #1f1e1c;"><option>All municipalities</option></select></div>
+        <div style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 6px;"><label for="r-status" style="font-weight: 500;">Status</label><select id="r-status" style="height: 44px; border: 1px solid #8a8883; border-radius: 8px; padding: 0 12px; font: 400 16px Inter, system-ui, sans-serif; background: #ffffff; color: #1f1e1c;"><option>All statuses</option></select></div>
+      </form>
+
+      <section aria-label="Records" style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); overflow: hidden;">
+        <div style="overflow-x: auto;">
+          <div role="table" aria-label="Interventions" style="min-width: 980px; display: flex; flex-direction: column;">
+            <div role="row" style="display: grid; grid-template-columns: 150px 1.3fr 120px 1.7fr 1fr 100px 56px 120px 56px; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #dcdbd6; font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">
+              <span role="columnheader">ID</span><span role="columnheader">Item</span><span role="columnheader">Type</span><span role="columnheader">Beneficiary</span><span role="columnheader">Barangay</span><span role="columnheader">Municipality</span><span role="columnheader" style="text-align: right;">Year</span><span role="columnheader">Status</span><span role="columnheader">Map</span>
+            </div>
+            <sc-for list="{{rows}}" as="r" hint-placeholder-count="12">
+              <div role="row" style="display: grid; grid-template-columns: 150px 1.3fr 120px 1.7fr 1fr 100px 56px 120px 56px; gap: 12px; align-items: center; min-height: 52px; padding: 4px 20px; border-bottom: 1px solid #dcdbd6;">
+                <span role="cell" style="white-space: nowrap; color: #52514e; width: 155px; height: 24px; font-size: 12px">{{r.id}}</span>
+                <span role="cell" style="width: 121px; height: 20px; font-size: 12px"><a href="Record.dc.html" style="font-weight: 600;">{{r.item}}</a></span>
+                <span role="cell"><span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #efede8; color: #52514e; font-size: 12px; font-weight: 600; white-space: nowrap;"><span style="width: 8px; height: 8px; border-radius: {{r.shape}}; background: {{r.typeColor}};"></span>{{r.type}}</span></span>
+                <span role="cell">{{r.who}}</span>
+                <span role="cell">{{r.brgy}}</span>
+                <span role="cell">{{r.muni}}</span>
+                <span role="cell" style="text-align: right;">{{r.year}}</span>
+                <span role="cell"><span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: {{r.statusBg}}; color: {{r.statusFg}};"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>{{r.status}}</span></span>
+                <span role="cell">
+                  <sc-if value="{{r.onMap}}" hint-placeholder-val="{{true}}"><a href="Map.dc.html" aria-label="Show on the map" style="width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #1b6b3f;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-7.5 7-13a7 7 0 0 0-14 0c0 5.5 7 13 7 13zM12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg></a></sc-if>
+                  <sc-if value="{{r.offMap}}" hint-placeholder-val="{{false}}"><span title="No coordinates yet" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #8a3b00;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="No coordinates yet"><path d="M12 22s7-7.5 7-13a7 7 0 0 0-11.9-5M5.3 6.6A7 7 0 0 0 5 9c0 5.5 7 13 7 13M3 3l18 18"></path></svg></span></sc-if>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px; color: #52514e;">
+          <span>1–12 of 199</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>Page 1 of 17</span>
+            <button type="button" aria-label="Previous page" disabled="" style="width: 44px; height: 44px; border-radius: 8px; border: 1px solid #dcdbd6; background: #ffffff; color: #8a8883; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+            <button type="button" aria-label="Next page" style="width: 44px; height: 44px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tone = {
+      'Turned-over': ['#e5f3ea', '#1b6b3f'],
+      Serviceable: ['#e5f3ea', '#1b6b3f'],
+      Inventory: ['#efede8', '#52514e'],
+    };
+    const r = (n, item, type, who, brgy, muni, year, status, onMap) => ({
+      id: 'RAED-2026-10-21-' + n, item, who, brgy, muni, year, status, onMap, offMap: !onMap,
+      type: type === 'ssip' ? 'SSIP' : 'Farm Machinery',
+      typeColor: type === 'ssip' ? '#1976d2' : '#2e7d32',
+      shape: type === 'ssip' ? '2px' : '50%',
+      statusBg: tone[status][0], statusFg: tone[status][1],
+    });
+    return {
+      rows: [
+        r('001', 'Cassava Granulator', 'fm', 'Tanauan City Corn Growers Association', 'Tiguion', 'Gasan', 2015, 'Turned-over', true),
+        r('002', 'Cassava Granulator', 'fm', 'Tigwi Corn and Vegetable Farmers Association', 'Tigwi', 'Torrijos', 2016, 'Turned-over', true),
+        r('003', 'Cassava Granulator', 'fm', 'Provincial Government Unit', 'Santol', 'Boac', 2016, 'Turned-over', true),
+        r('004', 'Cassava Chipper', 'fm', 'Bangcauangan Farmers Association', 'Bangcuangan', 'Santa Cruz', 2017, 'Serviceable', true),
+        r('005', 'Cassava Chipper', 'fm', 'Maniwaya Farmers Association', 'Maniwaya', 'Santa Cruz', 2017, 'Serviceable', true),
+        r('006', 'Cassava Granulator', 'fm', 'Dating Bayan Farmers Association', 'Dating Bayan', 'Santa Cruz', 2017, 'Serviceable', true),
+        r('007', 'Cassava Grater', 'fm', 'Samahang Boakenyong Nagtatanim ng Gulay (SamBoNG)', 'Tabi', 'Boac', 2017, 'Serviceable', true),
+        r('008', 'Cassava Grater', 'fm', 'Jolo Rural Improvement Club', 'Jolo', 'Santa Cruz', 2018, 'Turned-over', true),
+        r('009', 'Cassava Grater', 'fm', 'Samahan ng mga Kababaihan ng Balanacan', 'Balanacan', 'Mogpog', 2019, 'Serviceable', true),
+        r('010', 'Cassava Grater', 'fm', 'Samahan ng mga Kababaihan sa Organikong Pagsasaka', 'Banuyo', 'Gasan', 2021, 'Serviceable', true),
+        r('192', 'Hand Tractor (Walking-type)', 'fm', 'Balimbing Farmers Association', '—', 'Boac', 2017, 'Turned-over', false),
+        r('196', 'Solar-Powered Irrigation System', 'ssip', 'Pangi Farmers Association', 'Pangi', 'Gasan', 2025, 'Inventory', false),
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
