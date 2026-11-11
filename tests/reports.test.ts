@@ -216,7 +216,10 @@ describe('what the reports say', () => {
   });
 
   it('adds a units column only when a record holds several', () => {
-    const several = data.interventions.map((record, index) => (index === 0 ? { ...record, quantity: 3 } : record));
+    // Ids are random, so pick a Farm Machinery record by type rather than by position.
+    const machineryId = data.types.find((t) => t.code === 'farm-machinery')!.id;
+    const target = data.interventions.find((record) => record.intervention_type_id === machineryId)!;
+    const several = data.interventions.map((record) => (record.id === target.id ? { ...record, quantity: 3 } : record));
     const [machinery] = inventorySections({ ...data, interventions: several }, NO_INVENTORY_FILTERS);
     expect(machinery.columns[1]).toBe('Qty');
     expect(machinery.units).toBe(197);

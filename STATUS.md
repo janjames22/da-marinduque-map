@@ -53,6 +53,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Fixed a flaky unit test, "adds a units column only when a record holds several" (`tests/reports.test.ts`). It changed whichever record came first, but records are sorted by random ids, so about 1 run in 50 it picked an SSIP and failed. It now picks a Farm Machinery record. All 1,102 tests pass. Branch `fix-flaky-units-test`. Also ran `npm install` on this computer for the first time.
 - Phase 11 done: the owner signed off the design, including their own edits (office name written out on Sign in, smaller ID and item text in the Interventions list). The office wording now reads the same on every screen and in the docs. The canvas source is backed up in `design/canvas/`. Branch `design-canvas-signoff`.
 - Phase 11: Claude drew the six phone screens (390 px) on the same canvas: Sign in, Home, Home with the menu open, Dashboard, Map with the selected record in a bottom sheet, and Intervention detail.
 - Phase 11: Claude drew the six desktop screens (Sign in, Home, Dashboard, Map, Interventions list, Intervention detail) and a shared sidebar on a claude.ai design canvas, on the owner's choice over a paid Figma plan. The Map screen uses the real municipality boundaries. Waiting for the owner's review.
