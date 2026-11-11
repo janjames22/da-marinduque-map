@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Intervention detail on a phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+a{color:#1b6b3f}a:hover{color:#14532d}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 844px; background: #f7f6f3; font-family: Inter, system-ui, sans-serif; color: #1f1e1c; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums;">
+  <header style="height: 60px; display: flex; align-items: center; gap: 4px; padding: 0 8px 0 4px; background: #0f3f22; color: #ffffff;">
+    <a href="PhoneHome.dc.html" aria-label="Back" style="width: 44px; height: 44px; border-radius: 8px; color: #ffffff; display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></a>
+    <strong style="flex: 1 1 auto; font-size: 16px; font-weight: 600;">Intervention</strong>
+    <button type="button" aria-label="More actions" style="width: 44px; height: 44px; border: 0; background: transparent; color: #ffffff; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5h.01M12 12h.01M12 19h.01"></path></svg></button>
+  </header>
+
+  <main style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <h1 style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 700;">Cassava Chipper</h1>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+        <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #efede8; color: #52514e; font-size: 12px; font-weight: 600;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2e7d32;"></span>Farm Machinery</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #e5f3ea; color: #1b6b3f; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>Serviceable</span>
+      </div>
+      <p style="margin: 0; color: #52514e;">RAED-2026-10-21-004 · Bangcuangan, Santa Cruz</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+      <button type="button" style="height: 48px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif;">Update status</button>
+      <button type="button" style="height: 48px; border-radius: 8px; border: 0; background: #1b6b3f; color: #ffffff; font: 600 14px Inter, system-ui, sans-serif;">Edit</button>
+    </div>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Details</h2>
+      <dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px;">
+        <sc-for list="{{details}}" as="d" hint-placeholder-count="8">
+          <div style="display: flex; flex-direction: column; gap: 2px;"><dt style="font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">{{d.label}}</dt><dd style="margin: 0; font-size: 15px; line-height: 22px;">{{d.value}}</dd></div>
+        </sc-for>
+      </dl>
+      <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">Beneficiary</span><span style="font-size: 15px; line-height: 22px;">Bangcauangan Farmers Association</span></div>
+      <p style="margin: 0; padding-top: 12px; border-top: 1px solid #dcdbd6; font-size: 12px; line-height: 16px; color: #52514e;">Source: RAED Consolidated Inventory Report (2026-10-21), page 2</p>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+      <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Location</h2>
+      <sc-if value="{{located}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <svg viewBox="420 60 300 220" role="img" aria-label="Santa Cruz with the unit's location in Bangcuangan" style="width: 100%; height: 180px; border-radius: 8px; background: #dce9f0;">
+            <path d="M506 299L522 295L532 311L591 317L599 283L613 287L644 269L631 254L629 238L654 249L657 234L651 229L663 229L669 218L640 177L611 160L593 168L597 180L567 177L570 172L565 176L549 165L556 158L573 165L558 144L564 138L558 125L527 127L543 118L538 104L506 76L499 86L509 95L487 99L492 114L478 110L465 116L448 104L456 63L445 81L447 105L417 102L410 94L414 88L395 86L412 152L442 193L444 219L459 228L439 238L506 299ZM639 93L643 109L654 107L678 121L673 95L639 93ZM629 140L600 123L588 107L582 122L588 143L622 151L630 149L629 140ZM664 249L658 262L662 278L671 286L682 276L685 288L695 290L695 275L664 249Z" fill="#f6f4ee" stroke="#9a978e" stroke-width="1.5" stroke-linejoin="round"></path>
+            <circle cx="502" cy="176" r="15" fill="none" stroke="#1d5b8a" stroke-width="3"></circle>
+            <circle cx="502" cy="176" r="10" fill="#2e7d32" stroke="#ffffff" stroke-width="2"></circle>
+            <circle cx="502" cy="176" r="3.5" fill="#ffffff"></circle>
+          </svg>
+          <span style="display: flex; justify-content: space-between; gap: 8px;"><span style="color: #52514e;">13.4782, 122.0063</span><a href="PhoneMap.dc.html" style="font-weight: 600;">Open on the map</a></span>
+        </div>
+      </sc-if>
+      <sc-if value="{{notLocated}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div role="status" style="display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 8px; border: 1px solid #c6def2; background: #eaf3fb; color: #1d5b8a;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01"></path></svg>
+            <span>No coordinates yet, so this record is not on the map. It's still counted on the dashboard.</span>
+          </div>
+          <button type="button" style="height: 48px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif;">Enter verified coordinates</button>
+        </div>
+      </sc-if>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+      <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Status history</h2>
+      <div style="display: flex; gap: 12px;">
+        <span style="width: 12px; height: 12px; margin-top: 5px; flex: none; border-radius: 50%; background: #43a047; box-shadow: 0 0 0 4px #e5f3ea;"></span>
+        <span style="display: flex; flex-direction: column; gap: 2px;"><strong style="font-weight: 600;">Serviceable</strong><span style="color: #52514e;">as of 2026-10-21 (RAED report)</span></span>
+      </div>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+      <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Audit trail</h2>
+      <strong style="font-weight: 600;">Imported</strong>
+      <span style="color: #52514e;">Nov 5, 2026 · System import</span>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px;">
+      <span style="width: 48px; height: 48px; flex: none; border-radius: 12px; background: #e5f3ea; color: #1b6b3f; display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path></svg></span>
+      <span style="flex: 1 1 auto; display: flex; flex-direction: column;"><strong style="font-weight: 600;">No photos yet</strong><span style="font-size: 12px; line-height: 16px; color: #52514e;">Take one at the site</span></span>
+      <button type="button" style="height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif;">Add photo</button>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"location":{"editor":"enum","options":["Has coordinates","No coordinates yet"],"default":"Has coordinates"},"$preview":{"width":390,"height":1640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const located = (this.props.location ?? 'Has coordinates') === 'Has coordinates';
+    return {
+      located,
+      notLocated: !located,
+      details: [
+        { label: 'Category', value: 'Cassava Chipper' },
+        { label: 'Category group', value: 'Processing' },
+        { label: 'Program', value: 'Corn Program' },
+        { label: 'Year funded', value: '2017' },
+        { label: 'Quantity', value: '1' },
+        { label: 'Region', value: 'MIMAROPA' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

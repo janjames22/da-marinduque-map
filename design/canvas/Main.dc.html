@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f3}
+*{box-sizing:border-box}
+a{color:#1b6b3f}a:hover{color:#14532d}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #f7f6f3; font-family: Inter, system-ui, sans-serif; color: #1f1e1c; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums;">
+  <div style="flex: 1 1 248px; max-width: 100%; display: flex; background: linear-gradient(170deg, #0f3f22, #1b6b3f);">
+    <dc-import name="Sidebar" current="home" hint-size="248px,960px"></dc-import>
+  </div>
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+    <header style="height: 64px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 0 32px; border-bottom: 1px solid #dcdbd6;">
+      <span style="width: 36px; height: 36px; border-radius: 50%; background: #1b6b3f; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;">JD</span>
+      <span style="display: flex; flex-direction: column;"><strong style="font-weight: 600;">Juan dela Cruz</strong><span style="font-size: 12px; line-height: 16px; color: #52514e;">Admin</span></span>
+      <button type="button" aria-label="Account menu" style="width: 44px; height: 44px; border: 0; background: transparent; border-radius: 8px; color: #52514e; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+      </button>
+    </header>
+
+    <main style="width: 100%; max-width: 1200px; margin: 0 auto; padding: 32px; display: flex; flex-direction: column; gap: 24px;">
+      <section style="background: linear-gradient(120deg, #0f3f22, #14532d); color: #ffffff; border-radius: 16px; padding: 32px; display: flex; flex-direction: column; gap: 8px;">
+        <h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 700;">Welcome, Juan</h1>
+        <p style="margin: 0; color: #c3e6cf; font-size: 16px; line-height: 24px;">Figures come from every record in the system, including those not yet on the map.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">
+          <a href="Dashboard.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.06); color: #ffffff; font-weight: 600; text-decoration: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18M8 17v-5M13 17V7M18 17v-8"></path></svg>Open dashboard</a>
+          <a href="Map.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.06); color: #ffffff; font-weight: 600; text-decoration: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 7v13l6-3 6 3 6-3V4l-6 3-6-3zM9 4v13M15 7v13"></path></svg>View the map</a>
+          <a href="Record.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.06); color: #ffffff; font-weight: 600; text-decoration: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add intervention</a>
+        </div>
+      </section>
+
+      <section aria-label="Work waiting" style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); display: flex; flex-direction: column;">
+        <a href="Dashboard.dc.html" style="display: flex; align-items: center; gap: 16px; padding: 16px 24px; color: #1f1e1c; text-decoration: none; border-bottom: 1px solid #dcdbd6;">
+          <span style="width: 40px; height: 40px; flex: none; border-radius: 8px; background: #f8dc8a; color: #0f3f22; display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-7.5 7-13a7 7 0 0 0-11.9-5M5.3 6.6A7 7 0 0 0 5 9c0 5.5 7 13 7 13M3 3l18 18"></path></svg>
+          </span>
+          <span style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0;"><strong style="font-size: 16px; line-height: 24px; font-weight: 600;">27 records are waiting for verified coordinates</strong><span style="color: #52514e;">26 have none, 1 is outside Marinduque. They're counted, but not on the map.</span></span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52514e" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </a>
+        <a href="Records.dc.html" style="display: flex; align-items: center; gap: 16px; padding: 16px 24px; color: #1f1e1c; text-decoration: none; border-bottom: 1px solid #dcdbd6;">
+          <span style="width: 40px; height: 40px; flex: none; border-radius: 8px; background: #e5f3ea; color: #1b6b3f; display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 6 2 2 4-4M3 14l2 2 4-4M13 6h8M13 14h8M13 20h8"></path></svg>
+          </span>
+          <span style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0;"><strong style="font-size: 16px; line-height: 24px; font-weight: 600;">36 records need QA</strong><span style="color: #52514e;">Names to check, possible duplicates and missing barangays. Oldest first in the QA queue.</span></span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52514e" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </a>
+        <a href="Records.dc.html" style="display: flex; align-items: center; gap: 16px; padding: 16px 24px; color: #1f1e1c; text-decoration: none;">
+          <span style="width: 40px; height: 40px; flex: none; border-radius: 8px; background: #e5f3ea; color: #1b6b3f; display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0"></path></svg>
+          </span>
+          <span style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0;"><strong style="font-size: 16px; line-height: 24px; font-weight: 600;">163 units have no condition recorded yet</strong><span style="color: #52514e;">Marked Turned-over in the report. Record whether each still works in Condition check.</span></span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52514e" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </a>
+      </section>
+
+      <section aria-label="Headline figures" style="display: flex; flex-wrap: wrap; gap: 16px;">
+        <div style="flex: 1 1 220px; background: linear-gradient(140deg, #0f3f22, #14532d); color: #ffffff; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 6px;">
+          <span style="color: #c3e6cf; font-weight: 500;">Interventions</span>
+          <span style="font-size: 36px; line-height: 44px; font-weight: 700;">199</span>
+          <span style="font-size: 12px; line-height: 16px; color: #c3e6cf;">195 Farm Machinery · 4 SSIP</span>
+        </div>
+        <div style="flex: 1 1 220px; background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 6px; position: relative;">
+          <span style="position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 8px; background: #e5f3ea; color: #1b6b3f; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21a7 7 0 0 0-14 0M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21a7 7 0 0 0-4-6.3M16 3.5a4 4 0 0 1 0 7.8"></path></svg></span>
+          <span style="color: #52514e; font-weight: 500;">Beneficiaries</span>
+          <span style="font-size: 36px; line-height: 44px; font-weight: 700;">151</span>
+          <span style="font-size: 12px; line-height: 16px; color: #52514e;">Approximate, by name</span>
+        </div>
+        <div style="flex: 1 1 220px; background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 6px; position: relative;">
+          <span style="position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 8px; background: #e5f3ea; color: #1b6b3f; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-7.5 7-13a7 7 0 0 0-14 0c0 5.5 7 13 7 13zM12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg></span>
+          <span style="color: #52514e; font-weight: 500;">Barangays reached</span>
+          <span style="font-size: 36px; line-height: 44px; font-weight: 700;">97</span>
+          <span style="font-size: 12px; line-height: 16px; color: #52514e;">of 218 barangays</span>
+        </div>
+        <div style="flex: 1 1 220px; background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 6px; position: relative;">
+          <span style="position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 8px; background: #e5f3ea; color: #1b6b3f; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0"></path></svg></span>
+          <span style="color: #52514e; font-weight: 500;">% operational</span>
+          <span style="font-size: 36px; line-height: 44px; font-weight: 700;">100%</span>
+          <span style="font-size: 12px; line-height: 16px; color: #52514e;">Of 32 assessed units. 163 not assessed</span>
+        </div>
+      </section>
+
+      <section aria-label="By type" style="display: flex; flex-wrap: wrap; gap: 16px;">
+        <div style="flex: 2 1 420px; background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Farm Machinery</h2>
+              <span style="color: #52514e;">195 units by category group</span>
+            </div>
+            <a href="Dashboard.dc.html" style="display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 8px; font-weight: 600; text-decoration: none;">Open dashboard</a>
+          </div>
+          <div role="img" aria-label="Irrigation 60, Land preparation 53, Postharvest 45, Processing 22, other groups 15" style="display: flex; gap: 2px; height: 14px; border-radius: 999px; overflow: hidden;">
+            <span style="flex: 60 1 0; background: #2a78d6;"></span>
+            <span style="flex: 53 1 0; background: #eb6834;"></span>
+            <span style="flex: 45 1 0; background: #1baf7a;"></span>
+            <span style="flex: 22 1 0; background: #eda100;"></span>
+            <span style="flex: 15 1 0; background: #757575;"></span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px 24px;">
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 110px;"><span style="display: flex; align-items: center; gap: 6px; color: #52514e;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2a78d6;"></span>Irrigation</span><strong style="font-size: 16px; line-height: 24px;">60 <span style="font-weight: 400; color: #52514e;">31%</span></strong></div>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 110px;"><span style="display: flex; align-items: center; gap: 6px; color: #52514e;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #eb6834;"></span>Land preparation</span><strong style="font-size: 16px; line-height: 24px;">53 <span style="font-weight: 400; color: #52514e;">27%</span></strong></div>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 110px;"><span style="display: flex; align-items: center; gap: 6px; color: #52514e;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1baf7a;"></span>Postharvest</span><strong style="font-size: 16px; line-height: 24px;">45 <span style="font-weight: 400; color: #52514e;">23%</span></strong></div>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 110px;"><span style="display: flex; align-items: center; gap: 6px; color: #52514e;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #eda100;"></span>Processing</span><strong style="font-size: 16px; line-height: 24px;">22 <span style="font-weight: 400; color: #52514e;">11%</span></strong></div>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 110px;"><span style="display: flex; align-items: center; gap: 6px; color: #52514e;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #757575;"></span>Other groups</span><strong style="font-size: 16px; line-height: 24px;">15 <span style="font-weight: 400; color: #52514e;">8%</span></strong></div>
+          </div>
+        </div>
+
+        <div style="flex: 1 1 220px; background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); padding: 24px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">SSIP</h2>
+            <span style="color: #52514e;">Solar-powered irrigation</span>
+          </div>
+          <span style="font-size: 36px; line-height: 44px; font-weight: 700;">4</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #e5f3ea; color: #1b6b3f; font-size: 12px; font-weight: 600; white-space: nowrap;"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>Completed 2</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #efede8; color: #52514e; font-size: 12px; font-weight: 600; white-space: nowrap;"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>Inventory 2</span>
+          </div>
+          <span style="font-size: 12px; line-height: 16px; color: #52514e;">2 of the 4 have no coordinates yet</span>
+        </div>
+
+        <div style="flex: 1 1 220px; border: 1px dashed #8a8883; border-radius: 12px; background: #f7f6f3; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: #52514e;">
+          <span style="width: 40px; height: 40px; border-radius: 8px; background: #efede8; display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19 8 5M20 19 16 5M12 6v2M12 11v2M12 16v2"></path></svg>
+          </span>
+          <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: #1f1e1c;">Farm-to-Market Roads</h2>
+          <span>Data to follow</span>
+        </div>
+      </section>
+    </main>
+    <footer style="width: 100%; max-width: 1200px; margin: 0 auto; padding: 8px 32px 32px; font-size: 12px; line-height: 16px; color: #52514e;">Data: ABEMIS Inventory via RAED Consolidated Inventory Report (2026-10-21) · Boundaries: NAMRIA, PSA via HDX (CC BY-IGO)</footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

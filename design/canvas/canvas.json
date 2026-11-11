@@ -1,0 +1,44 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Dashboard.dc.html": { "expand": "fill", "h": 2140, "is_interactive": true, "title": "Dashboard", "w": 1440, "x": 3040, "y": 0 },
+    "Main.dc.html": { "expand": "fill", "h": 1180, "is_interactive": true, "title": "Home", "w": 1440, "x": 1520, "y": 0 },
+    "Map.dc.html": { "expand": "fill", "h": 1000, "is_interactive": true, "title": "Map", "w": 1440, "x": 0, "y": 2500 },
+    "Record.dc.html": { "expand": "fill", "h": 1240, "is_interactive": true, "title": "Intervention detail", "w": 1440, "x": 3040, "y": 2500 },
+    "Records.dc.html": { "expand": "fill", "h": 1040, "is_interactive": true, "title": "Interventions list", "w": 1440, "x": 1520, "y": 2500 },
+    "Sidebar.dc.html": { "h": 1000, "title": "Sidebar (shared component)", "w": 248, "x": 4560, "y": 0 },
+    "SignIn.dc.html": { "expand": "fill", "h": 900, "title": "Sign in", "w": 1440, "x": 0, "y": 0 },
+    "PhoneSignIn.dc.html": { "h": 844, "title": "Sign in · phone", "w": 390, "x": 0, "y": 4100, "is_interactive": true },
+    "PhoneHome.dc.html": { "h": 1560, "title": "Home · phone", "w": 390, "x": 470, "y": 4100, "is_interactive": true },
+    "PhoneDrawer.dc.html": { "h": 844, "title": "Home with the menu open · phone", "w": 390, "x": 940, "y": 4100, "is_interactive": true },
+    "PhoneDashboard.dc.html": { "h": 2460, "title": "Dashboard · phone", "w": 390, "x": 1410, "y": 4100, "is_interactive": true },
+    "PhoneMap.dc.html": { "h": 844, "title": "Map · phone", "w": 390, "x": 1880, "y": 4100, "is_interactive": true },
+    "PhoneRecord.dc.html": { "h": 1640, "title": "Intervention detail · phone", "w": 390, "x": 2350, "y": 4100, "is_interactive": true }
+  },
+  "createdOnFiles": { "at": "2026-11-11T07:30:00Z", "v": 1 },
+  "designSystems": [],
+  "launch": { "view": "canvas" },
+  "notes": {
+    "row1": { "kind": "title1", "maxW": 4808, "text": "Intervention Map · desktop screens", "w": 240, "x": 0, "y": -300 },
+    "row2": { "kind": "title1", "maxW": 4480, "text": "Map and records", "w": 240, "x": 0, "y": 2220 },
+    "row3": { "kind": "title1", "maxW": 2740, "text": "Phone screens", "w": 240, "x": 0, "y": 3820 }
+  },
+  "order": [
+    "SignIn.dc.html",
+    "Main.dc.html",
+    "Dashboard.dc.html",
+    "Map.dc.html",
+    "Records.dc.html",
+    "Record.dc.html",
+    "Sidebar.dc.html",
+    "PhoneSignIn.dc.html",
+    "PhoneHome.dc.html",
+    "PhoneDrawer.dc.html",
+    "PhoneDashboard.dc.html",
+    "PhoneMap.dc.html",
+    "PhoneRecord.dc.html"
+  ],
+  "pages": [],
+  "title": "Intervention Map Design"
+}

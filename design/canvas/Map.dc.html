@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Map</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f3}
+*{box-sizing:border-box}
+a{color:#1b6b3f}a:hover{color:#14532d}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #f7f6f3; font-family: Inter, system-ui, sans-serif; color: #1f1e1c; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums;">
+  <div style="flex: 1 1 248px; max-width: 100%; display: flex; background: linear-gradient(170deg, #0f3f22, #1b6b3f);">
+    <dc-import name="Sidebar" current="map" hint-size="248px,960px"></dc-import>
+  </div>
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+    <header style="height: 64px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 0 32px; border-bottom: 1px solid #dcdbd6;">
+      <span style="width: 36px; height: 36px; border-radius: 50%; background: #1b6b3f; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;">JD</span>
+      <span style="display: flex; flex-direction: column;"><strong style="font-weight: 600;">Juan dela Cruz</strong><span style="font-size: 12px; line-height: 16px; color: #52514e;">Admin</span></span>
+      <button type="button" aria-label="Account menu" style="width: 44px; height: 44px; border: 0; background: transparent; border-radius: 8px; color: #52514e; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+    </header>
+
+    <main style="width: 100%; padding: 24px 32px 32px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 700;">Map</h1>
+          <p style="margin: 0; color: #52514e;">Click a barangay for its profile, or a marker for the record.</p>
+        </div>
+        <form aria-label="Filters" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;"><label for="m-program" style="font-weight: 500;">Program</label><select id="m-program" style="height: 44px; min-width: 180px; border: 1px solid #8a8883; border-radius: 8px; padding: 0 12px; font: 400 16px Inter, system-ui, sans-serif; background: #ffffff; color: #1f1e1c;"><option>All programs</option></select></div>
+          <div style="display: flex; flex-direction: column; gap: 6px;"><label for="m-years" style="font-weight: 500;">Year funded</label><select id="m-years" style="height: 44px; min-width: 140px; border: 1px solid #8a8883; border-radius: 8px; padding: 0 12px; font: 400 16px Inter, system-ui, sans-serif; background: #ffffff; color: #1f1e1c;"><option>2014 – 2026</option></select></div>
+          <div style="display: flex; flex-direction: column; gap: 6px;"><label for="m-muni" style="font-weight: 500;">Municipality</label><select id="m-muni" style="height: 44px; min-width: 180px; border: 1px solid #8a8883; border-radius: 8px; padding: 0 12px; font: 400 16px Inter, system-ui, sans-serif; background: #ffffff; color: #1f1e1c;"><option>All municipalities</option></select></div>
+        </form>
+      </div>
+
+      <div role="status" style="display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 12px 16px; border-radius: 8px; border: 1px solid #c6def2; background: #eaf3fb; color: #1d5b8a;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01"></path></svg>
+        <span style="flex: 1 1 320px;"><strong style="font-weight: 600;">172 of 199 records are on the map.</strong> 27 are waiting for verified coordinates, so they're counted on the dashboard but not drawn here.</span>
+        <a href="Dashboard.dc.html#coords" style="color: #1d5b8a; font-weight: 600;">See the list</a>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch;">
+        <aside aria-label="Layers" style="flex: 1 1 260px; max-width: 100%; background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 20px;">
+          <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px;">
+            <legend style="padding: 0 0 6px; font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">Intervention layers</legend>
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 40px;"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #1b6b3f;"><span style="width: 14px; height: 14px; border-radius: 50%; background: #2e7d32; border: 2px solid #ffffff; box-shadow: 0 0 0 1px #8a8883;"></span><span style="flex: 1 1 auto;">Farm Machinery</span><span style="color: #52514e;">195</span></label>
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 40px;"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #1b6b3f;"><span style="width: 12px; height: 12px; margin: 0 1px; border-radius: 2px; transform: rotate(45deg); background: #1976d2; box-shadow: 0 0 0 1px #8a8883;"></span><span style="flex: 1 1 auto;">SSIP</span><span style="color: #52514e;">4</span></label>
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 40px; color: #52514e;"><input type="checkbox" disabled style="width: 18px; height: 18px;"><span style="width: 14px; height: 4px; border-radius: 2px; background: #b45309;"></span><span style="flex: 1 1 auto;">Farm-to-Market Roads</span><span style="font-size: 12px;">Data to follow</span></label>
+          </fieldset>
+          <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px;">
+            <legend style="padding: 0 0 6px; font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">Boundaries</legend>
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 40px;"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #1b6b3f;">Municipalities</label>
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 40px;"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #1b6b3f;">Barangays</label>
+          </fieldset>
+          <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px;">
+            <legend style="padding: 0 0 6px; font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">Shade barangays by</legend>
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 40px;"><input type="radio" name="shade" checked style="width: 18px; height: 18px; accent-color: #1b6b3f;">None</label>
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 40px;"><input type="radio" name="shade" style="width: 18px; height: 18px; accent-color: #1b6b3f;">Number of interventions</label>
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 40px;"><input type="radio" name="shade" style="width: 18px; height: 18px; accent-color: #1b6b3f;">Gap view: barangays with none</label>
+          </fieldset>
+          <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px;">
+            <legend style="padding: 0 0 6px; font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">Basemap</legend>
+            <div style="display: flex; gap: 8px;">
+              <label style="flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 8px; border: 2px solid #1b6b3f; background: #f2f9f4; font-weight: 600;"><input type="radio" name="base" checked style="accent-color: #1b6b3f;">Light</label>
+              <label style="flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 8px; border: 1px solid #8a8883;"><input type="radio" name="base" style="accent-color: #1b6b3f;">Satellite</label>
+            </div>
+          </fieldset>
+          <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #dcdbd6; padding-top: 16px;">
+            <span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">Saved views</span>
+            <a href="Map.dc.html" style="min-height: 32px; display: flex; align-items: center;">Rice Program, Santa Cruz</a>
+            <a href="Map.dc.html" style="min-height: 32px; display: flex; align-items: center;">Units not assessed</a>
+            <button type="button" style="height: 44px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; font: 600 14px Inter, system-ui, sans-serif; color: #1f1e1c; cursor: pointer;">Save this view</button>
+          </div>
+        </aside>
+
+        <div style="flex: 999 1 560px; min-width: 0; position: relative; border: 1px solid #dcdbd6; border-radius: 12px; overflow: hidden; background: #dce9f0; min-height: 640px;">
+          <svg viewBox="0 0 960 640" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Marinduque with its six municipalities, clusters of records and one selected Cassava Chipper in Santa Cruz" style="display: block; width: 100%; height: 100%; min-height: 640px;">
+            <rect width="960" height="640" fill="#dce9f0"></rect>
+            <path d="M0 0H140L110 120L60 260L0 300Z" fill="#e7e6e0" opacity="0.7"></path>
+            <g fill="#f6f4ee" stroke="#9a978e" stroke-width="1.5" stroke-linejoin="round">
+              <path d="M274 167L236 211L255 278L249 309L253 324L273 319L286 324L295 314L367 356L384 346L399 374L468 433L480 438L479 416L490 414L486 401L499 395L501 346L495 331L506 299L439 238L459 228L444 219L441 209L427 212L425 221L416 216L399 226L395 217L400 216L386 207L345 211L330 201L296 198L274 167Z"></path>
+              <path d="M437 410L363 463L393 486L424 494L447 538L501 566L538 562L527 552L508 495L482 462L480 438L437 410Z"></path>
+              <path d="M253 324L249 362L278 382L311 446L363 463L437 410L430 397L399 374L384 346L367 356L295 314L286 324L273 319L253 324ZM311 503L313 490L289 497L311 503ZM265 521L271 517L261 513L265 521ZM239 536L247 527L234 526L228 529L239 536Z"></path>
+              <path d="M441 209L442 193L412 152L397 91L383 110L356 100L344 63L341 75L322 70L328 62L312 46L296 55L310 74L303 90L296 89L304 100L308 95L303 91L315 85L323 88L310 96L313 108L289 115L294 130L274 149L279 153L273 165L296 198L330 201L345 211L386 207L400 216L395 217L399 226L416 216L425 221L427 212L441 209Z"></path>
+              <path d="M506 299L522 295L532 311L591 317L599 283L613 287L644 269L631 254L629 238L654 249L657 234L651 229L663 229L669 218L640 177L611 160L593 168L597 180L567 177L570 172L565 176L549 165L556 158L573 165L558 144L564 138L558 125L527 127L543 118L538 104L506 76L499 86L509 95L487 99L492 114L478 110L465 116L448 104L456 63L445 81L447 105L417 102L410 94L414 88L395 86L412 152L442 193L444 219L459 228L439 238L506 299ZM434 83L425 86L431 88L441 83L434 83ZM639 93L643 109L654 107L678 121L673 95L639 93ZM735 105L722 118L733 138L741 139L750 123L735 105ZM629 140L600 123L588 107L582 122L588 143L622 151L630 149L629 140ZM664 249L658 262L662 278L671 286L682 276L685 288L695 290L695 275L664 249Z"></path>
+              <path d="M480 438L482 462L508 495L527 552L537 562L566 508L567 488L553 469L557 458L583 441L587 416L658 370L668 338L684 327L696 328L694 317L682 314L690 300L661 296L655 274L644 269L613 287L599 283L591 317L532 311L522 295L506 299L495 331L501 387L486 401L490 414L479 416L480 438Z"></path>
+            </g>
+            <g font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#52514e" stroke="#f6f4ee" stroke-width="4" paint-order="stroke" text-anchor="middle">
+              <text x="330" y="100">Mogpog</text><text x="395" y="262">Boac</text><text x="610" y="200">Santa Cruz</text><text x="300" y="400">Gasan</text><text x="600" y="400">Torrijos</text><text x="470" y="520">Buenavista</text>
+            </g>
+            <g font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">
+              <circle cx="352" cy="150" r="27" fill="#1b6b3f" opacity="0.25"></circle><circle cx="352" cy="150" r="20" fill="#1b6b3f"></circle><text x="352" y="155">18</text>
+              <circle cx="380" cy="300" r="31" fill="#1b6b3f" opacity="0.25"></circle><circle cx="380" cy="300" r="24" fill="#1b6b3f"></circle><text x="380" y="305">35</text>
+              <circle cx="560" cy="160" r="31" fill="#1b6b3f" opacity="0.25"></circle><circle cx="560" cy="160" r="24" fill="#1b6b3f"></circle><text x="560" y="165">38</text>
+              <circle cx="320" cy="360" r="31" fill="#1b6b3f" opacity="0.25"></circle><circle cx="320" cy="360" r="24" fill="#1b6b3f"></circle><text x="320" y="365">28</text>
+              <circle cx="575" cy="370" r="31" fill="#1b6b3f" opacity="0.25"></circle><circle cx="575" cy="370" r="24" fill="#1b6b3f"></circle><text x="575" y="375">32</text>
+              <circle cx="470" cy="480" r="27" fill="#1b6b3f" opacity="0.25"></circle><circle cx="470" cy="480" r="20" fill="#1b6b3f"></circle><text x="470" y="485">17</text>
+            </g>
+            <g stroke="#ffffff" stroke-width="2">
+              <circle cx="538" cy="458" r="10" fill="#2e7d32"></circle>
+              <circle cx="612" cy="440" r="10" fill="#2e7d32"></circle>
+              <rect x="413" y="473" width="16" height="16" rx="3" transform="rotate(45 421 481)" fill="#1976d2"></rect>
+              <circle cx="502" cy="176" r="18" fill="none" stroke="#1d5b8a" stroke-width="3"></circle>
+              <circle cx="502" cy="176" r="12" fill="#2e7d32"></circle>
+            </g>
+            <g fill="#ffffff"><circle cx="538" cy="458" r="3"></circle><circle cx="612" cy="440" r="3"></circle><circle cx="502" cy="176" r="4"></circle><circle cx="421" cy="481" r="3"></circle></g>
+          </svg>
+
+          <div style="position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; background: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(31,30,28,0.2); overflow: hidden;">
+            <button type="button" aria-label="Zoom in" style="width: 44px; height: 44px; border: 0; border-bottom: 1px solid #dcdbd6; background: #ffffff; color: #1f1e1c; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+            <button type="button" aria-label="Zoom out" style="width: 44px; height: 44px; border: 0; border-bottom: 1px solid #dcdbd6; background: #ffffff; color: #1f1e1c; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+            <button type="button" aria-label="Show my location" style="width: 44px; height: 44px; border: 0; border-bottom: 1px solid #dcdbd6; background: #ffffff; color: #1f1e1c; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l19-9-9 19-2-8-8-2z"></path></svg></button>
+            <button type="button" aria-label="Full screen" style="width: 44px; height: 44px; border: 0; background: #ffffff; color: #1f1e1c; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path></svg></button>
+          </div>
+
+          <div style="position: absolute; left: 52%; top: 18%; margin-left: 28px; width: 272px; max-width: calc(100% - 24px); background: #ffffff; border-radius: 12px; box-shadow: 0 12px 32px rgba(31,30,28,0.18); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;"><strong style="font-size: 16px; line-height: 24px; font-weight: 600;">Cassava Chipper</strong><button type="button" aria-label="Close" style="width: 32px; height: 32px; margin: -4px -6px 0 0; border: 0; background: transparent; color: #52514e; cursor: pointer; display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #e5f3ea; color: #1b6b3f; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>Serviceable</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #efede8; color: #52514e; font-size: 12px; font-weight: 600;">Farm Machinery</span>
+            </div>
+            <dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; line-height: 18px;">
+              <dt style="color: #52514e;">Beneficiary</dt><dd style="margin: 0;">Bangcauangan Farmers Association</dd>
+              <dt style="color: #52514e;">Place</dt><dd style="margin: 0;">Bangcuangan, Santa Cruz</dd>
+              <dt style="color: #52514e;">Year</dt><dd style="margin: 0;">2017 · Corn Program</dd>
+            </dl>
+            <a href="Record.dc.html" style="font-weight: 600; min-height: 32px; display: flex; align-items: center;">Open the record</a>
+          </div>
+
+          <div style="position: absolute; left: 12px; bottom: 12px; background: #ffffff; border: 1px solid #dcdbd6; border-radius: 8px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 12px; line-height: 16px;">
+            <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 14px; height: 14px; border-radius: 50%; background: #2e7d32; border: 2px solid #ffffff; box-shadow: 0 0 0 1px #8a8883;"></span>Farm Machinery</span>
+            <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 11px; height: 11px; margin: 0 1px; border-radius: 2px; transform: rotate(45deg); background: #1976d2; box-shadow: 0 0 0 1px #8a8883;"></span>SSIP</span>
+            <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; border-radius: 50%; background: #1b6b3f; color: #ffffff; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center;">9</span>Group of nearby records</span>
+            <span style="color: #52514e;">172 of 199 records on the map</span>
+          </div>
+          <span style="position: absolute; right: 8px; bottom: 6px; font-size: 11px; line-height: 14px; color: #52514e; background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: 4px;">Boundaries: NAMRIA, PSA via HDX</span>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

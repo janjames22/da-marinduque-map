@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Intervention detail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f6f3}
+*{box-sizing:border-box}
+a{color:#1b6b3f}a:hover{color:#14532d}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #f7f6f3; font-family: Inter, system-ui, sans-serif; color: #1f1e1c; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums;">
+  <div style="flex: 1 1 248px; max-width: 100%; display: flex; background: linear-gradient(170deg, #0f3f22, #1b6b3f);">
+    <dc-import name="Sidebar" current="records" hint-size="248px,960px"></dc-import>
+  </div>
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+    <header style="height: 64px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 0 32px; border-bottom: 1px solid #dcdbd6;">
+      <span style="width: 36px; height: 36px; border-radius: 50%; background: #1b6b3f; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;">JD</span>
+      <span style="display: flex; flex-direction: column;"><strong style="font-weight: 600;">Juan dela Cruz</strong><span style="font-size: 12px; line-height: 16px; color: #52514e;">Admin</span></span>
+      <button type="button" aria-label="Account menu" style="width: 44px; height: 44px; border: 0; background: transparent; border-radius: 8px; color: #52514e; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+    </header>
+
+    <main style="width: 100%; max-width: 1200px; margin: 0 auto; padding: 32px; display: flex; flex-direction: column; gap: 24px;">
+      <a href="Records.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 32px; font-weight: 600; text-decoration: none; align-self: flex-start;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>Interventions</a>
+
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+            <h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 700;">Cassava Chipper</h1>
+            <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #efede8; color: #52514e; font-size: 12px; font-weight: 600;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2e7d32;"></span>Farm Machinery</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #e5f3ea; color: #1b6b3f; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>Serviceable</span>
+          </div>
+          <p style="margin: 0; color: #52514e;">RAED-2026-10-21-004 · Bangcuangan, Santa Cruz</p>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button type="button" style="height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;">Update status</button>
+          <button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 8px; border: 0; background: #1b6b3f; color: #ffffff; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>Edit</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 2 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 24px;">
+          <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+            <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Details</h2>
+            <dl style="margin: 0; display: flex; flex-wrap: wrap; gap: 20px 24px;">
+              <sc-for list="{{details}}" as="d" hint-placeholder-count="8">
+                <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">{{d.label}}</dt><dd style="margin: 0; font-size: 16px; line-height: 24px;">{{d.value}}</dd></div>
+              </sc-for>
+            </dl>
+            <p style="margin: 0; padding-top: 12px; border-top: 1px solid #dcdbd6; font-size: 12px; line-height: 16px; color: #52514e;">Source: ABEMIS Inventory via RAED Consolidated Inventory Report (2026-10-21), page 2</p>
+          </section>
+
+          <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+              <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Location</h2>
+              <sc-if value="{{located}}" hint-placeholder-val="{{true}}"><a href="Map.dc.html" style="font-weight: 600; min-height: 44px; display: flex; align-items: center;">Open on the map</a></sc-if>
+            </div>
+            <sc-if value="{{located}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch;">
+                <svg viewBox="420 60 300 250" role="img" aria-label="Santa Cruz with the unit's location in Bangcuangan" style="flex: 1 1 280px; min-height: 220px; border-radius: 8px; background: #dce9f0;">
+                  <path d="M506 299L522 295L532 311L591 317L599 283L613 287L644 269L631 254L629 238L654 249L657 234L651 229L663 229L669 218L640 177L611 160L593 168L597 180L567 177L570 172L565 176L549 165L556 158L573 165L558 144L564 138L558 125L527 127L543 118L538 104L506 76L499 86L509 95L487 99L492 114L478 110L465 116L448 104L456 63L445 81L447 105L417 102L410 94L414 88L395 86L412 152L442 193L444 219L459 228L439 238L506 299ZM639 93L643 109L654 107L678 121L673 95L639 93ZM629 140L600 123L588 107L582 122L588 143L622 151L630 149L629 140ZM664 249L658 262L662 278L671 286L682 276L685 288L695 290L695 275L664 249Z" fill="#f6f4ee" stroke="#9a978e" stroke-width="1.5" stroke-linejoin="round"></path>
+                  <circle cx="502" cy="176" r="15" fill="none" stroke="#1d5b8a" stroke-width="3"></circle>
+                  <circle cx="502" cy="176" r="10" fill="#2e7d32" stroke="#ffffff" stroke-width="2"></circle>
+                  <circle cx="502" cy="176" r="3.5" fill="#ffffff"></circle>
+                </svg>
+                <dl style="flex: 1 1 200px; margin: 0; display: flex; flex-direction: column; gap: 14px;">
+                  <div style="display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">Coordinates</dt><dd style="margin: 0; font-size: 16px; line-height: 24px;">13.4782, 122.0063</dd></div>
+                  <div style="display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">Barangay</dt><dd style="margin: 0; font-size: 16px; line-height: 24px;">Bangcuangan, Santa Cruz</dd></div>
+                  <div style="display: flex; flex-direction: column; gap: 4px;"><dt style="font-size: 12px; line-height: 16px; font-weight: 600; color: #52514e;">Location basis</dt><dd style="margin: 0; font-size: 16px; line-height: 24px;">As given in the RAED report</dd></div>
+                </dl>
+              </div>
+            </sc-if>
+            <sc-if value="{{notLocated}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div role="status" style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: 8px; border: 1px solid #c6def2; background: #eaf3fb; color: #1d5b8a;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01"></path></svg>
+                  <span>No coordinates yet, so this record is not on the map. It's still counted on the dashboard. It's on the verification sheet for the region.</span>
+                </div>
+                <button type="button" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-7.5 7-13a7 7 0 0 0-14 0c0 5.5 7 13 7 13zM12 6v6M9 9h6"></path></svg>Enter verified coordinates</button>
+              </div>
+            </sc-if>
+          </section>
+
+          <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+            <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Status history</h2>
+            <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px;">
+              <li style="display: flex; gap: 14px;">
+                <span style="width: 12px; height: 12px; margin-top: 6px; flex: none; border-radius: 50%; background: #43a047; box-shadow: 0 0 0 4px #e5f3ea;"></span>
+                <span style="display: flex; flex-direction: column; gap: 2px;"><strong style="font-weight: 600;">Serviceable</strong><span style="color: #52514e;">as of 2026-10-21 (RAED report). It may have changed earlier.</span></span>
+              </li>
+            </ol>
+          </section>
+        </div>
+
+        <div style="flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 24px;">
+          <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); padding: 24px; display: flex; flex-direction: column; gap: 12px;">
+            <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">QA</h2>
+            <span style="display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #e5f3ea; color: #1b6b3f; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>Nothing to check</span>
+          </section>
+          <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); padding: 24px; display: flex; flex-direction: column; gap: 12px;">
+            <h2 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 600;">Audit trail</h2>
+            <div style="display: flex; flex-direction: column; gap: 2px;"><strong style="font-weight: 600;">Imported</strong><span style="color: #52514e;">Nov 5, 2026 · System import</span><span style="font-size: 12px; line-height: 16px; color: #52514e;">From the RAED report seed file</span></div>
+          </section>
+          <section style="background: #ffffff; border: 1px solid #dcdbd6; border-radius: 12px; box-shadow: 0 1px 3px rgba(31,30,28,0.06); padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
+            <h2 style="margin: 0; align-self: flex-start; font-size: 18px; line-height: 24px; font-weight: 600;">Photos</h2>
+            <span style="width: 64px; height: 64px; border-radius: 12px; background: #e5f3ea; color: #1b6b3f; display: flex; align-items: center; justify-content: center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path></svg></span>
+            <strong style="font-weight: 600;">No photos yet</strong>
+            <span style="color: #52514e;">A photo of the unit helps the condition check.</span>
+            <button type="button" style="height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #8a8883; background: #ffffff; color: #1f1e1c; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;">Add photo</button>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"location":{"editor":"enum","options":["Has coordinates","No coordinates yet"],"default":"Has coordinates"},"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const located = (this.props.location ?? 'Has coordinates') === 'Has coordinates';
+    return {
+      located,
+      notLocated: !located,
+      details: [
+        { label: 'Type', value: 'Farm Machinery' },
+        { label: 'Category', value: 'Cassava Chipper' },
+        { label: 'Category group', value: 'Processing' },
+        { label: 'Program', value: 'Corn Program' },
+        { label: 'Year funded', value: '2017' },
+        { label: 'Quantity', value: '1' },
+        { label: 'Beneficiary', value: 'Bangcauangan Farmers Association' },
+        { label: 'Region', value: 'MIMAROPA (Region IV-B)' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
