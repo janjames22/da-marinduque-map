@@ -59,7 +59,7 @@ const fitsTheScreen = (page: Page) =>
 test.describe('who is offered it', () => {
   test('an Admin gets a link there and back', async ({ page }) => {
     await tilesOff(page);
-    await page.goto('/');
+    await page.goto('/map');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await expect(page).toHaveURL(/\/admin\/users$/);
@@ -71,7 +71,7 @@ test.describe('who is offered it', () => {
     test(`a ${role} isn't, even by going straight to the address`, async ({ page }) => {
       await tilesOff(page);
       await page.addInitScript((value) => localStorage.setItem('da-local-role', value), role);
-      await page.goto('/');
+      await page.goto('/map');
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
       await expect((await sidebar(page)).getByRole('link', { name: 'Users' })).toHaveCount(0);
 
@@ -594,7 +594,7 @@ test.describe('another Admin at the same time', () => {
   }
 
   test('an open map follows a change to a list, with no reload', async ({ page, context }) => {
-    const map = await secondTab(context, '/');
+    const map = await secondTab(context, '/map');
     await expect(map.locator('.barangay-shape')).toHaveCount(218);
     let reloads = 0;
     map.on('framenavigated', () => {

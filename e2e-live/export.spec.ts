@@ -21,7 +21,7 @@ async function open(browser: Browser, account: TestAccount) {
   contexts.push(context);
   const page = await context.newPage();
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.abort());
-  await page.goto('/');
+  await page.goto('/map');
   await page.getByLabel('Email').fill(account.email);
   await page.getByLabel('Password', { exact: true }).fill(account.password);
   await page.getByRole('button', { name: 'Sign in' }).click();

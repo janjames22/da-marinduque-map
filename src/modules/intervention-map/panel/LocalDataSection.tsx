@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { MapData } from '../data/types';
+import { MAP_PATH } from '../lib/map-paths';
 import { useEditUi } from '../state/edit-ui';
 import { useStore } from '../state/store-context';
 
@@ -28,7 +29,8 @@ export function LocalDataSection({ data }: { data: MapData }) {
     if (!window.confirm(message)) return;
     useEditUi.getState().closePanel();
     await local.reset();
-    window.location.assign('/');
+    // Back to the map, where the button is. / is Home.
+    window.location.assign(MAP_PATH);
   };
 
   return (

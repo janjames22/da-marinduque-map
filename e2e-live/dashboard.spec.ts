@@ -20,7 +20,7 @@ test.afterEach(async () => {
   for (const context of contexts.splice(0)) await context.close();
 });
 
-async function open(browser: Browser, account: TestAccount, path = '/') {
+async function open(browser: Browser, account: TestAccount, path = '/map') {
   const context = await browser.newContext();
   contexts.push(context);
   await skipNetlifyBadge(context);

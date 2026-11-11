@@ -67,7 +67,7 @@ const rows = (page: Page) => page.locator('.records-table tbody tr');
 const count = (page: Page) => page.locator('.records-count');
 const popup = (page: Page) => page.locator('.record-popup');
 
-async function ready(page: Page, path = '/') {
+async function ready(page: Page, path = '/map') {
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.fulfill({ status: 204 }));
   await page.goto(path);
   await expect(page.locator('.barangay-shape')).toHaveCount(218);
@@ -943,7 +943,7 @@ test.describe('saved views', () => {
     await expect(page.getByText('Opened on the shared view')).toHaveCount(0);
     await page.getByRole('button', { name: 'Close profile' }).click();
 
-    await page.goto('/');
+    await page.goto('/map');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await withLayers(page, isMobile, async () => {
       // It has to stay shared while it's the default.

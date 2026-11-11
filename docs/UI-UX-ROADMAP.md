@@ -430,6 +430,7 @@ Phase numbers continue from the project history, which ends at Phase 9.
 |---|---|
 | **Goal** | A map that looks designed |
 | **Branch** | `phase-14-map-style` |
+| **Owner's brief (2026-11-11, at Phase 13's Gate 1)** | "The map overwhelms the users." Make it "simple and clean but detailed", with "good aesthetics", like the Map screen on the design canvas (`design/canvas/Map.dc.html`): one filter bar on top, one tidy layers card, a "172 of 199 on the map" note, round group markers, a legend card and a small popup card |
 | **Scope** | Requirements M-1 to M-10 and M-12, and NC-5 and NC-6. Restyle the layer panel, barangay profile and popups as cards. **Laptop screens:** below 1440 px the full sidebar (Phase 12) leaves the map page squeezed between its layers panel and the dashboard, and the dashboard's Wider button can't widen. Fix this here. The owner turned down an automatic icon-only sidebar. The computer tests run at 1440 px until then |
 | **Deliverables** | Restyled map, updated print map |
 | **Done when** | The owner approves it against the Figma screen. Markers stay readable at province zoom. No record without coordinates appears. Editing, exports and the print map still work |

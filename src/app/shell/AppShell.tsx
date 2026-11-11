@@ -1,6 +1,6 @@
 // The frame around every signed-in page: the sidebar, the top bar and the sources line. On a phone
 // the sidebar is a drawer, opened from the top bar.
-import { ChevronDown, FileText, FileUp, Gauge, History, KeyRound, List, ListChecks, LogOut, Map as MapIcon, MapPin, Menu, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
+import { ChartColumn, ChevronDown, FileText, FileUp, Gauge, History, House, KeyRound, List, ListChecks, LogOut, Map as MapIcon, MapPin, Menu, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { AppUser } from '../../modules/intervention-map/data/types';
@@ -9,6 +9,8 @@ import { APP_NAME, OFFICE_NAME } from '../brand';
 import { isCurrent, navGroups, type NavIcon } from './nav';
 
 const ICONS: Record<NavIcon, LucideIcon> = {
+  home: House,
+  dashboard: ChartColumn,
   map: MapIcon,
   qa: ListChecks,
   condition: Gauge,
@@ -38,7 +40,7 @@ function Sidebar({ user, open, onClose }: { user: AppUser; open: boolean; onClos
   return (
     <nav id="main-menu" className={`sidebar${open ? ' is-open' : ''}`} aria-label="Main">
       <div className="sidebar-top">
-        <Link to="/map" className="sidebar-brand">
+        <Link to="/" className="sidebar-brand">
           <span className="sidebar-logo">
             <MapPin aria-hidden="true" strokeWidth={2.25} />
           </span>

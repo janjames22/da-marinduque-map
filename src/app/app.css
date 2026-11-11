@@ -1528,6 +1528,12 @@ form.admin-form[aria-label='Barangay fields'] {
   font-size: 12px;
 }
 
+.chart-card-actions {
+  display: flex;
+  flex: none;
+  gap: 12px;
+}
+
 .chart-table-scroll {
   overflow-x: auto;
 }

@@ -28,7 +28,8 @@ _Last updated: 2026-11-11_
 - **Office name, decided at sign-off:** "Intervention Map" with "Provincial Agriculture Office Marinduque" underneath, and the footer line "Provincial Agriculture Office, Marinduque". "Department of Agriculture –" is dropped.
 - **Built:** Phase 12, the foundation, through both gates on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
 - **Live:** Phase 12 is on https://da-marinduque-map.netlify.app since 2026-11-11. The owner deployed it with `npm run deploy`, because Claude Code's permissions don't let Claude deploy to production. Checked signed out: the security headers are on, Inter loads, and the only blocked script is Netlify's own badge, which is known since Phase 9.
-- **Next:** Phase 13, the Home and Dashboard pages, as drawn on the design canvas.
+- **In progress:** Phase 13, the Home and Dashboard pages. Built, and it passed Gate 1 on 2026-11-11. Next is the Gate 2 draft.
+- **Next after that:** Phase 14, the map restyle. The owner's brief from Gate 1 is that the map overwhelms users, and it should be simple and clean but detailed, like the canvas's Map screen. See `docs/UI-UX-ROADMAP.md` §12.
 
 ## Phases completed
 
@@ -57,6 +58,13 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 13 built and through Gate 1, on branch `phase-13-dashboard`:
+  - **Home at `/`:** a welcome banner, work waiting for Encoders and Admins, headline tiles, a card per type, and an FMR "Data to follow" card. Every figure counts every record.
+  - **Dashboard at `/dashboard`:** filters shared with the map, the tiles, units by category group, the five charts with Show table and a logged CSV, and the list of records awaiting coordinate verification with **Download verification sheet**.
+  - **Sidebar:** Home and Dashboard links added. Unknown addresses now open Home.
+  - **Fixed:** in local mode, Discard local changes now reloads the map, not Home.
+  - **Tests:** 1,119 unit tests passed, 7 of them new. 648 of 650 end-to-end tests passed, plus 11 skipped. The 2 that failed were the Discard bug above, and they pass after the fix. 14 new end-to-end tests cover Home and the Dashboard.
+  - **Owner at Gate 1:** "all features in the UI/UX is good except the map", which goes to Phase 14.
 - Phase 12 is live: the owner ran `npm run deploy`, deploy `6af4714978e1a6e0c7c26959`. Checked signed out on the live site.
 - Phase 12 Gate 2 approved by the owner, and merged into `main` (`68b573f`).
 - Phase 12 Gate 2 draft is up: https://6af46f36d1b297e398bd44b9--da-marinduque-map.netlify.app.
