@@ -62,7 +62,12 @@ async function open(page: Page, path: string, role?: string) {
 
 async function openQueue(page: Page) {
   await open(page, '/qa');
-  await expect(page.getByRole('region', { name: 'QA queue' })).toBeVisible();
+  await expect(page.getByRole('main', { name: 'QA queue' })).toBeVisible();
+}
+
+// From one of these pages to another, through the sidebar.
+async function goTo(page: Page, name: 'QA queue' | 'Condition check' | 'Import') {
+  await (await sidebar(page)).getByRole('link', { name, exact: true }).click();
 }
 
 async function filterQueue(page: Page, search: string) {
@@ -98,10 +103,13 @@ test.describe('who is offered it', () => {
       await expect(nav.getByRole('link', { name: 'Users' })).toHaveCount(role === 'admin' ? 1 : 0);
       await nav.getByRole('link', { name: 'QA queue' }).click();
       await expect(page).toHaveURL(/\/qa$/);
-      const sections = page.getByRole('navigation', { name: 'QA and import' });
-      await expect(sections.getByRole('link')).toHaveText(['QA queue', 'Condition check', 'Import']);
-      await sections.getByRole('link', { name: 'Import' }).click();
-      await expect(page.getByRole('region', { name: 'Import', exact: true })).toBeVisible();
+      await expect(page.getByRole('main', { name: 'QA queue' })).toBeVisible();
+      // Each is its own page in the sidebar, under Records.
+      const records = (await sidebar(page)).getByRole('list', { name: 'Records' });
+      await expect(records.getByRole('link')).toHaveText(['Interventions', 'QA queue', 'Condition check', 'Import']);
+      await expect(records.getByRole('link', { name: 'QA queue' })).toHaveAttribute('aria-current', 'page');
+      await records.getByRole('link', { name: 'Import' }).click();
+      await expect(page.getByRole('main', { name: 'Import', exact: true })).toBeVisible();
       // The RAED file was loaded by script, so it can't be undone here.
       await expect(page.getByRole('region', { name: 'Earlier imports' })).toContainText('Loaded by script');
       await expect(page.getByRole('button', { name: 'Undo this import' })).toHaveCount(0);
@@ -118,7 +126,7 @@ test.describe('who is offered it', () => {
     for (const path of ['/qa', '/qa/condition', '/import']) {
       await page.goto(path);
       await expect(page.getByRole('alert')).toContainText('This page is for Encoders and Admins');
-      await expect(page.getByRole('navigation', { name: 'QA and import' })).toHaveCount(0);
+      await expect(page.getByRole('main')).toHaveCount(0);
     }
   });
 });
@@ -129,13 +137,13 @@ test.describe('the QA queue', () => {
     const present = FLAG_ORDER.filter((flag) => flagCount(flag) > 0);
     await expect(page.locator('.queue-group')).toHaveCount(present.length);
     expect(await page.locator('.queue-group').evaluateAll((groups) => groups.map((element) => element.getAttribute('data-flag')))).toEqual(present);
-    for (const flag of present) await expect(group(page, flag).locator('h3 .count')).toHaveText(String(flagCount(flag)));
+    for (const flag of present) await expect(group(page, flag).locator('h2 .count')).toHaveText(String(flagCount(flag)));
     await expect(filter(page, 'queue', 'Flag')).toContainText(`All flags (${totalFlags})`);
 
     await filter(page, 'queue', 'Municipality').selectOption({ label: 'Boac' });
     for (const flag of FLAG_ORDER.filter((candidate) => flagCount(candidate, boac.id) > 0)) {
-      await expect(group(page, flag).locator('h3 .count')).toHaveText(String(flagCount(flag, boac.id)));
-      await expect(group(page, flag).locator('.queue-place h4')).toHaveCount(1);
+      await expect(group(page, flag).locator('h2 .count')).toHaveText(String(flagCount(flag, boac.id)));
+      await expect(group(page, flag).locator('.queue-place h3')).toHaveCount(1);
     }
     await filter(page, 'queue', 'Municipality').selectOption({ label: 'All' });
     await filter(page, 'queue', 'Flag').selectOption('barangay_mismatch');
@@ -159,7 +167,7 @@ test.describe('the QA queue', () => {
     await dismiss.getByRole('button', { name: 'Dismiss' }).click();
     await expect(notice(page)).toContainText('Flag dismissed for');
     await expect(item).toHaveCount(0);
-    await expect(group(page, 'barangay_mismatch').locator('h3 .count')).toHaveText(String(flagCount('barangay_mismatch') - 1));
+    await expect(group(page, 'barangay_mismatch').locator('h2 .count')).toHaveText(String(flagCount('barangay_mismatch') - 1));
     await expect(filter(page, 'queue', 'Flag')).toContainText(`All flags (${totalFlags - 1})`);
 
     await page.getByLabel('Show dismissed').check();
@@ -170,7 +178,7 @@ test.describe('the QA queue', () => {
     await expect(item).not.toContainText('Dismissed by');
     await page.getByLabel('Show dismissed').uncheck();
     await expect(item).toBeVisible();
-    await expect(group(page, 'barangay_mismatch').locator('h3 .count')).toHaveText(String(flagCount('barangay_mismatch')));
+    await expect(group(page, 'barangay_mismatch').locator('h2 .count')).toHaveText(String(flagCount('barangay_mismatch')));
   });
 
   test('setting the barangay to where the point is clears the flag', async ({ page }) => {
@@ -187,7 +195,7 @@ test.describe('the QA queue', () => {
     await set.getByRole('button', { name: 'Set barangay' }).click();
     await expect(notice(page)).toContainText('Barangay set for');
     await expect(page.locator(`.queue-item[data-record="${record.id}"]`)).toHaveCount(0);
-    await expect(group(page, 'barangay_mismatch').locator('h3 .count')).toHaveText(String(flagCount('barangay_mismatch') - 1));
+    await expect(group(page, 'barangay_mismatch').locator('h2 .count')).toHaveText(String(flagCount('barangay_mismatch') - 1));
   });
 
   test('setting a location basis dismisses the mismatch with the same reason', async ({ page }) => {
@@ -217,9 +225,9 @@ test.describe('the QA queue', () => {
     await expect(item).toBeVisible();
 
     // Its condition is known now, so it isn't waiting for a check.
-    await page.getByRole('navigation', { name: 'QA and import' }).getByRole('link', { name: 'Condition check' }).click();
+    await goTo(page, 'Condition check');
     await page.getByRole('form', { name: 'Filter the units' }).getByRole('searchbox').fill(unlocated.source_id);
-    await expect(page.getByRole('region', { name: 'Condition check' }).getByRole('status')).toContainText('Nothing waiting here.');
+    await expect(page.getByRole('main', { name: 'Condition check' }).getByRole('status')).toContainText('Nothing waiting here.');
   });
 
   test('a location is fixed on the map, with the record open to resolve', async ({ page }) => {
@@ -235,7 +243,7 @@ test.describe('the QA queue', () => {
 test.describe('the condition check', () => {
   test('lists Turned-over units by municipality, and a status set there takes the unit off the list', async ({ page }) => {
     await open(page, '/qa/condition');
-    const check = page.getByRole('region', { name: 'Condition check' });
+    const check = page.getByRole('main', { name: 'Condition check' });
     const units = (records: SeedRecord[]) => records.reduce((sum, record) => sum + record.quantity, 0);
     await expect(filter(page, 'units', 'Status')).toHaveValue(String(turnedOver.id));
     await expect(check.getByRole('status')).toHaveText(`${waitingIn().length} records waiting, ${units(waitingIn())} units.`);
@@ -317,7 +325,7 @@ test.describe('importing', () => {
     await expect(group(page, 'barangay_unmatched')).toContainText('The source names "Nowhere Brgy".');
     await expect(page.locator('.queue-item')).toHaveCount(2);
 
-    await page.getByRole('navigation', { name: 'QA and import' }).getByRole('link', { name: 'Import' }).click();
+    await goTo(page, 'Import');
     const batch = page.locator('.import-batches .queue-item').filter({ hasText: 'e2e.csv' });
     await expect(batch).toContainText('E2E export · Farm Machinery · 2 records, 1 flagged');
     await expect(batch).toContainText('By Local user on');
@@ -331,7 +339,7 @@ test.describe('importing', () => {
     await expect(batch).toContainText(/Undone by Local user on .*: Imported the wrong file/);
     await expect(batch.getByRole('button', { name: 'Undo this import' })).toHaveCount(0);
 
-    await page.getByRole('navigation', { name: 'QA and import' }).getByRole('link', { name: 'QA queue' }).click();
+    await goTo(page, 'QA queue');
     await filterQueue(page, 'E2E Test FCA');
     await expect(page.getByText('Nothing matches these filters.')).toBeVisible();
   });
@@ -358,14 +366,14 @@ test.describe('importing', () => {
     await importIt(page, 1);
 
     // A status set on one of its records is work that undoing would lose.
-    await page.getByRole('navigation', { name: 'QA and import' }).getByRole('link', { name: 'Condition check' }).click();
-    const check = page.getByRole('region', { name: 'Condition check' });
+    await goTo(page, 'Condition check');
+    const check = page.getByRole('main', { name: 'Condition check' });
     await page.getByRole('form', { name: 'Filter the units' }).getByRole('searchbox').fill('E2E Test FCA Eleven');
     await check.locator('.queue-item').getByRole('button', { name: 'Serviceable', exact: true }).click();
     await form(page, /^Set Serviceable: /).getByRole('button', { name: 'Save as Serviceable' }).click();
     await expect(check.getByRole('status')).toContainText('Nothing waiting here.');
 
-    await page.getByRole('navigation', { name: 'QA and import' }).getByRole('link', { name: 'Import' }).click();
+    await goTo(page, 'Import');
     const batch = page.locator('.import-batches .queue-item').filter({ hasText: 'second.csv' });
     await batch.getByRole('button', { name: 'Undo this import' }).click();
     await form(page, 'Undo second.csv').getByLabel(/^Reason/).fill('Wrong file');

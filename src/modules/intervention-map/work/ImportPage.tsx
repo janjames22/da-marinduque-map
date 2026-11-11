@@ -1,6 +1,7 @@
 // /import: a file of records in, as one batch that can be taken back off the map together. The file is
 // read in this browser and nothing is saved until the last step. The database checks every row again.
-import { useMemo, useState, type FormEvent } from 'react';
+import { Check, CircleCheckBig, FileSpreadsheet, History, Upload } from 'lucide-react';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { MOST_IMPORT_ROWS } from '../data/store';
 import type { AppUser, ImportBatch, MapData } from '../data/types';
@@ -61,13 +62,31 @@ const when = (timestamp: string) => new Date(timestamp).toLocaleString('en-PH', 
 function Steps({ step }: { step: Step }) {
   const at = STEPS.findIndex((entry) => entry.id === step);
   return (
-    <ol className="import-steps" aria-label="Steps">
-      {STEPS.map((entry, index) => (
-        <li key={entry.id} className={index === at ? 'current' : index < at || step === 'done' ? 'done' : undefined} aria-current={index === at ? 'step' : undefined}>
-          {index + 1}. {entry.label}
-        </li>
-      ))}
+    <ol className="stepper" aria-label="Steps">
+      {STEPS.map((entry, index) => {
+        const state = index === at ? 'current' : index < at || step === 'done' ? 'done' : 'next';
+        return (
+          <li key={entry.id} className={`stepper-step is-${state}`} aria-current={index === at ? 'step' : undefined}>
+            <span className="stepper-mark" aria-hidden="true">
+              {state === 'done' ? <Check /> : index + 1}
+            </span>
+            <span className="stepper-label">
+              {entry.label}
+              {state === 'done' && <span className="visually-hidden"> (done)</span>}
+            </span>
+          </li>
+        );
+      })}
     </ol>
+  );
+}
+
+function StepHeader({ title, children }: { title: string; children?: ReactNode }) {
+  return (
+    <header className="import-step-header">
+      <h2>{title}</h2>
+      {children && <p>{children}</p>}
+    </header>
   );
 }
 
@@ -103,27 +122,39 @@ function BatchList({ data, user }: { data: MapData; user: AppUser }) {
 
   if (batches.length === 0) return null;
   return (
-    <section className="import-batches" aria-label="Earlier imports">
-      <h3>Earlier imports</h3>
+    <section className="overview-card import-batches" aria-labelledby="import-batches-title">
+      <header className="overview-card-header">
+        <div>
+          <h2 id="import-batches-title">Earlier imports</h2>
+          <p>Newest first. A batch can be undone while none of its records has been changed since.</p>
+        </div>
+      </header>
       <Feedback failure={failure} notice={notice} />
       <ul className="queue-list">
         {batches.map((batch) => {
           const type = data.types.find((candidate) => candidate.id === batch.intervention_type_id);
           const canUndo = batch.undone_at === null && batch.imported_by !== null && (user.role === 'admin' || batch.imported_by === user.id);
+          const flagged = Number(batch.counts.flagged ?? 0);
           return (
-            <li key={batch.id} className="queue-item" data-batch={batch.id}>
+            <li key={batch.id} className={`queue-item batch-item${batch.undone_at ? ' is-undone' : ''}`} data-batch={batch.id}>
+              <span className="batch-icon" aria-hidden="true">
+                {batch.undone_at ? <History /> : <FileSpreadsheet />}
+              </span>
               <div className="queue-item-main">
-                <strong>{batch.file_name}</strong>
+                <span className="batch-title">
+                  <strong>{batch.file_name}</strong>
+                  {batch.undone_at && <span className="ui-badge">Undone</span>}
+                </span>
                 <span>
                   {batch.data_source}
                   {type ? ` · ${type.name}` : ''} · {plural(Number(batch.counts.records ?? 0), 'record')}
-                  {batch.counts.flagged ? `, ${batch.counts.flagged} flagged` : ''}
+                  {flagged > 0 ? `, ${flagged} flagged` : ''}
                 </span>
-                <span className="field-hint">
+                <span className="queue-item-meta">
                   {batch.imported_by === null ? 'Loaded by script' : `By ${personName(data, user, batch.imported_by)}`} on {when(batch.imported_at)}
                 </span>
                 {batch.undone_at && (
-                  <span className="field-hint">
+                  <span className="queue-item-meta">
                     Undone by {personName(data, user, batch.undone_by)} on {when(batch.undone_at)}: {batch.undo_reason}
                   </span>
                 )}
@@ -132,7 +163,7 @@ function BatchList({ data, user }: { data: MapData; user: AppUser }) {
                 <div className="queue-actions">
                   <button
                     type="button"
-                    className="secondary-button"
+                    className="ui-button ui-button-secondary ui-button-small"
                     onClick={() => {
                       setUndoing(batch.id);
                       setReason('');
@@ -144,15 +175,16 @@ function BatchList({ data, user }: { data: MapData; user: AppUser }) {
                 </div>
               )}
               {undoing === batch.id && (
-                <form className="queue-action" aria-label={`Undo ${batch.file_name}`} onSubmit={(event) => void undo(event, batch)} noValidate>
+                <form className="queue-action is-danger" aria-label={`Undo ${batch.file_name}`} onSubmit={(event) => void undo(event, batch)} noValidate>
+                  <strong className="queue-action-title">Undo this import</strong>
                   <p className="field-hint">This takes all {plural(Number(batch.counts.records ?? 0), 'record')} from this file off the map. It can't be done once any of them has been changed since.</p>
-                  <TextField label="Reason" required multiline value={reason} onChange={setReason} error={errors.reason} />
-                  <div className="form-actions">
-                    <button type="submit" className="danger-button" disabled={busy}>
-                      Undo the import
-                    </button>
-                    <button type="button" className="secondary-button" onClick={() => setUndoing(null)}>
+                  <TextField label="Reason" required multiline value={reason} onChange={setReason} error={errors.reason} hint="It goes in the audit log." />
+                  <div className="queue-action-buttons">
+                    <button type="button" className="ui-button ui-button-quiet" onClick={() => setUndoing(null)}>
                       Cancel
+                    </button>
+                    <button type="submit" className="ui-button ui-button-danger" disabled={busy}>
+                      Undo the import
                     </button>
                   </div>
                 </form>
@@ -173,27 +205,31 @@ function PreviewTable({ rows }: { rows: PreviewRow[] }) {
   const at = Math.min(page, lastPage);
 
   return (
-    <>
-      <label className="field import-show">
-        <span>Show</span>
-        <select
-          value={show}
-          onChange={(event) => {
-            setShow(event.target.value as typeof show);
-            setPage(0);
-          }}
-        >
-          <option value="all">Every row ({rows.length})</option>
-          <option value="fix">Rows to fix ({rows.filter((row) => row.input === null).length})</option>
-          <option value="warnings">Rows with warnings ({rows.filter((row) => row.warnings.length > 0).length})</option>
-          <option value="flagged">Rows that will be flagged ({rows.filter((row) => row.flags.length > 0).length})</option>
-        </select>
-      </label>
+    <div className="import-preview-block">
+      <div className="import-preview-bar">
+        <h3>Every row</h3>
+        <div className="filter-field import-show">
+          <label htmlFor="import-show">Show</label>
+          <select
+            id="import-show"
+            value={show}
+            onChange={(event) => {
+              setShow(event.target.value as typeof show);
+              setPage(0);
+            }}
+          >
+            <option value="all">Every row ({rows.length})</option>
+            <option value="fix">Rows to fix ({rows.filter((row) => row.input === null).length})</option>
+            <option value="warnings">Rows with warnings ({rows.filter((row) => row.warnings.length > 0).length})</option>
+            <option value="flagged">Rows that will be flagged ({rows.filter((row) => row.flags.length > 0).length})</option>
+          </select>
+        </div>
+      </div>
       {shown.length === 0 ? (
         <p className="empty-note">No rows here.</p>
       ) : (
-        <div className="records-scroll">
-          <table className="records-table import-preview">
+        <div className="table-scroll import-preview-scroll">
+          <table className="data-table import-preview">
             <thead>
               <tr>
                 <th scope="col">Row</th>
@@ -206,8 +242,8 @@ function PreviewTable({ rows }: { rows: PreviewRow[] }) {
             </thead>
             <tbody>
               {shown.slice(at * PREVIEW_PAGE, (at + 1) * PREVIEW_PAGE).map((row) => (
-                <tr key={row.row} data-row={row.row} className={row.input === null ? 'to-fix' : undefined}>
-                  <td>{row.row}</td>
+                <tr key={row.row} data-row={row.row} className={row.input === null ? 'to-fix' : row.warnings.length > 0 ? 'has-warning' : undefined}>
+                  <td className="number">{row.row}</td>
                   <td>{row.beneficiary ?? '—'}</td>
                   <td>{row.municipality || '—'}</td>
                   <td>
@@ -219,7 +255,7 @@ function PreviewTable({ rows }: { rows: PreviewRow[] }) {
                       </span>
                     )}
                   </td>
-                  <td>{row.flags.map((flag) => FLAG_LABELS[flag] ?? flag).join('; ') || '—'}</td>
+                  <td>{row.flags.length === 0 ? '—' : row.flags.map((flag) => FLAG_LABELS[flag] ?? flag).join('; ')}</td>
                   <td>
                     {row.errors.map((message) => (
                       <span key={message} className="import-error">
@@ -239,19 +275,21 @@ function PreviewTable({ rows }: { rows: PreviewRow[] }) {
         </div>
       )}
       {shown.length > PREVIEW_PAGE && (
-        <div className="records-pages">
-          <span className="records-count">
+        <div className="card-pager">
+          <span>
             {at * PREVIEW_PAGE + 1}–{Math.min((at + 1) * PREVIEW_PAGE, shown.length)} of {shown.length}
           </span>
-          <button type="button" className="secondary-button" disabled={at === 0} onClick={() => setPage(at - 1)}>
-            Previous
-          </button>
-          <button type="button" className="secondary-button" disabled={at >= lastPage} onClick={() => setPage(at + 1)}>
-            Next
-          </button>
+          <div>
+            <button type="button" className="ui-button ui-button-secondary ui-button-small" disabled={at === 0} onClick={() => setPage(at - 1)}>
+              Previous
+            </button>
+            <button type="button" className="ui-button ui-button-secondary ui-button-small" disabled={at >= lastPage} onClick={() => setPage(at + 1)}>
+              Next
+            </button>
+          </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -265,6 +303,7 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
   const [dataSource, setDataSource] = useState('');
   const [file, setFile] = useState<ParsedFile | null>(null);
   const [reading, setReading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
   const [mapping, setMapping] = useState<ColumnMapping>({});
@@ -407,250 +446,329 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
   };
 
   const statuses = type ? statusChoices(data, type.id) : [];
+  const mapped = file ? file.columns.filter((column) => mapping[column]).length : 0;
 
   return (
-    <section className="admin-section import-page" aria-label="Import">
-      <header className="admin-section-header">
-        <div>
-          <h2>Import records</h2>
-          <p className="field-hint">A CSV, Excel (.xlsx) or Google Earth (.kml, .kmz) file of records, brought in as one batch. Nothing is saved until the last step, and the whole batch can be undone while its records are untouched.</p>
-        </div>
+    <main className="overview-page work-page import-page" aria-labelledby="import-title">
+      <header className="page-header">
+        <h1 id="import-title">Import</h1>
+        <p>A CSV, Excel (.xlsx) or Google Earth (.kml, .kmz) file of records, brought in as one batch. Nothing is saved until the last step, and the whole batch can be undone while its records are untouched.</p>
       </header>
-      {step !== 'done' && <Steps step={step} />}
 
-      {step === 'file' && (
-        <>
-          <form className="import-form" aria-label="Choose a file" onSubmit={toColumns} noValidate>
-            <SelectField
-              label="What the file lists"
-              required
-              value={typeId}
-              placeholder="Choose a type"
-              onChange={(value) => setTypeId(value)}
-              options={types.map((candidate) => ({ value: candidate.id, label: candidate.name }))}
-              error={stepErrors.type}
-            />
-            <div className="form-field">
-              <label htmlFor="import-source">
-                Where it came from
-                <span className="required-mark"> *</span>
-              </label>
-              <input id="import-source" list="import-sources" value={dataSource} onChange={(event) => setDataSource(event.target.value)} aria-invalid={stepErrors.source ? true : undefined} aria-required aria-describedby="import-source-hint" />
-              <datalist id="import-sources">
-                {data.dataSources.map((source) => (
-                  <option key={source} value={source} />
-                ))}
-              </datalist>
-              <span id="import-source-hint" className="field-hint">
-                {stepErrors.source ? <span className="field-error">{stepErrors.source}</span> : 'Such as "ABEMIS export". Columns are remembered for the next file from the same source.'}
-              </span>
-            </div>
-            <div className="form-field">
-              <label htmlFor="import-file">
-                File
-                <span className="required-mark"> *</span>
-              </label>
-              <input id="import-file" type="file" accept=".csv,.txt,.xlsx,.xls,.kml,.kmz" onChange={(event) => void chooseFile(event.target.files?.[0])} />
-              {reading && <span className="field-hint">Reading the file…</span>}
-              {(fileError ?? stepErrors.file) && (
-                <span className="field-error" role="alert">
-                  {fileError ?? stepErrors.file}
-                </span>
-              )}
-              {file && (
-                <span className="field-hint" role="status">
-                  {plural(file.rows.length, 'row')} and {plural(file.columns.length, 'column')} read{file.sheet ? ` from the sheet "${file.sheet}"` : ''}.
-                </span>
-              )}
-              {file?.notes.map((note) => (
-                <span key={note} className="field-hint">
-                  {note}
-                </span>
-              ))}
-            </div>
-            <div className="form-actions">
-              <button type="submit" className="primary-button" disabled={reading}>
-                Next: columns
-              </button>
-            </div>
-          </form>
-          <BatchList data={data} user={user} />
-        </>
-      )}
+      {step !== 'done' && (
+        <div className="overview-card import-wizard">
+          <Steps step={step} />
 
-      {step === 'columns' && file && type && (
-        <form className="import-form" aria-label="Match the columns" onSubmit={toValues} noValidate>
-          <p className="field-hint">Which field each of the file's columns fills. Starred fields need a column. Columns left out aren't imported, but each row is kept whole with its record.</p>
-          <div className="records-scroll">
-            <table className="records-table import-columns">
-              <thead>
-                <tr>
-                  <th scope="col">Column in the file</th>
-                  <th scope="col">Its first values</th>
-                  <th scope="col">Goes into</th>
-                </tr>
-              </thead>
-              <tbody>
-                {file.columns.map((column) => (
-                  <tr key={column}>
-                    <th scope="row">{column}</th>
-                    <td className="field-hint">{samples(file, column) || '(empty)'}</td>
-                    <td>
-                      <select aria-label={`Field for ${column}`} value={mapping[column] ?? ''} onChange={(event) => assign(column, event.target.value)}>
-                        <option value="">Don't import</option>
-                        {targets.map((target) => (
-                          <option key={target.id} value={target.id}>
-                            {target.label}
-                            {target.required ? ' *' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {stepErrors.columns && (
-            <p className="field-error" role="alert">
-              {stepErrors.columns}
-            </p>
-          )}
-          <SelectField label="Status for rows without one" required value={statusId} placeholder="Choose a status" onChange={setStatusId} options={statuses} error={stepErrors.status} />
-          <TextField
-            label="Statuses are as of"
-            type="date"
-            required
-            value={statusDate}
-            onChange={setStatusDate}
-            error={stepErrors.statusDate}
-            hint="The date the file's statuses were true, such as the day it was exported. Rows with a status date of their own keep it."
-          />
-          <div className="form-actions">
-            <button type="button" className="secondary-button" onClick={() => setStep('file')}>
-              Back
-            </button>
-            <button type="submit" className="primary-button">
-              {pending.length > 0 ? 'Next: values' : 'Next: check'}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {step === 'values' && file && type && (
-        <form className="import-form" aria-label="Match the values" onSubmit={toCheck} noValidate>
-          <p className="field-hint">These values aren't on the app's lists. Choose what each one is. Your choices are remembered for the next file from {dataSource.trim()}.</p>
-          <ul className="import-values">
-            {pending.map((value) => {
-              const target = targets.find((candidate) => candidate.id === value.target)!;
-              const chosen = choices[value.target]?.[value.key];
-              const blank = value.target === 'status' ? 'Use the status for rows without one' : target.required ? null : 'Leave it blank';
-              return (
-                <li key={`${value.target}|${value.key}`}>
-                  <label className="field">
-                    <span>
-                      {value.label}: "{value.raw}" <span className="field-hint">({plural(value.rows, 'row')})</span>
-                    </span>
-                    <select value={chosen === undefined ? '' : chosen === null ? BLANK : chosen} onChange={(event) => choose(value.target, value.key, event.target.value)}>
-                      <option value="">Choose…</option>
-                      {listOptions(target, type, data).map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                      {blank && <option value={BLANK}>{blank}</option>}
-                    </select>
+          {step === 'file' && (
+            <form className="import-form" aria-label="Choose a file" onSubmit={toColumns} noValidate>
+              <StepHeader title="Choose a file">The file is read in this browser. Columns are remembered for the next file from the same source.</StepHeader>
+              <div className="import-fields">
+                <SelectField
+                  label="What the file lists"
+                  required
+                  value={typeId}
+                  placeholder="Choose a type"
+                  onChange={(value) => setTypeId(value)}
+                  options={types.map((candidate) => ({ value: candidate.id, label: candidate.name }))}
+                  error={stepErrors.type}
+                />
+                <div className="form-field">
+                  <label htmlFor="import-source">
+                    Where it came from
+                    <span className="required-mark"> *</span>
                   </label>
-                </li>
-              );
-            })}
-          </ul>
-          {stepErrors.values && (
-            <p className="field-error" role="alert">
-              {stepErrors.values}
-            </p>
-          )}
-          <div className="form-actions">
-            <button type="button" className="secondary-button" onClick={() => setStep('columns')}>
-              Back
-            </button>
-            <button type="submit" className="primary-button">
-              Next: check
-            </button>
-          </div>
-        </form>
-      )}
-
-      {step === 'check' && file && type && (
-        <div className="import-check">
-          <p className="import-summary" role="status">
-            {plural(summary.rows, 'row')}: {summary.ready} ready, {summary.toFix} to fix, {summary.withWarnings} with warnings.
-          </p>
-          {Object.keys(summary.flags).length > 0 && (
-            <ul className="import-flags" aria-label="What will be flagged">
-              {[...FLAG_ORDER, ...Object.keys(summary.flags).filter((flag) => !FLAG_ORDER.includes(flag))]
-                .filter((flag) => summary.flags[flag])
-                .map((flag) => (
-                  <li key={flag}>
-                    {FLAG_LABELS[flag] ?? flag}: {summary.flags[flag]}
-                  </li>
+                  <input id="import-source" list="import-sources" value={dataSource} onChange={(event) => setDataSource(event.target.value)} aria-invalid={stepErrors.source ? true : undefined} aria-required aria-describedby="import-source-hint" />
+                  <datalist id="import-sources">
+                    {data.dataSources.map((source) => (
+                      <option key={source} value={source} />
+                    ))}
+                  </datalist>
+                  <span id="import-source-hint" className={stepErrors.source ? 'field-error' : 'field-hint'}>
+                    {stepErrors.source ?? 'Such as "ABEMIS export".'}
+                  </span>
+                </div>
+              </div>
+              <div className="form-field">
+                <label htmlFor="import-file">
+                  File
+                  <span className="required-mark"> *</span>
+                </label>
+                <div className={`file-drop${dragging ? ' is-dragging' : ''}${file ? ' has-file' : ''}${fileError ?? stepErrors.file ? ' has-error' : ''}`}>
+                  <input
+                    id="import-file"
+                    type="file"
+                    accept=".csv,.txt,.xlsx,.xls,.kml,.kmz"
+                    aria-describedby="import-file-hint"
+                    onChange={(event) => {
+                      setDragging(false);
+                      void chooseFile(event.target.files?.[0]);
+                    }}
+                    onDragEnter={() => setDragging(true)}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={() => setDragging(false)}
+                  />
+                  <span className="file-drop-icon" aria-hidden="true">
+                    {file ? <FileSpreadsheet /> : <Upload />}
+                  </span>
+                  <span className="file-drop-text">
+                    <strong>{reading ? 'Reading the file…' : file ? file.fileName : 'Choose a file, or drop it here'}</strong>
+                    <span id="import-file-hint">{file ? 'Choose another to replace it.' : `CSV, Excel (.xlsx) or Google Earth (.kml, .kmz), up to ${MOST_IMPORT_ROWS.toLocaleString('en-US')} rows.`}</span>
+                  </span>
+                </div>
+                {(fileError ?? stepErrors.file) && (
+                  <span className="field-error" role="alert">
+                    {fileError ?? stepErrors.file}
+                  </span>
+                )}
+                {file && (
+                  <span className="file-read" role="status">
+                    <Check aria-hidden="true" />
+                    {plural(file.rows.length, 'row')} and {plural(file.columns.length, 'column')} read{file.sheet ? ` from the sheet "${file.sheet}"` : ''}.
+                  </span>
+                )}
+                {file?.notes.map((note) => (
+                  <span key={note} className="field-hint">
+                    {note}
+                  </span>
                 ))}
-            </ul>
+              </div>
+              <div className="form-actions-bar">
+                <button type="submit" className="ui-button ui-button-primary" disabled={reading}>
+                  Next: columns
+                </button>
+              </div>
+            </form>
           )}
-          {summary.flags.barangay_unmatched || summary.flags.barangay_mismatch ? <p className="field-hint">Flagged records come in and wait in the QA queue, where they can be fixed.</p> : null}
-          <PreviewTable rows={preview} />
 
-          {already > 0 && (
-            <label className="choice">
-              <input type="checkbox" checked={leaveOutAlready} onChange={(event) => setLeaveOutAlready(event.target.checked)} />
-              Leave out the {plural(already, 'row')} already imported from {dataSource.trim()}
-            </label>
+          {step === 'columns' && file && type && (
+            <form className="import-form" aria-label="Match the columns" onSubmit={toValues} noValidate>
+              <StepHeader title="Match the columns">
+                Which field each of the file's columns fills. Starred fields need a column. Columns left out aren't imported, but each row is kept whole with its record.
+              </StepHeader>
+              <p className="import-mapped">
+                <span className="ui-badge is-success">{mapped} matched</span>
+                <span className="ui-badge">{file.columns.length - mapped} left out</span>
+                {missing.length > 0 && <span className="ui-badge is-warning">Still needed: {missing.map((target) => target.label).join(', ')}</span>}
+              </p>
+              <div className="table-scroll import-columns-scroll">
+                <table className="data-table import-columns">
+                  <thead>
+                    <tr>
+                      <th scope="col">Column in the file</th>
+                      <th scope="col">Its first values</th>
+                      <th scope="col">Goes into</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {file.columns.map((column) => (
+                      <tr key={column} className={mapping[column] ? 'is-mapped' : undefined}>
+                        <th scope="row">{column}</th>
+                        <td className="import-samples">{samples(file, column) || '(empty)'}</td>
+                        <td>
+                          <select aria-label={`Field for ${column}`} value={mapping[column] ?? ''} onChange={(event) => assign(column, event.target.value)}>
+                            <option value="">Don't import</option>
+                            {targets.map((target) => (
+                              <option key={target.id} value={target.id}>
+                                {target.label}
+                                {target.required ? ' *' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {stepErrors.columns && (
+                <p className="field-error" role="alert">
+                  {stepErrors.columns}
+                </p>
+              )}
+              <div className="import-fields">
+                <SelectField label="Status for rows without one" required value={statusId} placeholder="Choose a status" onChange={setStatusId} options={statuses} error={stepErrors.status} />
+                <TextField
+                  label="Statuses are as of"
+                  type="date"
+                  required
+                  value={statusDate}
+                  onChange={setStatusDate}
+                  error={stepErrors.statusDate}
+                  hint="The date the file's statuses were true, such as the day it was exported. Rows with a status date of their own keep it."
+                />
+              </div>
+              <div className="form-actions-bar">
+                <button type="button" className="ui-button ui-button-secondary is-start" onClick={() => setStep('file')}>
+                  Back
+                </button>
+                <button type="submit" className="ui-button ui-button-primary">
+                  {pending.length > 0 ? 'Next: values' : 'Next: check'}
+                </button>
+              </div>
+            </form>
           )}
-          {summary.toFix > 0 && (
-            <label className="choice">
-              <input type="checkbox" checked={leaveOutToFix} onChange={(event) => setLeaveOutToFix(event.target.checked)} />
-              Leave out the {plural(summary.toFix, 'row')} to fix, and import the rest
-            </label>
+
+          {step === 'values' && file && type && (
+            <form className="import-form" aria-label="Match the values" onSubmit={toCheck} noValidate>
+              <StepHeader title="Match the values">
+                These values aren't on the app's lists. Choose what each one is. Your choices are remembered for the next file from {dataSource.trim()}.
+              </StepHeader>
+              <div className="table-scroll">
+                <table className="data-table import-values">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">In the file</th>
+                      <th scope="col" className="number">
+                        Rows
+                      </th>
+                      <th scope="col">Is</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pending.map((value) => {
+                      const target = targets.find((candidate) => candidate.id === value.target)!;
+                      const chosen = choices[value.target]?.[value.key];
+                      const blank = value.target === 'status' ? 'Use the status for rows without one' : target.required ? null : 'Leave it blank';
+                      return (
+                        <tr key={`${value.target}|${value.key}`} className={chosen === undefined ? 'is-unchosen' : undefined}>
+                          <td>{value.label}</td>
+                          <th scope="row">"{value.raw}"</th>
+                          <td className="number">{value.rows}</td>
+                          <td>
+                            <select aria-label={`${value.label}: "${value.raw}" (${plural(value.rows, 'row')})`} value={chosen === undefined ? '' : chosen === null ? BLANK : chosen} onChange={(event) => choose(value.target, value.key, event.target.value)}>
+                              <option value="">Choose…</option>
+                              {listOptions(target, type, data).map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                              {blank && <option value={BLANK}>{blank}</option>}
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {stepErrors.values && (
+                <p className="field-error" role="alert">
+                  {stepErrors.values}
+                </p>
+              )}
+              <div className="form-actions-bar">
+                <button type="button" className="ui-button ui-button-secondary is-start" onClick={() => setStep('columns')}>
+                  Back
+                </button>
+                <button type="submit" className="ui-button ui-button-primary">
+                  Next: check
+                </button>
+              </div>
+            </form>
           )}
-          {summary.toFix > 0 && !leaveOutToFix && <p className="field-hint">Fix those rows in the file and read it again, change the columns or values, or leave them out.</p>}
-          <Feedback failure={saving.failure} />
-          <div className="form-actions">
-            <button type="button" className="secondary-button" onClick={() => setStep(pending.length > 0 ? 'values' : 'columns')} disabled={saving.busy}>
-              Back
-            </button>
-            <button type="button" className="primary-button" disabled={saving.busy || toImport.length === 0 || (summary.toFix > 0 && !leaveOutToFix)} onClick={() => void commit()}>
-              {saving.busy ? 'Importing…' : `Import ${plural(toImport.length, 'record')}`}
-            </button>
-          </div>
+
+          {step === 'check' && file && type && (
+            <div className="import-form import-check">
+              <StepHeader title="Check before importing" />
+              <dl className="import-tally" aria-hidden="true">
+                <div>
+                  <dt>Rows</dt>
+                  <dd>{summary.rows}</dd>
+                </div>
+                <div className="is-success">
+                  <dt>Ready</dt>
+                  <dd>{summary.ready}</dd>
+                </div>
+                <div className={summary.toFix > 0 ? 'is-danger' : undefined}>
+                  <dt>To fix</dt>
+                  <dd>{summary.toFix}</dd>
+                </div>
+                <div className={summary.withWarnings > 0 ? 'is-warning' : undefined}>
+                  <dt>With warnings</dt>
+                  <dd>{summary.withWarnings}</dd>
+                </div>
+              </dl>
+              <p className="import-summary visually-hidden" role="status">
+                {plural(summary.rows, 'row')}: {summary.ready} ready, {summary.toFix} to fix, {summary.withWarnings} with warnings.
+              </p>
+              {Object.keys(summary.flags).length > 0 && (
+                <div className="import-flag-block">
+                  <ul className="import-flags" aria-label="What will be flagged">
+                    {[...FLAG_ORDER, ...Object.keys(summary.flags).filter((flag) => !FLAG_ORDER.includes(flag))]
+                      .filter((flag) => summary.flags[flag])
+                      .map((flag) => (
+                        <li key={flag} className="ui-badge is-warning">
+                          {FLAG_LABELS[flag] ?? flag}: {summary.flags[flag]}
+                        </li>
+                      ))}
+                  </ul>
+                  {summary.flags.barangay_unmatched || summary.flags.barangay_mismatch ? <p className="field-hint">Flagged records come in and wait in the QA queue, where they can be fixed.</p> : null}
+                </div>
+              )}
+              <PreviewTable rows={preview} />
+
+              {(already > 0 || summary.toFix > 0) && (
+                <div className="import-choices">
+                  {already > 0 && (
+                    <label className="ui-check">
+                      <input type="checkbox" checked={leaveOutAlready} onChange={(event) => setLeaveOutAlready(event.target.checked)} />
+                      Leave out the {plural(already, 'row')} already imported from {dataSource.trim()}
+                    </label>
+                  )}
+                  {summary.toFix > 0 && (
+                    <label className="ui-check">
+                      <input type="checkbox" checked={leaveOutToFix} onChange={(event) => setLeaveOutToFix(event.target.checked)} />
+                      Leave out the {plural(summary.toFix, 'row')} to fix, and import the rest
+                    </label>
+                  )}
+                  {summary.toFix > 0 && !leaveOutToFix && <p className="field-hint">Fix those rows in the file and read it again, change the columns or values, or leave them out.</p>}
+                </div>
+              )}
+              <Feedback failure={saving.failure} />
+              <div className="form-actions-bar">
+                <button type="button" className="ui-button ui-button-secondary is-start" onClick={() => setStep(pending.length > 0 ? 'values' : 'columns')} disabled={saving.busy}>
+                  Back
+                </button>
+                <button type="button" className="ui-button ui-button-primary" disabled={saving.busy || toImport.length === 0 || (summary.toFix > 0 && !leaveOutToFix)} onClick={() => void commit()}>
+                  {saving.busy ? 'Importing…' : `Import ${plural(toImport.length, 'record')}`}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {step === 'done' && result && file && (
-        <>
-        <div className="import-done" role="status">
-          <h3>Imported {plural(result.records, 'record')}</h3>
-          <p>
-            From {file.fileName}, as one batch. {result.flagged > 0 ? `${result.flagged} of them need a look in the QA queue.` : 'None of them were flagged.'}
-          </p>
-          {result.leftOut.length > 0 && <p className="field-hint">Left out: {result.leftOut.length > 30 ? `${plural(result.leftOut.length, 'row')}` : `row${result.leftOut.length === 1 ? '' : 's'} ${result.leftOut.join(', ')}`}.</p>}
-          <div className="form-actions">
-            {result.flagged > 0 && (
-              <Link className="primary-button" to="/qa">
-                Open the QA queue
+        <div className="overview-card import-done" role="status">
+          <span className="import-done-icon" aria-hidden="true">
+            <CircleCheckBig />
+          </span>
+          <div className="import-done-text">
+            <h2>Imported {plural(result.records, 'record')}</h2>
+            <p>
+              From {file.fileName}, as one batch. {result.flagged > 0 ? `${result.flagged} of them need a look in the QA queue.` : 'None of them were flagged.'}
+            </p>
+            {result.leftOut.length > 0 && <p className="field-hint">Left out: {result.leftOut.length > 30 ? `${plural(result.leftOut.length, 'row')}` : `row${result.leftOut.length === 1 ? '' : 's'} ${result.leftOut.join(', ')}`}.</p>}
+            <div className="import-done-actions">
+              {result.flagged > 0 && (
+                <Link className="ui-button ui-button-primary" to="/qa">
+                  Open the QA queue
+                </Link>
+              )}
+              <Link className={`ui-button ${result.flagged > 0 ? 'ui-button-secondary' : 'ui-button-primary'}`} to={MAP_PATH}>
+                See them on the map
               </Link>
-            )}
-            <Link className="secondary-button" to={MAP_PATH}>
-              See them on the map
-            </Link>
-            <button type="button" className="secondary-button" onClick={restart}>
-              Import another file
-            </button>
+              <button type="button" className="ui-button ui-button-secondary" onClick={restart}>
+                Import another file
+              </button>
+            </div>
           </div>
         </div>
-        {/* So a wrong file can be undone straight away. */}
-        <BatchList data={data} user={user} />
-        </>
       )}
-    </section>
+
+      {/* On the last step too, so a wrong file can be undone straight away. */}
+      {(step === 'file' || step === 'done') && <BatchList data={data} user={user} />}
+    </main>
   );
 }

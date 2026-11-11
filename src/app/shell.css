@@ -661,3 +661,167 @@
   border-color: #f4c3bd;
   color: var(--status-danger-text);
 }
+
+.ui-button svg {
+  flex: none;
+  height: 18px;
+  width: 18px;
+}
+
+.ui-button-danger {
+  background: var(--action-danger);
+  color: var(--text-on-primary);
+}
+
+.ui-button-danger:hover:not(:disabled) {
+  background: #8f1c13;
+}
+
+/* No fill, for a lesser action beside the others, such as Cancel or Show table. */
+.ui-button-quiet {
+  background: none;
+  color: var(--text-link);
+}
+
+.ui-button-quiet:hover:not(:disabled) {
+  background: var(--bg-surface-muted);
+}
+
+/* In a row of a list, where several sit side by side. */
+.ui-button-small {
+  min-height: var(--size-button-height);
+  padding: 0 var(--space-3);
+}
+
+.ui-badge {
+  align-items: center;
+  background: var(--status-neutral-bg);
+  border-radius: var(--radius-pill);
+  color: var(--status-neutral-text);
+  display: inline-flex;
+  flex: none;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  gap: 6px;
+  line-height: var(--font-line-height-caption);
+  min-height: 24px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.ui-badge::before {
+  background: currentColor;
+  border-radius: 50%;
+  content: '';
+  flex: none;
+  height: 6px;
+  width: 6px;
+}
+
+.ui-badge.is-success {
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+
+.ui-badge.is-warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+
+.ui-badge.is-danger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+
+.ui-badge.is-info {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
+}
+
+.ui-notice-success {
+  background: var(--status-success-bg);
+  border-color: var(--color-green-200);
+  color: var(--status-success-text);
+}
+
+.ui-notice-warning {
+  background: var(--status-warning-bg);
+  border-color: #f5d3b3;
+  color: var(--status-warning-text);
+}
+
+/* A page's own sections, as tabs under its header. */
+.page-tabs {
+  border-bottom: 1px solid var(--border-card);
+  display: flex;
+  /* It scrolls sideways on a phone, so it mustn't shrink in the page's column. */
+  flex-shrink: 0;
+  gap: var(--space-1);
+  margin-top: calc(-1 * var(--space-2));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.page-tab {
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  flex: none;
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: -1px;
+  padding: var(--space-3) var(--space-3);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.page-tab:hover {
+  color: var(--text-primary);
+}
+
+.page-tab[aria-current='page'] {
+  border-bottom-color: var(--action-primary);
+  color: var(--text-link);
+}
+
+.page-tab:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* Nothing to show: an icon, one line of title, one of help, and maybe a button. */
+.empty-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+}
+
+.empty-state-icon {
+  align-items: center;
+  background: var(--bg-icon-tile);
+  border-radius: var(--radius-md);
+  color: var(--text-link);
+  display: flex;
+  height: 64px;
+  justify-content: center;
+  margin-bottom: var(--space-2);
+  width: 64px;
+}
+
+.empty-state-icon svg {
+  height: 32px;
+  width: 32px;
+}
+
+.empty-state strong {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.empty-state p {
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 420px;
+}

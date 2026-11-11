@@ -15,7 +15,8 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-12_
 
-- **Branch:** `main`, in sync with `origin/main`. Phase 15a is merged.
+- **Branch:** `phase-15b-work-pages`, started from `main`. Phase 15a is merged into `main`.
+- **Phase 15b in progress:** the QA queue, Condition check, Import and Reports pages in the new design, committed and pushed as work in progress. Not yet through Gate 1.
 - **Phase 15a approved, live deploy pending:** the Interventions pages, the phone map rework and the faster page changes passed both gates on 2026-11-12 and are merged into `main`. They go live when the owner runs `npm run deploy`.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
@@ -64,6 +65,13 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Phase 15b started on branch `phase-15b-work-pages`, committed and pushed as work in progress. Not yet through Gate 1:
+  - **QA queue, Condition check and Import** are each their own page now, reached from the sidebar under Records. The old "QA and import" tabs are gone, and an unknown address under them opens the QA queue. Each page has a page header, a filter bar card, and cards for its lists.
+  - **Import** shows its steps as a stepper, and Earlier imports is a card with an Undone badge on undone batches.
+  - **Reports** lists the four reports as cards with an icon and the format of each (PDF, A4; PDF or Excel, legal; and so on), and the signature blocks sit in their own card. The Municipal, Beneficiary and Inventory report pages are restyled to match.
+  - **Shared parts:** an `EmptyState` card for empty lists, and new button, badge, notice and page-tab styles in `src/app/shell.css`. The work and report styles moved out of `app.css` into `work/work.css` and `reports/reports.css`.
+  - **Tests updated** for the new page landmarks and headings: `e2e/work.spec.ts`, `e2e/reports.spec.ts`, and one line of `e2e/auth.spec.ts`.
+  - **Checks:** typecheck, 1,120 unit tests, and the production build with its check for private data. The full e2e run had 670 passed, 0 failed and 11 skipped. Its first pass had 7 failures. Three were the `auth.spec.ts` line still looking for the old QA queue region, and they pass after the fix. The other four were mobile map editing tests that stalled for 28 minutes in the long run, and all 56 mobile editing tests pass when run again on their own.
 - Phase 15a passed Gate 2 and is merged into `main`. Going live waits for the owner to run `npm run deploy`.
 - Phase 15a, second round, through Gate 1. The owner tried the live map on a phone and found the buttons overlapping, the layers panel covering the map, and each page slow to open:
   - **Phone map:** one row of buttons over the map (Layers; + Add, Export and Print as icon buttons), the layers panel as a sheet that slides up with the map dimmed behind it and its own close button, the legend folded into a Legend button, zoom at the bottom right, Map / Dashboard / List as one rounded switch, and the sources on one line. Styles in `src/app/map-phone.css`; the computer layout is unchanged.

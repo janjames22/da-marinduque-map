@@ -60,6 +60,7 @@ async function downloading(page: Page, click: () => Promise<void>): Promise<Down
 }
 
 const section = (page: Page, name: string) => page.getByRole('region', { name, exact: true });
+const reportsPage = (page: Page) => page.getByRole('main', { name: 'Reports' });
 
 test.describe('who is offered them', () => {
   const WHO: Record<string, string> = { admin: 'an Admin', encoder: 'an Encoder', viewer: 'a Viewer' };
@@ -69,7 +70,7 @@ test.describe('who is offered them', () => {
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
       await (await sidebar(page)).getByRole('link', { name: 'Reports' }).click();
       await expect(page).toHaveURL(/\/reports$/);
-      const overview = section(page, 'Reports');
+      const overview = reportsPage(page);
       await expect(overview.getByRole('link')).toContainText(['Municipal profile', 'Beneficiary profile', 'Inventory report']);
       await expect(overview.locator('.signature-list li')).toHaveText(['Prepared by: Engr. Jan James P. Graza, Agricultural and Biosystems Engineer', 'Noted by: Susana Arellano-Uy, RAgr., MPA, OIC Provincial Agriculturist']);
       await expect(overview.getByRole('link', { name: /Change them in Admin/ })).toHaveCount(role === 'admin' ? 1 : 0);
@@ -232,7 +233,7 @@ test.describe('signature blocks', () => {
     await expect(list.locator('.admin-row-archived')).toHaveCount(1);
 
     await page.goto('/reports');
-    await expect(section(page, 'Reports').locator('.signature-list li')).toHaveText(['Approved by: Juan dela Cruz', 'Noted by: Susana Arellano-Uy, RAgr., MPA, Provincial Agriculturist']);
+    await expect(reportsPage(page).locator('.signature-list li')).toHaveText(['Approved by: Juan dela Cruz', 'Noted by: Susana Arellano-Uy, RAgr., MPA, Provincial Agriculturist']);
     await page.goto('/reports/inventory');
     const download = await downloading(page, () => section(page, 'Inventory report').getByRole('button', { name: 'Download PDF' }).click());
     const last = (await pdfText(download)).pages.at(-1)!;
