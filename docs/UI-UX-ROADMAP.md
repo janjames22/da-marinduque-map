@@ -144,7 +144,7 @@ Rules:
 
 ## 5. Design system
 
-Figma is the source of truth ([§9](#9-tools)). The values below are a starting point taken from the sample and from today's `app.css`. Phase 11 fixes the final values.
+Figma is the source of truth ([§9](#9-tools)). The values below are a starting point taken from the sample and from today's `app.css`. **Phase 11 replaced them with [`design/tokens.json`](../design/tokens.json)**, which wins wherever the two differ.
 
 ### Tokens
 
@@ -262,10 +262,10 @@ Records outside the province follow the same rule and are counted in the same no
 | M-1 | Basemap | A light, muted style so the data stands out. Keep satellite as a second choice |
 | M-2 | Focus | Everything outside Marinduque is dimmed with a mask, using the province boundary already in `public/boundaries` |
 | M-3 | Boundaries | Thin municipality lines, thinner barangay lines, labels that appear as the person zooms in |
-| M-4 | Markers | One shape, colored by category group (Land preparation, Irrigation, Postharvest, Processing, Crop care, Harvesting, Planting), with a small icon inside. SSIP gets its own shape |
+| M-4 | Markers | In each type's color, as set by Admins (Farm Machinery green, SSIP blue), with a small icon inside. SSIP is a diamond, so the types differ by shape as well as color. "Color by" a field keeps the app's existing palette, which was checked for color blindness |
 | M-5 | Clusters | Green circles sized by count, in the palette |
 | M-6 | Shared spots | Records with the same coordinates stay reachable (24 in the seed data share a point) |
-| M-7 | Choropleth | A single green ramp from light to dark. The gap view keeps a distinct color for barangays with no records |
+| M-7 | Choropleth | Keep today's single blue ramp from light to dark. It stays distinct from the green interface and the green markers. The gap view keeps its orange for barangays with no records |
 | M-8 | Legend | A card in a corner that explains exactly what is on screen now, and collapses on phones |
 | M-9 | Popup | A small card: name, type badge, status badge, beneficiary, year, and a link to the full record |
 | M-10 | Controls | Zoom, layers, locate and full screen, styled as one group |
@@ -486,7 +486,7 @@ Phase numbers continue from the project history, which ends at Phase 9.
 | # | Question | Needed by |
 |---|---|---|
 | Q-1 | Is the PDF in `Downloads` the 2026-10-21 report, or a newer one? | **Answered:** the 2026-10-21 report, matching the seed data |
-| Q-2 | Who designs in Figma, and is a Dev Mode seat available for the MCP server? | Phase 11 |
+| Q-2 | Who designs in Figma, and is a Dev Mode seat available for the MCP server? | **Answered:** the owner, on the Free plan first, moving to a paid plan with Dev Mode if the quality falls short |
 | Q-3 | What name and logo does the system use: "agri-dms", "Intervention Map", or both? | **Answered:** "Intervention Map", in agri-dms's logo tile |
 | Q-4 | Should the map stay the landing page for Viewers? | **Answered:** no, everyone lands on Home |
 | Q-5 | In what format will the FMR data arrive, and with which fields? | Phase 16 |
@@ -514,5 +514,6 @@ A phase is done when all of these hold:
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 2026-11-11 | Phase 11 kit: tokens moved to `design/tokens.json`, map and chart colors kept as they are (M-4, M-7), Q-2 answered |
 | 0.2 | 2026-11-11 | Phase 10 done: data confirmed against the PDF, Q-1, Q-3, Q-4 and Q-7 answered |
 | 0.1 | 2026-11-11 | First draft |

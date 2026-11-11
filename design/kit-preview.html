@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intervention Map Kit</title>
+<!-- Preview only. The app itself will bundle Inter, because its security policy blocks outside fonts. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+/* Same values as design/tokens.json */
+:root {
+  --green-950:#0b2e1c; --green-900:#0f3f22; --green-800:#14532d; --green-700:#1b6b3f; --green-600:#23804c;
+  --green-300:#8fcfa6; --green-200:#c3e6cf; --green-100:#e5f3ea; --green-50:#f2f9f4;
+  --neutral-0:#ffffff; --neutral-50:#f7f6f3; --neutral-100:#efede8; --neutral-200:#dcdbd6; --neutral-500:#8a8883; --neutral-600:#52514e; --neutral-900:#1f1e1c;
+  --yellow-400:#f9c80e; --yellow-200:#f8dc8a; --orange-800:#8a3b00; --orange-50:#fff3e6; --red-700:#b42318; --red-50:#fdecea;
+  --blue-700:#1d5b8a; --blue-200:#c6def2; --blue-50:#eaf3fb;
+  --bg-page:var(--neutral-50); --bg-surface:var(--neutral-0); --bg-muted:var(--neutral-100);
+  --text:var(--neutral-900); --text-2:var(--neutral-600); --link:var(--green-700);
+  --border-card:var(--neutral-200); --border-input:var(--neutral-500);
+  --primary:var(--green-700); --primary-hover:var(--green-800); --focus:var(--blue-700);
+  --r-sm:8px; --r-md:12px; --r-lg:16px;
+  --shadow-card:0 1px 3px rgba(31,30,28,.06); --shadow-dialog:0 12px 32px rgba(31,30,28,.18);
+  --type-fm:#2e7d32; --type-ssip:#1976d2; --type-fmr:#b45309;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; }
+body { background:var(--bg-page); color:var(--text); font:400 14px/20px Inter, system-ui, sans-serif; font-feature-settings:'tnum' 1; }
+h1, h2, h3, p { margin:0; }
+a { color:var(--link); }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+.lucide { width:20px; height:20px; stroke-width:1.75; flex:none; }
+
+.doc { max-width:1200px; margin:0 auto; padding:32px 16px 64px; display:grid; gap:48px; }
+.doc > header h1 { font-size:28px; line-height:36px; font-weight:700; }
+.doc > header p { color:var(--text-2); margin-top:4px; }
+.section-title { font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); margin-bottom:16px; }
+
+/* Screen sample */
+.screen { display:grid; grid-template-columns:248px 1fr; min-height:720px; border:1px solid var(--border-card); border-radius:var(--r-lg); overflow:hidden; background:var(--bg-page); box-shadow:var(--shadow-dialog); }
+.sidebar { background:linear-gradient(160deg, var(--green-900), var(--green-700)); color:#fff; padding:20px 12px; display:flex; flex-direction:column; gap:4px; }
+.brand { display:flex; gap:12px; align-items:center; padding:4px 8px 20px; }
+.logo { width:40px; height:40px; border-radius:var(--r-sm); background:var(--yellow-200); color:var(--green-900); display:grid; place-items:center; }
+.logo .lucide { stroke-width:2.25; }
+.brand strong { display:block; font-size:16px; line-height:20px; }
+.brand span { font-size:12px; color:var(--green-200); }
+.nav-group { font-size:12px; font-weight:600; color:var(--green-200); padding:16px 12px 6px; }
+.nav-item { display:flex; align-items:center; gap:12px; height:40px; padding:0 12px; border-radius:var(--r-sm); color:#fff; text-decoration:none; font-weight:500; }
+.nav-item:hover { background:rgba(255,255,255,.08); }
+.nav-item[aria-current] { background:#fff; color:var(--green-900); }
+.nav-item:focus-visible { outline-color:var(--yellow-400); }
+.main { display:flex; flex-direction:column; min-width:0; }
+.topbar { height:64px; display:flex; justify-content:flex-end; align-items:center; gap:16px; padding:0 32px; border-bottom:1px solid var(--border-card); background:var(--bg-page); }
+.avatar { width:36px; height:36px; border-radius:50%; background:var(--green-700); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; }
+.who strong { display:block; font-weight:600; }
+.who span { font-size:12px; color:var(--text-2); }
+.content { padding:32px; display:grid; gap:24px; }
+
+.banner { background:linear-gradient(120deg, var(--green-900), var(--green-800)); color:#fff; border-radius:var(--r-lg); padding:32px; display:grid; gap:8px; }
+.banner h2 { font-size:28px; line-height:36px; font-weight:700; }
+.banner p { color:var(--green-200); }
+.banner .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.btn-on-dark { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:var(--r-sm); border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.06); color:#fff; font:600 14px Inter, sans-serif; cursor:pointer; }
+
+.card { background:var(--bg-surface); border:1px solid var(--border-card); border-radius:var(--r-md); box-shadow:var(--shadow-card); padding:24px; }
+.card-title { font-size:18px; line-height:24px; font-weight:600; }
+.card-note { color:var(--text-2); margin-top:2px; }
+.card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:16px; }
+
+.work { display:flex; align-items:center; gap:16px; padding:16px 24px; }
+.work .icon-tile { background:var(--yellow-200); color:var(--green-900); }
+.work strong { font-weight:600; font-size:16px; }
+.work p { color:var(--text-2); font-size:13px; }
+.work .lucide:last-child { margin-left:auto; color:var(--text-2); }
+
+.tiles { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:16px; }
+.tile { background:var(--bg-surface); border:1px solid var(--border-card); border-radius:var(--r-md); padding:20px; display:grid; gap:6px; position:relative; }
+.tile .label { color:var(--text-2); font-weight:500; }
+.tile .value { font-size:36px; line-height:44px; font-weight:700; letter-spacing:-.01em; }
+.tile .note { font-size:12px; line-height:16px; color:var(--text-2); }
+.tile .icon-tile { position:absolute; top:16px; right:16px; }
+.tile.hero { background:linear-gradient(140deg, var(--green-900), var(--green-800)); border-color:transparent; color:#fff; }
+.tile.hero .label, .tile.hero .note { color:var(--green-200); }
+.icon-tile { width:36px; height:36px; border-radius:var(--r-sm); background:var(--green-100); color:var(--green-700); display:grid; place-items:center; }
+
+.types { display:grid; grid-template-columns:2fr 1fr 1fr; gap:16px; }
+.seg { display:flex; height:14px; border-radius:999px; overflow:hidden; gap:2px; margin:12px 0 16px; }
+.seg span { display:block; }
+.seg-legend { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px 16px; }
+.seg-legend div { display:grid; gap:2px; }
+.seg-legend .k { display:flex; align-items:center; gap:6px; color:var(--text-2); font-size:13px; }
+.seg-legend .k i { width:8px; height:8px; border-radius:50%; display:inline-block; }
+.seg-legend strong { font-size:16px; }
+.seg-legend small { color:var(--text-2); font-weight:400; }
+.placeholder { display:grid; place-items:center; text-align:center; gap:8px; color:var(--text-2); border:1px dashed var(--neutral-500); background:var(--neutral-50); box-shadow:none; }
+
+.notice { display:flex; gap:12px; align-items:flex-start; padding:12px 16px; border-radius:var(--r-sm); border:1px solid var(--blue-200); background:var(--blue-50); color:var(--blue-700); }
+.notice.warning { border-color:#f3cfa8; background:var(--orange-50); color:var(--orange-800); }
+.notice.danger { border-color:#f4c3bd; background:var(--red-50); color:var(--red-700); }
+
+/* Components */
+.grid-2 { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:24px; }
+.row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.stack { display:grid; gap:16px; align-content:start; }
+.btn { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:var(--r-sm); font:600 14px Inter, sans-serif; cursor:pointer; border:1px solid transparent; }
+.btn.primary { background:var(--primary); color:#fff; }
+.btn.primary:hover { background:var(--primary-hover); }
+.btn.secondary { background:#fff; color:var(--text); border-color:var(--border-input); }
+.btn.quiet { background:transparent; color:var(--link); padding:0 8px; }
+.btn.danger { background:var(--red-700); color:#fff; }
+.btn[disabled] { opacity:.45; cursor:not-allowed; }
+.field { display:grid; gap:6px; }
+.field label { font-weight:500; }
+.field label b { color:var(--red-700); }
+.control { height:44px; border:1px solid var(--border-input); border-radius:var(--r-sm); padding:0 12px; font:400 16px Inter, sans-serif; color:var(--text); background:#fff; width:100%; }
+.field .hint { font-size:12px; color:var(--text-2); }
+.field.error .control { border-color:var(--red-700); border-width:2px; }
+.field.error .hint { color:var(--red-700); }
+.badge { white-space:nowrap; display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:999px; font-size:12px; font-weight:600; }
+.badge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+.badge.success { background:var(--green-100); color:var(--green-700); }
+.badge.warning { background:var(--orange-50); color:var(--orange-800); }
+.badge.danger { background:var(--red-50); color:var(--red-700); }
+.badge.info { background:var(--blue-50); color:var(--blue-700); }
+.badge.neutral { background:var(--neutral-100); color:var(--neutral-600); }
+
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; font-size:12px; font-weight:600; color:var(--text-2); padding:10px 12px; border-bottom:1px solid var(--border-card); }
+td { padding:0 12px; height:48px; border-bottom:1px solid var(--border-card); }
+td.num, th.num { text-align:right; }
+td:first-child { white-space:nowrap; }
+tr:last-child td { border-bottom:0; }
+.table-foot { display:flex; justify-content:space-between; align-items:center; color:var(--text-2); padding-top:12px; }
+
+/* Map parts */
+.mapbox { position:relative; height:280px; border-radius:var(--r-md); overflow:hidden; border:1px solid var(--border-card);
+  background: radial-gradient(ellipse 34% 40% at 52% 50%, #f4f2ec 0 98%, transparent 100%), #dbe8ef; }
+.mapbox .island { position:absolute; inset:18% 30%; border:1.5px solid #b9b5aa; border-radius:46% 54% 50% 50% / 52% 44% 56% 48%; background:#f4f2ec; }
+.marker { position:absolute; width:24px; height:24px; border-radius:50%; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.35); display:grid; place-items:center; color:#fff; }
+.marker .lucide { width:13px; height:13px; stroke-width:2.25; }
+.marker.ssip { border-radius:6px; transform:rotate(45deg); }
+.marker.ssip .lucide { transform:rotate(-45deg); }
+.cluster { position:absolute; border-radius:50%; background:var(--green-700); color:#fff; font-weight:700; display:grid; place-items:center; box-shadow:0 0 0 6px rgba(27,107,63,.25); }
+.legend { position:absolute; left:12px; bottom:12px; background:#fff; border-radius:var(--r-sm); box-shadow:var(--shadow-card); border:1px solid var(--border-card); padding:10px 12px; font-size:12px; display:grid; gap:6px; }
+.legend div { display:flex; align-items:center; gap:8px; }
+.legend i { width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.2); display:inline-block; }
+.legend i.sq { border-radius:3px; transform:rotate(45deg); }
+.popup { position:absolute; right:14px; top:14px; width:240px; background:#fff; border-radius:var(--r-md); box-shadow:var(--shadow-dialog); padding:14px; display:grid; gap:6px; font-size:13px; }
+.popup strong { font-size:14px; }
+.popup .row { gap:6px; }
+.popup dl { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; margin:4px 0 0; color:var(--text-2); }
+.popup dd { margin:0; color:var(--text); }
+
+/* Tokens */
+.swatches { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
+.swatch { border:1px solid var(--border-card); border-radius:var(--r-sm); overflow:hidden; background:#fff; }
+.swatch div { height:56px; }
+.swatch p { padding:8px 10px; font-size:12px; line-height:16px; }
+.swatch p b { display:block; font-weight:600; }
+.type-scale { display:grid; gap:12px; }
+.type-scale div { display:flex; align-items:baseline; gap:16px; }
+.type-scale code { width:180px; flex:none; font-size:12px; color:var(--text-2); }
+
+@media (max-width: 900px) {
+  .screen { grid-template-columns:1fr; }
+  .sidebar { display:none; }
+  .topbar { padding:0 16px; justify-content:space-between; }
+  .content { padding:16px; }
+  .tiles, .types, .grid-2, .seg-legend { grid-template-columns:1fr 1fr; }
+  .types > :first-child { grid-column:1 / -1; }
+}
+@media (max-width: 520px) {
+  .tiles, .types, .grid-2 { grid-template-columns:1fr; }
+  .popup { display:none; }
+}
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <h1>Intervention Map design kit</h1>
+    <p>Preview of <code>design/tokens.json</code> and the components to build in Figma. Starting values for Phase 11, with numbers from the RAED report (2026-10-21).</p>
+  </header>
+
+  <!-- 1. Screen sample -->
+  <section aria-labelledby="s1">
+    <h2 class="section-title" id="s1">1. Home, desktop (the look to match)</h2>
+    <div class="screen">
+      <nav class="sidebar" aria-label="Main">
+        <div class="brand"><span class="logo"><i data-lucide="map-pin"></i></span><div><strong>Intervention Map</strong><span>Marinduque PAO</span></div></div>
+        <div class="nav-group">Overview</div>
+        <a class="nav-item" href="#" aria-current="page"><i data-lucide="house"></i>Home</a>
+        <a class="nav-item" href="#"><i data-lucide="chart-column"></i>Dashboard</a>
+        <a class="nav-item" href="#"><i data-lucide="map"></i>Map</a>
+        <div class="nav-group">Records</div>
+        <a class="nav-item" href="#"><i data-lucide="tractor"></i>Interventions</a>
+        <a class="nav-item" href="#"><i data-lucide="list-checks"></i>QA queue</a>
+        <a class="nav-item" href="#"><i data-lucide="stethoscope"></i>Condition check</a>
+        <a class="nav-item" href="#"><i data-lucide="file-up"></i>Import</a>
+        <div class="nav-group">Reports</div>
+        <a class="nav-item" href="#"><i data-lucide="file-text"></i>Reports</a>
+        <div class="nav-group">Administration</div>
+        <a class="nav-item" href="#"><i data-lucide="users"></i>Users</a>
+        <a class="nav-item" href="#"><i data-lucide="shapes"></i>Types and fields</a>
+        <a class="nav-item" href="#"><i data-lucide="list"></i>Lists</a>
+        <a class="nav-item" href="#"><i data-lucide="signature"></i>Signature blocks</a>
+        <a class="nav-item" href="#"><i data-lucide="history"></i>Audit log</a>
+      </nav>
+      <div class="main">
+        <div class="topbar">
+          <span class="avatar">JD</span>
+          <div class="who"><strong>Juan dela Cruz</strong><span>Admin</span></div>
+          <button class="btn quiet" type="button"><i data-lucide="chevron-down"></i></button>
+        </div>
+        <div class="content">
+          <section class="banner">
+            <h2>Welcome, Juan</h2>
+            <p>Figures come from every record in the system, including those not yet on the map.</p>
+            <div class="actions">
+              <button class="btn-on-dark" type="button"><i data-lucide="chart-column"></i>Open dashboard</button>
+              <button class="btn-on-dark" type="button"><i data-lucide="map"></i>View the map</button>
+              <button class="btn-on-dark" type="button"><i data-lucide="plus"></i>Add intervention</button>
+            </div>
+          </section>
+
+          <a class="card work" href="#" style="text-decoration:none;color:inherit">
+            <span class="icon-tile"><i data-lucide="map-pin-off"></i></span>
+            <div><strong>27 records are waiting for verified coordinates</strong><p>26 have none, 1 is outside Marinduque. They're counted, but not on the map.</p></div>
+            <i data-lucide="arrow-right"></i>
+          </a>
+
+          <div class="tiles">
+            <div class="tile hero"><span class="label">Interventions</span><span class="value">199</span><span class="note">195 Farm Machinery · 4 SSIP</span></div>
+            <div class="tile"><span class="icon-tile"><i data-lucide="users"></i></span><span class="label">Beneficiaries</span><span class="value">151</span><span class="note">Approximate, by name</span></div>
+            <div class="tile"><span class="icon-tile"><i data-lucide="map-pin"></i></span><span class="label">Barangays reached</span><span class="value">97</span><span class="note">of 218 barangays</span></div>
+            <div class="tile"><span class="icon-tile"><i data-lucide="gauge"></i></span><span class="label">% operational</span><span class="value">100%</span><span class="note">Of 32 assessed units. 163 not assessed</span></div>
+          </div>
+
+          <div class="types">
+            <div class="card">
+              <div class="card-head"><div><h3 class="card-title">Farm Machinery</h3><p class="card-note">195 units by category group</p></div><button class="btn quiet" type="button"><i data-lucide="table"></i>Table</button></div>
+              <div class="seg" role="img" aria-label="Units by category group">
+                <span style="flex:60;background:#2a78d6"></span><span style="flex:53;background:#eb6834"></span><span style="flex:45;background:#1baf7a"></span><span style="flex:22;background:#eda100"></span><span style="flex:15;background:#757575"></span>
+              </div>
+              <div class="seg-legend">
+                <div><span class="k"><i style="background:#2a78d6"></i>Irrigation</span><strong>60 <small>31%</small></strong></div>
+                <div><span class="k"><i style="background:#eb6834"></i>Land preparation</span><strong>53 <small>27%</small></strong></div>
+                <div><span class="k"><i style="background:#1baf7a"></i>Postharvest</span><strong>45 <small>23%</small></strong></div>
+                <div><span class="k"><i style="background:#eda100"></i>Processing</span><strong>22 <small>11%</small></strong></div>
+                <div><span class="k"><i style="background:#757575"></i>Other groups</span><strong>15 <small>8%</small></strong></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><h3 class="card-title">SSIP</h3><p class="card-note">Solar-powered irrigation</p></div></div>
+              <div class="tile" style="border:0;padding:0"><span class="value">4</span></div>
+              <div class="row" style="margin-top:8px"><span class="badge success">Completed 2</span><span class="badge neutral">Inventory 2</span></div>
+            </div>
+            <div class="card placeholder">
+              <i data-lucide="route"></i>
+              <h3 class="card-title" style="color:var(--text)">Farm-to-Market Roads</h3>
+              <p>Data to follow</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Components -->
+  <section aria-labelledby="s2" class="stack">
+    <h2 class="section-title" id="s2">2. Components</h2>
+    <div class="grid-2">
+      <div class="card stack">
+        <h3 class="card-title">Buttons</h3>
+        <div class="row">
+          <button class="btn primary" type="button"><i data-lucide="plus"></i>Add intervention</button>
+          <button class="btn secondary" type="button"><i data-lucide="download"></i>Export</button>
+          <button class="btn quiet" type="button"><i data-lucide="file-spreadsheet"></i>CSV</button>
+          <button class="btn danger" type="button">Delete</button>
+          <button class="btn primary" type="button" disabled>Saving…</button>
+        </div>
+        <h3 class="card-title">Badges</h3>
+        <div class="row">
+          <span class="badge success">Serviceable</span><span class="badge warning">Needs repair</span><span class="badge danger">Unserviceable</span><span class="badge info">On-going</span><span class="badge neutral">No coordinates yet</span>
+        </div>
+        <h3 class="card-title">Notices</h3>
+        <div class="notice"><i data-lucide="info"></i><span>27 of 199 records aren't on the map yet. They're waiting for verified coordinates.</span></div>
+        <div class="notice warning"><i data-lucide="triangle-alert"></i><span>This point is in Bangbangalon, Boac, but it's encoded as Buliasnin.</span></div>
+        <div class="notice danger"><i data-lucide="circle-x"></i><span>The file couldn't be read. Check that it's a CSV or Excel file.</span></div>
+      </div>
+      <div class="card stack">
+        <h3 class="card-title">Form fields</h3>
+        <div class="field"><label for="f1">Beneficiary <b>*</b></label><input class="control" id="f1" value="Bangcauangan Farmers Association"><span class="hint">The association or LGU that received it</span></div>
+        <div class="field"><label for="f2">Municipality</label><select class="control" id="f2"><option>Santa Cruz</option></select></div>
+        <div class="field error"><label for="f3">Year funded <b>*</b></label><input class="control" id="f3" value="2071"><span class="hint">Enter a year from 2000 to 2026</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><h3 class="card-title">Waiting for verified coordinates</h3><p class="card-note">Counted on the dashboard, not plotted on the map</p></div>
+        <div class="row"><button class="btn quiet" type="button"><i data-lucide="chart-column"></i>Chart</button><button class="btn quiet" type="button"><i data-lucide="download"></i>CSV</button></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>ID</th><th>Item</th><th>Beneficiary</th><th>Municipality</th><th>Issue</th></tr></thead>
+          <tbody>
+            <tr><td>RAED-2026-10-21-192</td><td>Hand Tractor (Walking-type)</td><td><a href="#">Balimbing Farmers Association</a></td><td>Boac</td><td><span class="badge neutral">No coordinates yet</span></td></tr>
+            <tr><td>RAED-2026-10-21-103</td><td>Forage/Silage Chopper</td><td><a href="#">Malibago Upland-Beneficiaries Agriculture Cooperative</a></td><td>Torrijos</td><td><span class="badge warning">Outside Marinduque</span></td></tr>
+            <tr><td>RAED-2026-10-21-196</td><td>Pangi Solar-Powered Irrigation System</td><td><a href="#">Pangi Farmers Association</a></td><td>Gasan</td><td><span class="badge neutral">No coordinates yet</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-foot"><span>1–3 of 27</span><span class="row"><button class="btn secondary" type="button" aria-label="Previous page"><i data-lucide="chevron-left"></i></button><button class="btn secondary" type="button" aria-label="Next page"><i data-lucide="chevron-right"></i></button></span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><h3 class="card-title">Map parts</h3><p class="card-note">Marker per type (color from Admin), SSIP as a diamond, cluster, legend card, popup card</p></div></div>
+      <div class="mapbox" role="img" aria-label="Sample map with markers, a cluster, a legend and a popup">
+        <div class="island"></div>
+        <span class="marker" style="left:38%;top:36%;background:var(--type-fm)"><i data-lucide="tractor"></i></span>
+        <span class="marker" style="left:46%;top:62%;background:var(--type-fm)"><i data-lucide="tractor"></i></span>
+        <span class="marker ssip" style="left:56%;top:44%;background:var(--type-ssip)"><i data-lucide="droplets"></i></span>
+        <span class="cluster" style="left:48%;top:28%;width:36px;height:36px">12</span>
+        <span class="cluster" style="left:61%;top:58%;width:44px;height:44px">38</span>
+        <div class="legend"><div><i style="background:var(--type-fm)"></i>Farm Machinery</div><div><i class="sq" style="background:var(--type-ssip)"></i>SSIP</div><div style="color:var(--text-2)">172 of 199 on the map</div></div>
+        <div class="popup">
+          <strong>Cassava Chipper</strong>
+          <div class="row"><span class="badge success">Serviceable</span><span class="badge neutral">Farm Machinery</span></div>
+          <dl><dt>Beneficiary</dt><dd>Bangcauangan FA</dd><dt>Place</dt><dd>Bangcuangan, Santa Cruz</dd><dt>Year</dt><dd>2017</dd></dl>
+          <a href="#">Open the record</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Tokens -->
+  <section aria-labelledby="s3" class="stack">
+    <h2 class="section-title" id="s3">3. Tokens</h2>
+    <div class="card stack">
+      <h3 class="card-title">Interface colors</h3>
+      <div class="swatches">
+        <div class="swatch"><div style="background:#0f3f22"></div><p><b>green.900</b>#0f3f22 · sidebar, hero</p></div>
+        <div class="swatch"><div style="background:#1b6b3f"></div><p><b>green.700</b>#1b6b3f · buttons, links</p></div>
+        <div class="swatch"><div style="background:#e5f3ea"></div><p><b>green.100</b>#e5f3ea · icon tiles</p></div>
+        <div class="swatch"><div style="background:#f8dc8a"></div><p><b>yellow.200</b>#f8dc8a · logo tile</p></div>
+        <div class="swatch"><div style="background:#f9c80e"></div><p><b>yellow.400</b>#f9c80e · focus on dark</p></div>
+        <div class="swatch"><div style="background:#f7f6f3"></div><p><b>neutral.50</b>#f7f6f3 · page</p></div>
+        <div class="swatch"><div style="background:#dcdbd6"></div><p><b>neutral.200</b>#dcdbd6 · card border</p></div>
+        <div class="swatch"><div style="background:#8a8883"></div><p><b>neutral.500</b>#8a8883 · input border</p></div>
+        <div class="swatch"><div style="background:#52514e"></div><p><b>neutral.600</b>#52514e · secondary text</p></div>
+        <div class="swatch"><div style="background:#1f1e1c"></div><p><b>neutral.900</b>#1f1e1c · text</p></div>
+        <div class="swatch"><div style="background:#1d5b8a"></div><p><b>blue.700</b>#1d5b8a · focus, info</p></div>
+        <div class="swatch"><div style="background:#b42318"></div><p><b>red.700</b>#b42318 · danger</p></div>
+      </div>
+      <h3 class="card-title">Data colors (already in the app, unchanged)</h3>
+      <div class="swatches">
+        <div class="swatch"><div style="background:#2e7d32"></div><p><b>Farm Machinery</b>#2e7d32</p></div>
+        <div class="swatch"><div style="background:#1976d2"></div><p><b>SSIP</b>#1976d2</p></div>
+        <div class="swatch"><div style="background:#b45309"></div><p><b>FMR (proposed)</b>#b45309</p></div>
+        <div class="swatch"><div style="background:linear-gradient(90deg,#2a78d6 0 12.5%,#eb6834 0 25%,#1baf7a 0 37.5%,#eda100 0 50%,#e87ba4 0 62.5%,#008300 0 75%,#6250d6 0 87.5%,#e34948 0)"></div><p><b>Color by a field</b>8 colors, color-blind checked</p></div>
+        <div class="swatch"><div style="background:linear-gradient(90deg,#f0efec 0 16.6%,#cde2fb 0 33.3%,#86b6ef 0 50%,#3987e5 0 66.6%,#1c5cab 0 83.3%,#0d366b 0)"></div><p><b>Shade barangays</b>0, 1, 2, 3–4, 5–9, 10+</p></div>
+      </div>
+    </div>
+    <div class="card type-scale">
+      <h3 class="card-title">Type: Inter</h3>
+      <div><code>display 36/44 bold</code><span style="font-size:36px;line-height:44px;font-weight:700">199</span></div>
+      <div><code>title 28/36 bold</code><span style="font-size:28px;line-height:36px;font-weight:700">Dashboard</span></div>
+      <div><code>title-sm 18/24 semibold</code><span style="font-size:18px;line-height:24px;font-weight:600">Units by municipality</span></div>
+      <div><code>body 16/24 regular</code><span style="font-size:16px;line-height:24px">Form inputs and longer text</span></div>
+      <div><code>body-sm 14/20 regular</code><span>Tables, labels, buttons (semibold)</span></div>
+      <div><code>caption 12/16 regular</code><span style="font-size:12px;line-height:16px;color:var(--text-2)">Notes under numbers, column headings (semibold)</span></div>
+    </div>
+  </section>
+</div>
+<script>try { lucide.createIcons(); } catch (e) {}</script>
+</body>
+</html>

@@ -280,7 +280,7 @@ Every chart card has a title, a one-line note, a Table button and a CSV button, 
 
 Marker, cluster, choropleth and FMR styling are set in [`UI-UX-ROADMAP.md`](UI-UX-ROADMAP.md) §8.
 
-Category groups and their record counts in the current data, for the marker palette (seven colors that stay distinguishable for color-blind people, plus a separate shape for SSIP):
+Markers use each type's color as set by Admins, and SSIP gets a diamond shape. Coloring by a field, such as category group, uses the app's existing palette, which was checked for color blindness (see `design/tokens.json`, `data.categorical`). Category groups and their record counts in the current data:
 
 | Category group | Records |
 |---|---|
