@@ -26,8 +26,8 @@ _Last updated: 2026-11-11_
   - Laptop screens (below 1440 px): the full sidebar leaves the map page squeezed, and the dashboard's Wider button can't widen. To fix in Phase 14. The computer tests run at 1440 px until then.
 - **Built:** Phases 10 and 11 of the UI/UX roadmap. The design is signed off: 6 desktop and 6 phone screens on the [Intervention Map Design](https://claude.ai/artifact/LvSgChD6pwXb7nXuZsv2Ze) canvas (private to the owner), with its source backed up in [`design/canvas/`](design/canvas/README.md).
 - **Office name, decided at sign-off:** "Intervention Map" with "Provincial Agriculture Office Marinduque" underneath, and the footer line "Provincial Agriculture Office, Marinduque". "Department of Agriculture –" is dropped.
-- **In progress:** Phase 12, the foundation. It's built, and it passed Gate 1 (the owner's local preview) on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
-- **Gate 2 approved, live deploy pending:** the owner approved the draft on 2026-11-11, and Phase 12 is merged into `main`. The live site is still the old version until the owner runs `npm run deploy`, because Claude Code's permissions don't allow Claude to deploy to production.
+- **Built:** Phase 12, the foundation, through both gates on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
+- **Live:** Phase 12 is on https://da-marinduque-map.netlify.app since 2026-11-11. The owner deployed it with `npm run deploy`, because Claude Code's permissions don't let Claude deploy to production. Checked signed out: the security headers are on, Inter loads, and the only blocked script is Netlify's own badge, which is known since Phase 9.
 - **Next:** Phase 13, the Home and Dashboard pages, as drawn on the design canvas.
 
 ## Phases completed
@@ -49,6 +49,7 @@ The phases were built in a different order from the spec's §9. Export came befo
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
 | 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
 | 11. Design | `design-figma-kit`, `design-canvas-signoff` | 2026-11-11 | Tokens, kit preview and Figma guide, then 12 screens on a claude.ai design canvas, signed off by the owner. Source in `design/canvas/` |
+| 12. Foundation | `phase-12-ux-foundation` | 2026-11-11 | Design tokens as CSS, Inter font, Lucide icons, the new sidebar, top bar and sign-in screens, the map at `/map` with old links redirected, and `npm run deploy:preview`. Live |
 
 ## Work log
 
@@ -56,7 +57,8 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
-- Phase 12 Gate 2 approved by the owner, and merged into `main` (`68b573f`). Going live waits for the owner to run `npm run deploy`.
+- Phase 12 is live: the owner ran `npm run deploy`, deploy `6af4714978e1a6e0c7c26959`. Checked signed out on the live site.
+- Phase 12 Gate 2 approved by the owner, and merged into `main` (`68b573f`).
 - Phase 12 Gate 2 draft is up: https://6af46f36d1b297e398bd44b9--da-marinduque-map.netlify.app.
   - **Setup on this computer:** `.env.local` is in place, `npm run check:supabase` passes all 16 checks (1,167 records, 2 Admins), and the folder is linked to the `da-marinduque-map` Netlify site.
   - **Draft checked signed out:** it loads under the real security headers, Inter loads, and there are no console errors.
