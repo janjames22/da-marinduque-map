@@ -28,7 +28,7 @@ _Last updated: 2026-11-11_
 - **Office name, decided at sign-off:** "Intervention Map" with "Provincial Agriculture Office Marinduque" underneath, and the footer line "Provincial Agriculture Office, Marinduque". "Department of Agriculture –" is dropped.
 - **Built:** Phase 12, the foundation, through both gates on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
 - **Live:** Phase 12 is on https://da-marinduque-map.netlify.app since 2026-11-11. The owner deployed it with `npm run deploy`, because Claude Code's permissions don't let Claude deploy to production. Checked signed out: the security headers are on, Inter loads, and the only blocked script is Netlify's own badge, which is known since Phase 9.
-- **In progress:** Phase 13, the Home and Dashboard pages. Built, and it passed Gate 1 on 2026-11-11. **Waiting for Gate 2:** the owner checks the private draft at https://6af47ac1471c9089aea2f7ab--da-marinduque-map.netlify.app with their usual login. When it's approved, merge into `main`, and the owner runs `npm run deploy`.
+- **Phase 13 approved, live deploy pending:** the Home and Dashboard pages passed both gates on 2026-11-11 and are merged into `main`. They go live when the owner runs `npm run deploy`.
 - **Next after that:** Phase 14, the map restyle. The owner's brief from Gate 1 is that the map overwhelms users, and it should be simple and clean but detailed, like the canvas's Map screen. See `docs/UI-UX-ROADMAP.md` §12.
 
 ## Phases completed
@@ -50,6 +50,7 @@ The phases were built in a different order from the spec's §9. Export came befo
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
 | 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
 | 11. Design | `design-figma-kit`, `design-canvas-signoff` | 2026-11-11 | Tokens, kit preview and Figma guide, then 12 screens on a claude.ai design canvas, signed off by the owner. Source in `design/canvas/` |
+| 13. Home and Dashboard | `phase-13-dashboard` | 2026-11-11 | Home at `/` with work waiting and a card per type, and the Dashboard page with shared filters, CSVs and the list of records awaiting coordinate verification |
 | 12. Foundation | `phase-12-ux-foundation` | 2026-11-11 | Design tokens as CSS, Inter font, Lucide icons, the new sidebar, top bar and sign-in screens, the map at `/map` with old links redirected, and `npm run deploy:preview`. Live |
 
 ## Work log
@@ -58,6 +59,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 13 passed Gate 2 and is merged into `main`. Going live waits for the owner to run `npm run deploy`.
 - Phase 13 built and through Gate 1, on branch `phase-13-dashboard`:
   - **Home at `/`:** a welcome banner, work waiting for Encoders and Admins, headline tiles, a card per type, and an FMR "Data to follow" card. Every figure counts every record.
   - **Dashboard at `/dashboard`:** filters shared with the map, the tiles, units by category group, the five charts with Show table and a logged CSV, and the list of records awaiting coordinate verification with **Download verification sheet**.
