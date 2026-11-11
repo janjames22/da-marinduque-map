@@ -24,11 +24,10 @@ _Last updated: 2026-11-11_
   - 27 records stay off the map until the region verifies their location: 26 with no coordinates, 1 outside Marinduque. See [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §2.
   - UI/UX roadmap questions still open: Q-5 (FMR data format), Q-6 (basemap provider).
   - Laptop screens (below 1440 px): the full sidebar leaves the map page squeezed, and the dashboard's Wider button can't widen. To fix in Phase 14. The computer tests run at 1440 px until then.
-  - This computer has no `.env.local` yet, so it can't build a draft (Gate 2) or deploy, and nobody can sign in to a local copy. The owner adds it from their safe copy of the keys.
 - **Built:** Phases 10 and 11 of the UI/UX roadmap. The design is signed off: 6 desktop and 6 phone screens on the [Intervention Map Design](https://claude.ai/artifact/LvSgChD6pwXb7nXuZsv2Ze) canvas (private to the owner), with its source backed up in [`design/canvas/`](design/canvas/README.md).
 - **Office name, decided at sign-off:** "Intervention Map" with "Provincial Agriculture Office Marinduque" underneath, and the footer line "Provincial Agriculture Office, Marinduque". "Department of Agriculture –" is dropped.
 - **In progress:** Phase 12, the foundation. It's built, and it passed Gate 1 (the owner's local preview) on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
-- **Next:** Gate 2. Once `.env.local` is on this computer, `npm run deploy:preview` makes a private Netlify draft for the owner to check. When it's approved, merge into `main` and run `npm run deploy`. Then Phase 13: the Home and Dashboard pages.
+- **Waiting for Gate 2:** the owner checks the private draft at https://6af46f36d1b297e398bd44b9--da-marinduque-map.netlify.app with their usual login. It uses the real database, and the live site is unchanged. When it's approved, merge into `main` and run `npm run deploy`. Then comes Phase 13: the Home and Dashboard pages.
 
 ## Phases completed
 
@@ -56,6 +55,9 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 12 Gate 2 draft is up: https://6af46f36d1b297e398bd44b9--da-marinduque-map.netlify.app.
+  - **Setup on this computer:** `.env.local` is in place, `npm run check:supabase` passes all 16 checks (1,167 records, 2 Admins), and the folder is linked to the `da-marinduque-map` Netlify site.
+  - **Draft checked signed out:** it loads under the real security headers, Inter loads, and there are no console errors.
 - Phase 12 built and through Gate 1, on branch `phase-12-ux-foundation`:
   - **Look and frame:** `design/tokens.json` turned into `src/app/tokens.css` by `npm run build:tokens`, with a test that keeps the two in step. Inter is bundled with the site, and Lucide gives the icons. A new sidebar (grouped by role), a top bar with an account menu, a drawer on phones, and a two-panel sign-in.
   - **Addresses:** the map moved to `/map`. Old links to `/`, `/barangays/…` and `/records/…` redirect.
