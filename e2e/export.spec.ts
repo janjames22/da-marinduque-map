@@ -105,9 +105,11 @@ test('Export stands out, right beside "+ Add intervention"', async ({ page }) =>
     expect(button.x - (add.x + add.width)).toBeLessThanOrEqual(8);
   }
   expect(button.height).toBeCloseTo(add.height, 0);
-  await expect(toolbarExport(page)).toHaveCSS('color', 'rgb(20, 83, 45)');
-  await expect(toolbarExport(page)).toHaveCSS('border-top-color', 'rgb(20, 83, 45)');
-  await expect(toolbarExport(page)).toHaveCSS('border-top-width', '2px');
+  // A white card button beside the green one, as in the Phase 11 design.
+  await expect(toolbarExport(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(toolbarExport(page)).toHaveCSS('color', 'rgb(31, 30, 28)');
+  await expect(toolbarExport(page)).toHaveCSS('border-top-color', 'rgb(138, 136, 131)');
+  await expect(toolbarExport(page)).toHaveCSS('border-top-width', '1px');
   await expect(toolbarExport(page).locator('svg')).toBeVisible();
 });
 

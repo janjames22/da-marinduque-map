@@ -511,6 +511,7 @@ test.describe('the lists', () => {
 
     await goToMap(page);
     if (isMobile) await page.getByRole('navigation', { name: 'Views' }).getByRole('button', { name: 'Dashboard' }).click();
+    else await page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true }).click();
     const notes = page.locator('[data-kpi="operational"] .kpi-note');
     await expect(page.locator('[data-kpi="operational"] .kpi-value')).toHaveText('100%', { timeout: 30_000 });
     await expect(notes.first()).toHaveText('Operational: 195 of 195 assessed');

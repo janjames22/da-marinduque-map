@@ -503,7 +503,8 @@ describe('a saved view', () => {
   it('can\'t be broken by a stored value that makes no sense', () => {
     for (const nonsense of [null, 'text', 7, [], { basemap: 'moon', style: { mode: 'x', colorBy: 3 }, filters: { fieldFilters: 'no', yearFrom: 'soon' }, layers: { hiddenTypeIds: 'none' }, extent: { center: ['a'], zoom: 'b' } }]) {
       const read = readViewConfig(nonsense, baseData());
-      expect(read.basemap).toBe('osm');
+      // The map's default basemap, since Phase 14.
+      expect(read.basemap).toBe('light');
       expect(read.style.mode).toBe('count');
       expect(read.style.colorBy).toBe('program');
       expect(read.filters.fieldFilters).toEqual([]);

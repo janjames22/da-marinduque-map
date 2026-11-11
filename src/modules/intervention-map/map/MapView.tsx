@@ -18,7 +18,15 @@ const MAX_ZOOM = 19;
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
 const ESRI_ATTRIBUTION = 'Tiles &copy; Esri';
 
-const BASEMAPS: Record<BasemapId, { url: string; attribution: string; labelsUrl?: string }> = {
+// Light is the default: a quiet grey base, so the barangays and markers are what stands out. Esri
+// serves it only to zoom 16, and Leaflet enlarges those tiles beyond that.
+const BASEMAPS: Record<BasemapId, { url: string; attribution: string; labelsUrl?: string; maxNativeZoom?: number }> = {
+  light: {
+    url: `${ESRI}/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+    labelsUrl: `${ESRI}/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
+    attribution: 'Tiles &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+    maxNativeZoom: 16,
+  },
   osm: {
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -37,9 +45,9 @@ function Basemap() {
   const basemap = BASEMAPS[id];
   return (
     <>
-      <TileLayer key={id} url={basemap.url} attribution={basemap.attribution} maxZoom={MAX_ZOOM} crossOrigin="anonymous" />
+      <TileLayer key={id} url={basemap.url} attribution={basemap.attribution} maxZoom={MAX_ZOOM} maxNativeZoom={basemap.maxNativeZoom} crossOrigin="anonymous" />
       {basemap.labelsUrl && (
-        <TileLayer key={`${id}-labels`} url={basemap.labelsUrl} maxZoom={MAX_ZOOM} pane="overlayPane" crossOrigin="anonymous" />
+        <TileLayer key={`${id}-labels`} url={basemap.labelsUrl} maxZoom={MAX_ZOOM} maxNativeZoom={basemap.maxNativeZoom} pane="overlayPane" crossOrigin="anonymous" />
       )}
     </>
   );

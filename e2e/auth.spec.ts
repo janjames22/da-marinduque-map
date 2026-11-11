@@ -606,14 +606,19 @@ test.describe('the dashboard and records table', () => {
   const panel = (page: Page) => page.getByRole('complementary', { name: 'Dashboard and records' });
   const tabs = (page: Page) => page.getByRole('navigation', { name: 'Views' });
 
+  // The panel beside the map starts closed on a computer, and opens from the map's Dashboard button.
   async function showDashboard(page: Page, isMobile: boolean) {
     if (isMobile) await tabs(page).getByRole('button', { name: 'Dashboard' }).click();
+    else await page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true }).click();
     await expect(page.locator('[data-kpi="records"] .kpi-value')).toBeVisible({ timeout: 30_000 });
   }
 
   async function showRecords(page: Page, isMobile: boolean) {
     if (isMobile) await tabs(page).getByRole('button', { name: 'List' }).click();
-    else await panel(page).getByRole('button', { name: 'Records', exact: true }).click();
+    else {
+      await page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true }).click();
+      await panel(page).getByRole('button', { name: 'Records', exact: true }).click();
+    }
     await expect(page.getByRole('region', { name: 'Records table' })).toBeVisible({ timeout: 30_000 });
   }
 

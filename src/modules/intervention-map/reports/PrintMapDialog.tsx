@@ -16,6 +16,7 @@ import type { LegendSection } from './print-map-pdf';
 import { dataSourceLine } from './report-data';
 
 const BASEMAP_CREDITS: Record<BasemapId, string> = {
+  light: 'Esri World Light Gray Canvas, © OpenStreetMap contributors',
   osm: '© OpenStreetMap contributors',
   imagery: 'Esri World Imagery',
   topo: 'Esri World Topographic Map',

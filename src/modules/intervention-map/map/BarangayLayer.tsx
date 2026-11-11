@@ -76,9 +76,9 @@ export function BarangayLayer({ data, geojson, shading, counts, selectedId, onSe
       path.setStyle({
         fillColor: color,
         fillOpacity: opacity,
-        color: selected ? '#111111' : '#6b6a66',
-        weight: selected ? 3 : 0.8,
-        opacity: selected ? 1 : 0.8,
+        color: selected ? '#14532d' : '#8a8883',
+        weight: selected ? 3 : 0.6,
+        opacity: selected ? 1 : 0.7,
       });
       if (selected) path.bringToFront();
     }

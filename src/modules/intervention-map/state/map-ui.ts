@@ -7,13 +7,15 @@ export type { BasemapId } from '../lib/saved-views';
 
 export type InsightsTab = 'dashboard' | 'records';
 
-// The dashboard sits beside the map when there's room for both. On a phone the two take turns.
+// The map opens on its own, so it isn't crowded. The Dashboard page has the full figures, and the panel
+// beside the map opens from its button and stays open next time for whoever opened it. On a phone the
+// two take turns.
 const WIDE_ENOUGH = '(min-width: 1100px)';
-const INSIGHTS_KEY = 'da-map-insights-closed';
+const INSIGHTS_KEY = 'da-map-insights-open';
 
 function insightsAtStart(): InsightsTab | null {
   try {
-    if (globalThis.localStorage?.getItem(INSIGHTS_KEY) === 'yes') return null;
+    if (globalThis.localStorage?.getItem(INSIGHTS_KEY) !== 'yes') return null;
     return globalThis.matchMedia?.(WIDE_ENOUGH).matches ? 'dashboard' : null;
   } catch {
     return null;
@@ -22,8 +24,8 @@ function insightsAtStart(): InsightsTab | null {
 
 function rememberInsights(closed: boolean) {
   try {
-    if (closed) globalThis.localStorage?.setItem(INSIGHTS_KEY, 'yes');
-    else globalThis.localStorage?.removeItem(INSIGHTS_KEY);
+    if (closed) globalThis.localStorage?.removeItem(INSIGHTS_KEY);
+    else globalThis.localStorage?.setItem(INSIGHTS_KEY, 'yes');
   } catch {
     // Only a convenience, so a browser that won't store it just opens as usual next time.
   }
@@ -88,7 +90,7 @@ export const useMapUi = create<MapUiState>((set) => ({
   barangayId: null,
   fieldFilters: [],
   colorBy: DEFAULT_COLOR_BY,
-  basemap: 'osm',
+  basemap: 'light',
   showMunicipal: true,
   showProvince: true,
   panelOpen: false,

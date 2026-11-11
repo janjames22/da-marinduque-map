@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useMatch, useNavigate } from 'react-router-dom';
+import { Info } from 'lucide-react';
+import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { LocalSeedMissingError } from './data/store';
 import type { AppUser, MapData } from './data/types';
 import {
@@ -14,7 +15,7 @@ import {
   type ChoroplethMode,
 } from './lib/choropleth';
 import { isOnMap } from './lib/display';
-import { BARANGAY_ROUTE, barangayOnMap, MAP_PATH, RECORD_ROUTE } from './lib/map-paths';
+import { AWAITING_LIST, BARANGAY_ROUTE, barangayOnMap, MAP_PATH, RECORD_ROUTE } from './lib/map-paths';
 import { readViewConfig } from './lib/saved-views';
 import { buildColorScale, viewFields } from './lib/view-fields';
 import { EditPanelHost } from './edit/EditPanelHost';
@@ -170,146 +171,169 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   if (ui.insights) insightsOpened.current = true;
 
   const layout = otherPanel ? ' has-right-panel' : ui.insights ? ` has-insights${ui.insightsWide ? ' insights-wide' : ''}` : '';
+  // Counted, but not drawn: no coordinates yet, or coordinates outside Marinduque.
+  const onMap = markers.filter(isOnMap).length;
+  const offMap = markers.length - onMap;
 
   return (
-    <main className={`workspace${layout}`}>
-      <nav className="phone-tabs" aria-label="Views">
-        <button type="button" aria-pressed={!ui.insights} onClick={() => ui.setInsights(null)}>
-          Map
-        </button>
-        <button type="button" aria-pressed={ui.insights === 'dashboard'} onClick={() => ui.setInsights('dashboard')}>
-          Dashboard
-        </button>
-        <button type="button" aria-pressed={ui.insights === 'records'} onClick={() => ui.setInsights('records')}>
-          List
-        </button>
-      </nav>
+    <main className="map-page" aria-labelledby="map-title">
+      <header className="map-header">
+        <h1 id="map-title">Map</h1>
+        <p className="map-header-note">Click a barangay for its profile, or a marker for the record.</p>
+        {offMap > 0 && (
+          <p className="map-coverage">
+            <Info aria-hidden="true" />
+            <span>
+              <strong>
+                {onMap.toLocaleString('en-US')} of {markers.length.toLocaleString('en-US')} records are on the map.
+              </strong>{' '}
+              <span className="map-coverage-detail">
+                {offMap.toLocaleString('en-US')} {offMap === 1 ? 'is' : 'are'} waiting for verified coordinates, so {offMap === 1 ? "it's" : "they're"} counted but not drawn.
+              </span>
+            </span>
+            <Link to={AWAITING_LIST}>See the list</Link>
+          </p>
+        )}
+      </header>
+      <div className={`workspace${layout}`}>
+        <nav className="phone-tabs" aria-label="Views">
+          <button type="button" aria-pressed={!ui.insights} onClick={() => ui.setInsights(null)}>
+            Map
+          </button>
+          <button type="button" aria-pressed={ui.insights === 'dashboard'} onClick={() => ui.setInsights('dashboard')}>
+            Dashboard
+          </button>
+          <button type="button" aria-pressed={ui.insights === 'records'} onClick={() => ui.setInsights('records')}>
+            List
+          </button>
+        </nav>
 
-      <LayerPanel
-        data={data}
-        records={allRecords}
-        onGoToBarangay={(id) => {
-          if (isFormOpen(useEditUi.getState().panel)) {
-            ui.zoomToBarangay(id); // the form stays open, and the map goes there
-            return;
-          }
-          closePanel();
-          openBarangay(id);
-          ui.zoomToBarangay(id);
-        }}
-      />
-
-      <div className="map-area">
-        <MapView
+        <LayerPanel
           data={data}
-          boundaries={boundaries}
-          shading={shading}
-          counts={counts}
-          markers={markers}
-          colorOf={scale.colorOf}
-          selectedBarangayId={selectedId}
-          onSelectBarangay={onMapSelectBarangay}
-        />
-        <button
-          type="button"
-          className="panel-toggle"
-          aria-expanded={ui.panelOpen}
-          onClick={() => ui.setPanelOpen(!ui.panelOpen)}
-        >
-          {ui.panelOpen ? 'Close layers' : 'Layers and filters'}
-        </button>
-        {!panel && (
-          <div className="map-toolbar">
-            {canEdit && (
-              <button
-                type="button"
-                className="add-record-button"
-                onClick={() => {
-                  ui.setPanelOpen(false);
-                  openPanel({ kind: 'add' }, { picking: true });
-                }}
-              >
-                + Add intervention
-              </button>
-            )}
-            <button
-              type="button"
-              className="export-button"
-              onClick={() => {
-                ui.setPanelOpen(false);
-                useExportUi.getState().openExport();
-              }}
-            >
-              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" />
-              </svg>
-              Export
-            </button>
-            <button
-              type="button"
-              className="export-button"
-              onClick={() => {
-                ui.setPanelOpen(false);
-                setPrinting(true);
-              }}
-            >
-              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7 9V3h10v6M7 18H4v-7h16v7h-3M7 14h10v7H7z" />
-              </svg>
-              Print map
-            </button>
-            {!ui.insights && !otherPanel && (
-              <button type="button" className="export-button insights-open-button" onClick={() => ui.setInsights('dashboard')}>
-                Dashboard
-              </button>
-            )}
-          </div>
-        )}
-        {picking && (
-          <div className="map-hint" role="status">
-            Click the map to set the location.
-            <button type="button" className="link-button" onClick={() => setPicking(false)}>
-              Cancel
-            </button>
-          </div>
-        )}
-        <MoveConfirm data={data} />
-        <Notice />
-        <ConnectionNotice />
-        <Legend
-          mode={mode}
-          shading={shading}
-          totalBarangays={scoped.length}
-          unassigned={unassigned.length}
-          scale={scale}
-          markers={markers}
-          onShowUnassigned={() => {
-            closeProfile();
-            ui.setShowUnassigned(true);
+          records={allRecords}
+          onGoToBarangay={(id) => {
+            if (isFormOpen(useEditUi.getState().panel)) {
+              ui.zoomToBarangay(id); // the form stays open, and the map goes there
+              return;
+            }
+            closePanel();
+            openBarangay(id);
+            ui.zoomToBarangay(id);
           }}
         />
-      </div>
 
-      {panel ? (
-        <EditPanelHost data={data} />
-      ) : (
-        <>
-          {selected && !ui.showUnassigned && (
-            <BarangayProfile barangay={selected} data={data} allRecords={allRecords} onClose={closeProfile} />
+        <div className="map-area">
+          <MapView
+            data={data}
+            boundaries={boundaries}
+            shading={shading}
+            counts={counts}
+            markers={markers}
+            colorOf={scale.colorOf}
+            selectedBarangayId={selectedId}
+            onSelectBarangay={onMapSelectBarangay}
+          />
+          <button
+            type="button"
+            className="panel-toggle"
+            aria-expanded={ui.panelOpen}
+            onClick={() => ui.setPanelOpen(!ui.panelOpen)}
+          >
+            {ui.panelOpen ? 'Close layers' : 'Layers and filters'}
+          </button>
+          {!panel && (
+            <div className="map-toolbar">
+              {canEdit && (
+                <button
+                  type="button"
+                  className="add-record-button"
+                  onClick={() => {
+                    ui.setPanelOpen(false);
+                    openPanel({ kind: 'add' }, { picking: true });
+                  }}
+                >
+                  + Add intervention
+                </button>
+              )}
+              <button
+                type="button"
+                className="export-button"
+                onClick={() => {
+                  ui.setPanelOpen(false);
+                  useExportUi.getState().openExport();
+                }}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" />
+                </svg>
+                Export
+              </button>
+              <button
+                type="button"
+                className="export-button"
+                onClick={() => {
+                  ui.setPanelOpen(false);
+                  setPrinting(true);
+                }}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 9V3h10v6M7 18H4v-7h16v7h-3M7 14h10v7H7z" />
+                </svg>
+                Print map
+              </button>
+              {!ui.insights && !otherPanel && (
+                <button type="button" className="export-button insights-open-button" onClick={() => ui.setInsights('dashboard')}>
+                  Dashboard
+                </button>
+              )}
+            </div>
           )}
-          {ui.showUnassigned && (
-            <UnassignedPanel records={unassigned} data={data} onClose={() => ui.setShowUnassigned(false)} />
+          {picking && (
+            <div className="map-hint" role="status">
+              Click the map to set the location.
+              <button type="button" className="link-button" onClick={() => setPicking(false)}>
+                Cancel
+              </button>
+            </div>
           )}
-        </>
-      )}
-      {insightsOpened.current && (
-        <Suspense fallback={ui.insights && !otherPanel ? <aside className="panel panel-right insights-panel">Loading the dashboard…</aside> : null}>
-          <InsightsPanel data={data} boundaries={boundaries} allRecords={allRecords} covered={otherPanel} />
-        </Suspense>
-      )}
-      <PhotoDialog />
-      <ExportDialog data={data} boundaries={boundaries} allRecords={allRecords} />
-      <PrintMapDialog open={printing} onClose={() => setPrinting(false)} data={data} mode={mode} shading={shading} scale={scale} markers={markers} />
+          <MoveConfirm data={data} />
+          <Notice />
+          <ConnectionNotice />
+          <Legend
+            mode={mode}
+            shading={shading}
+            totalBarangays={scoped.length}
+            unassigned={unassigned.length}
+            scale={scale}
+            markers={markers}
+            onShowUnassigned={() => {
+              closeProfile();
+              ui.setShowUnassigned(true);
+            }}
+          />
+        </div>
+
+        {panel ? (
+          <EditPanelHost data={data} />
+        ) : (
+          <>
+            {selected && !ui.showUnassigned && (
+              <BarangayProfile barangay={selected} data={data} allRecords={allRecords} onClose={closeProfile} />
+            )}
+            {ui.showUnassigned && (
+              <UnassignedPanel records={unassigned} data={data} onClose={() => ui.setShowUnassigned(false)} />
+            )}
+          </>
+        )}
+        {insightsOpened.current && (
+          <Suspense fallback={ui.insights && !otherPanel ? <aside className="panel panel-right insights-panel">Loading the dashboard…</aside> : null}>
+            <InsightsPanel data={data} boundaries={boundaries} allRecords={allRecords} covered={otherPanel} />
+          </Suspense>
+        )}
+        <PhotoDialog />
+        <ExportDialog data={data} boundaries={boundaries} allRecords={allRecords} />
+        <PrintMapDialog open={printing} onClose={() => setPrinting(false)} data={data} mode={mode} shading={shading} scale={scale} markers={markers} />
+      </div>
     </main>
   );
 }
