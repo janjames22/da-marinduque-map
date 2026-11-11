@@ -486,7 +486,7 @@ Phase numbers continue from the project history, which ends at Phase 9.
 | # | Question | Needed by |
 |---|---|---|
 | Q-1 | Is the PDF in `Downloads` the 2026-10-21 report, or a newer one? | **Answered:** the 2026-10-21 report, matching the seed data |
-| Q-2 | Who designs in Figma, and is a Dev Mode seat available for the MCP server? | **Answered:** the owner, on the Free plan first, moving to a paid plan with Dev Mode if the quality falls short |
+| Q-2 | Who designs in Figma, and is a Dev Mode seat available for the MCP server? | **Answered:** Claude draws the design on a claude.ai design canvas. Figma's MCP server can write to a file only on a paid plan, so Figma is optional |
 | Q-3 | What name and logo does the system use: "agri-dms", "Intervention Map", or both? | **Answered:** "Intervention Map", in agri-dms's logo tile |
 | Q-4 | Should the map stay the landing page for Viewers? | **Answered:** no, everyone lands on Home |
 | Q-5 | In what format will the FMR data arrive, and with which fields? | Phase 16 |
