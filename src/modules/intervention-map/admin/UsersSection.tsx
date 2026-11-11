@@ -5,6 +5,7 @@ import type { InviteDelivery, PeopleApi, Person, PersonStatus } from '../data/st
 import type { UserRole } from '../data/types';
 import { SelectField, TextField } from '../edit/FormParts';
 import { copyText } from '../lib/copy-text';
+import { manilaDate } from '../lib/dates';
 import { ROLE_LABELS } from '../lib/permissions';
 import { useStore } from '../state/store-context';
 import { Feedback, useSaving } from './parts';
@@ -142,7 +143,7 @@ function PersonRow({ person, isMe, people, onChanged, onLink }: { person: Person
         <span className="field-hint">{person.email}</span>
         <span className="field-hint">
           {STATUS_LABELS[person.status]}
-          {person.last_sign_in_at && ` · Last signed in ${person.last_sign_in_at.slice(0, 10)}`}
+          {person.last_sign_in_at && ` · Last signed in ${manilaDate(person.last_sign_in_at)}`}
         </span>
         {failure && (
           <span className="field-error" role="alert">

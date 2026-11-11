@@ -3,6 +3,13 @@ export function manilaToday(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 }
 
+// The Philippine date a saved time fell on. The database keeps times in UTC, so cutting the date off
+// the text would give the day before for anything from midnight to 8 a.m.
+export function manilaDate(timestamp: string): string {
+  const time = new Date(timestamp);
+  return Number.isNaN(time.getTime()) ? timestamp.slice(0, 10) : manilaToday(time);
+}
+
 // The Philippine date and time to the minute, for file names: 2026-11-08-1942. Add the seconds when
 // two files could start in the same minute.
 export function manilaStamp(now: Date = new Date(), withSeconds = false): string {
