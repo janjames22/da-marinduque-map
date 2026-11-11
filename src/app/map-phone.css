@@ -1,0 +1,383 @@
+/* The map on a phone, since Phase 15a, after the owner's review on a phone (2026-11-12): one row of
+   buttons over the map, the layers panel as a sheet that slides up, and the legend folded into a
+   button. Loaded after map.css. The sheet parts stay hidden on a computer. */
+
+.sheet-header,
+.sheet-backdrop,
+.legend-toggle {
+  display: none;
+}
+
+.map-toolbar svg,
+.panel-toggle svg {
+  flex: none;
+  height: 16px;
+  width: 16px;
+}
+
+@media (max-width: 800px) {
+  /* A quiet line instead of a box, so the map starts higher. */
+  .map-page .map-header {
+    padding: var(--space-2) var(--space-3) 0;
+  }
+
+  .map-page .map-coverage {
+    background: none;
+    border: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    gap: var(--space-2);
+    padding: 0;
+  }
+
+  .map-page .map-coverage strong {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* Map, Dashboard and List as one segmented control. */
+  .map-page .phone-tabs {
+    background: var(--bg-surface-muted);
+    border: 1px solid var(--border-card);
+    border-radius: 999px;
+    gap: 2px;
+    margin: var(--space-2) var(--space-3);
+    padding: 3px;
+  }
+
+  .map-page .phone-tabs button {
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    min-height: 34px;
+    padding: 0 var(--space-3);
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .map-page .phone-tabs button[aria-pressed='true'] {
+    background: var(--bg-surface);
+    box-shadow: 0 1px 3px rgb(31 30 28 / 18%);
+    color: var(--color-green-700);
+  }
+
+  .map-page .map-area {
+    border-top: 1px solid var(--border-card);
+  }
+
+  /* One row over the map: Layers on the left, Add, Export and Print on the right. */
+  .map-page .panel-toggle,
+  .map-page .panel-toggle[aria-expanded='true'] {
+    align-items: center;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-card);
+    border-radius: 999px;
+    box-shadow: 0 1px 3px rgb(31 30 28 / 22%);
+    color: var(--text-primary);
+    display: inline-flex;
+    font-size: 14px;
+    gap: 6px;
+    left: var(--space-3);
+    min-height: 40px;
+    padding: 0 14px;
+    top: var(--space-3);
+    z-index: 800;
+  }
+
+  .map-page .map-toolbar {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+    max-width: none;
+    right: var(--space-3);
+    top: var(--space-3);
+  }
+
+  /* The words stay for screen readers; the icons say it on screen. */
+  .toolbar-label,
+  .toolbar-label-long {
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .map-page .map-toolbar .add-record-button,
+  .map-page .map-toolbar .export-button {
+    border-radius: 999px;
+    font-size: 14px;
+    min-height: 40px;
+  }
+
+  .map-page .map-toolbar .add-record-button {
+    padding: 0 14px;
+  }
+
+  .map-page .map-toolbar .export-button {
+    justify-content: center;
+    padding: 0;
+    width: 40px;
+  }
+
+  .map-page .map-hint {
+    top: 64px;
+  }
+
+  /* Zoom goes to the bottom right, out of the way of the row above. */
+  .map-page .map .leaflet-top.leaflet-left {
+    bottom: 24px;
+    left: auto;
+    right: 0;
+    top: auto;
+  }
+
+  /* The layers panel is a sheet that slides up over the map, with the map dimmed behind it. */
+  .map-page .sheet-backdrop {
+    background: rgb(17 24 20 / 40%);
+    display: block;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    transition: opacity 0.28s ease;
+    z-index: 1050;
+  }
+
+  .map-page .sheet-backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .map-page .panel-left,
+  .map-page .panel-left.is-open {
+    border-radius: 16px 16px 0 0;
+    bottom: 0;
+    box-shadow: 0 -8px 24px rgb(31 30 28 / 20%);
+    display: block;
+    height: auto;
+    left: 0;
+    max-height: min(85%, 680px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+    right: 0;
+    top: auto;
+    width: auto;
+    z-index: 1100;
+  }
+
+  .map-page .panel-left {
+    transform: translateY(100%);
+    transition:
+      transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+      visibility 0s linear 0.28s;
+    visibility: hidden;
+  }
+
+  .map-page .panel-left.is-open {
+    transform: none;
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+    visibility: visible;
+  }
+
+  .sheet-header {
+    align-items: center;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-card);
+    display: flex;
+    gap: var(--space-2);
+    margin: 0 calc(-1 * var(--space-4)) var(--space-4);
+    padding: 18px var(--space-4) var(--space-3);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .sheet-handle {
+    background: var(--border-input);
+    border-radius: 2px;
+    height: 4px;
+    left: 50%;
+    opacity: 0.5;
+    position: absolute;
+    top: 7px;
+    transform: translateX(-50%);
+    width: 36px;
+  }
+
+  .sheet-title {
+    flex: 1;
+    font-size: 16px;
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+  }
+
+  .sheet-close {
+    align-items: center;
+    background: var(--bg-surface-muted);
+    border: 0;
+    border-radius: 50%;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    height: 40px;
+    justify-content: center;
+    width: 40px;
+  }
+
+  .sheet-close svg {
+    height: 20px;
+    width: 20px;
+  }
+
+  .sheet-close:focus-visible,
+  .legend-toggle:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* The legend starts as a small button, and opens into the full card. */
+  .map-page .legend {
+    border-radius: 999px;
+    bottom: var(--space-6);
+    left: var(--space-3);
+    max-width: min(260px, calc(100% - 80px));
+    padding: 0;
+  }
+
+  .map-page .legend.is-open {
+    border-radius: var(--radius-md);
+  }
+
+  .legend-toggle {
+    align-items: center;
+    background: none;
+    border: 0;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: 13px;
+    font-weight: var(--font-weight-semibold);
+    gap: var(--space-2);
+    min-height: 36px;
+    padding: 0 14px;
+  }
+
+  .legend-toggle-swatches {
+    display: inline-flex;
+  }
+
+  .legend-toggle-swatches span {
+    border: 1.5px solid var(--bg-surface);
+    border-radius: 50%;
+    height: 12px;
+    width: 12px;
+  }
+
+  .legend-toggle-swatches span + span {
+    margin-left: -4px;
+  }
+
+  .map-page .legend:not(.is-open) .legend-body {
+    display: none;
+  }
+
+  .map-page .legend.is-open .legend-body {
+    max-height: 45vh;
+    overflow-y: auto;
+    padding: 0 14px 10px;
+  }
+
+  /* The sources stay, on one line that scrolls sideways, so they don't take the map's room. */
+  .app-footer {
+    flex-wrap: nowrap;
+    font-size: 12px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    padding-top: 6px;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+}
+
+/* Movement that explains what happened: sheets slide in, the legend opens, a pressed button gives.
+   Off for anyone who has asked their device for less motion. */
+@media (max-width: 800px) and (prefers-reduced-motion: no-preference) {
+  .map-page .panel-right {
+    animation: sheet-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .map-page .legend.is-open .legend-body {
+    animation: fade-up 0.2s ease-out both;
+  }
+
+  .map-page .map-toolbar button,
+  .map-page .panel-toggle {
+    transition:
+      transform 0.12s ease,
+      background-color 0.15s ease;
+  }
+
+  .map-page .map-toolbar button:active,
+  .map-page .panel-toggle:active,
+  .legend-toggle:active {
+    transform: scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-page .panel-left,
+  .map-page .panel-left.is-open,
+  .map-page .sheet-backdrop {
+    transition: none;
+  }
+}
+
+/* Every page fades in as it opens, and "Loading…" only shows if the wait is long enough to notice. */
+@media (prefers-reduced-motion: no-preference) {
+  .shell-content > main,
+  .shell-content > div {
+    animation: page-in 0.18s ease-out both;
+  }
+}
+
+.page-message.is-loading {
+  animation: show-late 0.01s linear 0.3s both;
+}
+
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes show-late {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

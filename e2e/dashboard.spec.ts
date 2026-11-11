@@ -61,6 +61,13 @@ const panel = (page: Page) => page.getByRole('complementary', { name: 'Dashboard
 const tabs = (page: Page) => page.getByRole('navigation', { name: 'Views' });
 const layers = (page: Page) => page.getByRole('complementary', { name: 'Layers and filters' });
 const legend = (page: Page) => page.getByLabel('Map legend');
+
+// On a phone the legend starts folded into a button. On a computer it's always open.
+async function openLegend(page: Page) {
+  await expect(legend(page)).toBeVisible();
+  const toggle = legend(page).getByRole('button', { name: 'Legend', exact: true });
+  if (await toggle.isVisible()) await toggle.click();
+}
 const kpi = (page: Page, id: string) => page.locator(`[data-kpi="${id}"] .kpi-value`);
 const chart = (page: Page, name: string) => page.getByRole('figure', { name });
 const rows = (page: Page) => page.locator('.records-table tbody tr');
@@ -759,6 +766,7 @@ test.describe('coloring markers by any field', () => {
 
   test('recolors the markers and explains them, with how many of each', async ({ page, isMobile }) => {
     await ready(page);
+    await openLegend(page);
     await expect(legend(page).getByText('Markers by program')).toBeVisible();
 
     await colorBy(page, 'Status', isMobile);
@@ -777,6 +785,7 @@ test.describe('coloring markers by any field', () => {
 
   test('a number goes in ranges, and a filter doesn\'t repaint what\'s left', async ({ page, isMobile }) => {
     await ready(page);
+    await openLegend(page);
     await colorBy(page, 'Year funded', isMobile);
     await showMap(page, isMobile);
     const markers = legend(page).getByRole('list', { name: 'Marker colors by Year funded' });
@@ -795,6 +804,7 @@ test.describe('coloring markers by any field', () => {
     await addCustomFields(page);
     await colorBy(page, 'Drive', isMobile);
     await showMap(page, isMobile);
+    await openLegend(page);
     const markers = legend(page).getByRole('list', { name: 'Marker colors by Drive' });
     await expect(markers.locator('li').filter({ hasText: 'Solar' })).toContainText('2');
     await expect(markers.locator('li').filter({ hasText: 'Diesel' })).toContainText('1');

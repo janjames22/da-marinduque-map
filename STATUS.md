@@ -15,7 +15,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-12_
 
-- **Branch:** `main`, in sync with `origin/main`. Phase 15a passed Gate 1 on `phase-15a-records` and is waiting for its Netlify draft (Gate 2).
+- **Branch:** `main`, in sync with `origin/main`. Phase 15a, with the owner's phone fixes and faster page changes, passed Gate 1 on `phase-15a-records` and is waiting for Gate 2.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -62,6 +62,11 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Phase 15a, second round, through Gate 1. The owner tried the live map on a phone and found the buttons overlapping, the layers panel covering the map, and each page slow to open:
+  - **Phone map:** one row of buttons over the map (Layers; + Add, Export and Print as icon buttons), the layers panel as a sheet that slides up with the map dimmed behind it and its own close button, the legend folded into a Legend button, zoom at the bottom right, Map / Dashboard / List as one rounded switch, and the sources on one line. Styles in `src/app/map-phone.css`; the computer layout is unchanged.
+  - **Transitions:** the sheet slides, the backdrop fades, panels rise in, the legend fades open, buttons give when pressed, and pages fade in. All off when the device asks for less motion.
+  - **Speed:** the data loads once per sign-in and every page shares it (`useMapData` keeps one session, with live updates), instead of each page loading the boundaries and every table again. The other pages' code is fetched in the background once the first page is up, and "Loading…" only shows after 0.3 s. On the local dev server, Home, Interventions and the Map now open in about 0.3 to 0.5 s.
+  - **Checks:** typecheck, 1,120 unit tests, and the full e2e run with 670 passed. Five phone tests were updated for the folded legend and the one-row toolbar.
 - Phase 14 is live (deploy `6af4953cc6a4eec06e04faca`), deployed by the owner from `main`. The Phase 15a work was set aside first, so only Phase 14 went out.
 - Known bug found by the tests after midnight: a few dates (QA dismissals, last sign-in, deleted records) show the UTC date, so between midnight and 8 a.m. Philippine time they show the day before. Fixed on `phase-15a-records` with one helper, `manilaDate()`.
 - Phase 15a built and through Gate 1, on branch `phase-15a-records`:

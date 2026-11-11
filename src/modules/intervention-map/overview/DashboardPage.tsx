@@ -265,7 +265,7 @@ export function DashboardPage({ user, onDataSources }: { user: AppUser; onDataSo
   useEffect(() => {
     if (sources) onDataSources(sources);
   }, [sources, onDataSources]);
-  if (state.status === 'loading') return <p className="page-message">Loading…</p>;
+  if (state.status === 'loading') return <p className="page-message is-loading">Loading…</p>;
   if (state.status === 'error') {
     return (
       <div className="page-message" role="alert">

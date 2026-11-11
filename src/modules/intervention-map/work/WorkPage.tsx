@@ -35,7 +35,7 @@ function Workspace({ data, user }: { data: MapData; user: AppUser }) {
           <Route
             path="/import"
             element={
-              <Suspense fallback={<p className="page-message">Loading…</p>}>
+              <Suspense fallback={<p className="page-message is-loading">Loading…</p>}>
                 <ImportPage data={data} user={user} />
               </Suspense>
             }
@@ -48,7 +48,7 @@ function Workspace({ data, user }: { data: MapData; user: AppUser }) {
 
 function WorkLoader({ user }: { user: AppUser }) {
   const state = useMapData(user);
-  if (state.status === 'loading') return <p className="page-message">Loading…</p>;
+  if (state.status === 'loading') return <p className="page-message is-loading">Loading…</p>;
   if (state.status === 'error') {
     return (
       <div className="page-message" role="alert">

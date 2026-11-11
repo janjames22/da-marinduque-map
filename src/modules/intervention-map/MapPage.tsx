@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Info } from 'lucide-react';
+import { Download, Info, Layers, Printer } from 'lucide-react';
 import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { LocalSeedMissingError } from './data/store';
 import type { AppUser, MapData } from './data/types';
@@ -208,6 +208,8 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
           </button>
         </nav>
 
+        {/* Phones: dims the map behind the layers sheet, and a tap on it closes the sheet. */}
+        <div className={`sheet-backdrop${ui.panelOpen ? ' is-open' : ''}`} aria-hidden="true" onClick={() => ui.setPanelOpen(false)} />
         <LayerPanel
           data={data}
           records={allRecords}
@@ -233,13 +235,10 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
             selectedBarangayId={selectedId}
             onSelectBarangay={onMapSelectBarangay}
           />
-          <button
-            type="button"
-            className="panel-toggle"
-            aria-expanded={ui.panelOpen}
-            onClick={() => ui.setPanelOpen(!ui.panelOpen)}
-          >
-            {ui.panelOpen ? 'Close layers' : 'Layers and filters'}
+          {/* Phones only. The sheet it opens has its own close button. */}
+          <button type="button" className="panel-toggle" aria-expanded={ui.panelOpen} onClick={() => ui.setPanelOpen(!ui.panelOpen)}>
+            <Layers aria-hidden="true" />
+            Layers<span className="toolbar-label-long"> and filters</span>
           </button>
           {!panel && (
             <div className="map-toolbar">
@@ -252,7 +251,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
                     openPanel({ kind: 'add' }, { picking: true });
                   }}
                 >
-                  + Add intervention
+                  + Add<span className="toolbar-label-long"> intervention</span>
                 </button>
               )}
               <button
@@ -263,10 +262,8 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
                   useExportUi.getState().openExport();
                 }}
               >
-                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" />
-                </svg>
-                Export
+                <Download aria-hidden="true" />
+                <span className="toolbar-label">Export</span>
               </button>
               <button
                 type="button"
@@ -276,10 +273,8 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
                   setPrinting(true);
                 }}
               >
-                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 9V3h10v6M7 18H4v-7h16v7h-3M7 14h10v7H7z" />
-                </svg>
-                Print map
+                <Printer aria-hidden="true" />
+                <span className="toolbar-label">Print map</span>
               </button>
               {!ui.insights && !otherPanel && (
                 <button type="button" className="export-button insights-open-button" onClick={() => ui.setInsights('dashboard')}>
@@ -346,7 +341,7 @@ export function MapPage({ user, onDataSources }: { user: AppUser; onDataSources(
   }, [state, onDataSources]);
 
   if (state.status === 'loading') {
-    return <p className="page-message">Loading the map…</p>;
+    return <p className="page-message is-loading">Loading the map…</p>;
   }
 
   if (state.status === 'error') {

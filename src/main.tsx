@@ -11,6 +11,7 @@ import './app/tokens.css';
 import './app/app.css';
 import './app/shell.css';
 import './app/map.css';
+import './app/map-phone.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
