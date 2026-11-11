@@ -22,8 +22,9 @@ _Last updated: 2026-11-11_
   - ABE PDCS integration is only a proposal. The options are written up and nothing is merged.
   - Drawing lines and polygons on the map isn't built yet. Editing works for points only.
   - 27 records stay off the map until the region verifies their location: 26 with no coordinates, 1 outside Marinduque. See [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §2.
-  - UI/UX roadmap questions still open: Q-2 (who designs in Figma, and is there a Dev Mode seat), Q-5 (FMR data format), Q-6 (basemap provider).
-- **Next:** Phase 11, the Figma design system and mock-ups, in [`docs/UI-UX-ROADMAP.md`](docs/UI-UX-ROADMAP.md) §12. The frames to draw are listed in [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §9. No app code changes until the design is signed off.
+  - UI/UX roadmap questions still open: Q-5 (FMR data format), Q-6 (basemap provider).
+- **In progress:** Phase 11. The Figma kit is done and approved. **The owner now builds the design in Figma** (Free plan first; paid with Dev Mode only if the quality falls short), following [`design/FIGMA-GUIDE.md`](design/FIGMA-GUIDE.md).
+- **Next:** when the exports are in `design/` (tokens and one PNG per frame), Claude checks them against the guide, and Phase 11 closes with the owner's sign-off. No app code changes until then.
 
 ## Phases completed
 
@@ -43,6 +44,7 @@ The phases were built in a different order from the spec's §9. Export came befo
 | 9. Reports | `phase-9-reports`, `phase-9-fixes` | 2026-11-09 | Reports, print map, signature blocks, ABE PDCS write-up |
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
 | 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
+| 11. Figma kit (first half of Phase 11) | `design-figma-kit` | 2026-11-11 | `design/tokens.json`, `design/kit-preview.html`, `design/FIGMA-GUIDE.md`. The Figma design itself is still to come |
 
 ## Work log
 
@@ -50,6 +52,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 11 started: added the Figma kit in `design/`, approved by the owner at Gate 1. Tokens in W3C format for Tokens Studio, a browser preview of the look, and a build guide with every component and frame, filled with real report numbers. Map and chart colors stay as they are in the app. Branch `design-figma-kit`.
 - Phase 10 done: added `docs/DESIGN-BRIEF.md`, approved by the owner. The PDF report (2026-10-21) matches the seed data: 199 records, 195 Farm Machinery, 4 SSIP, every municipality. Branch `docs-design-brief`.
 - Added `docs/UI-UX-ROADMAP.md`: the plan to restyle the app after the agri-dms sample, in Phases 10 to 17, with Figma as the design source, preview gates, and the rule that records without coordinates are counted on the dashboard and kept off the map.
 - Cloned the repo locally and added this `STATUS.md` to track status and work.
