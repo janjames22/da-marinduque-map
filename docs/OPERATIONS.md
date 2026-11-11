@@ -57,6 +57,21 @@ After the first deploy, do these two things so invite links go to the right plac
 
 The `VITE_` settings are built into the website, so deploy again if the project URL or publishable key changes.
 
+### Previewing before going live
+
+Every change to how the site looks is checked twice before it goes live (the gates in `docs/UI-UX-ROADMAP.md` §11):
+
+1. **On this computer.** Run `npm run dev:local` and open the address it prints. Local mode uses the sample data in this browser only, so nothing you do there reaches the real records.
+2. **On a private Netlify address.** Run:
+   ```
+   npm run deploy:preview
+   ```
+   This builds the site and uploads it as a draft. Netlify prints a "Website draft URL". Only people with that link can open it, and the live site doesn't change.
+
+**A draft uses the real database.** Sign in and look around, but don't import, delete or edit records there unless you mean it.
+
+When the draft is approved, run `npm run deploy` to put the same version live.
+
 ## Managing people
 
 Accounts are by invitation only.
@@ -331,6 +346,8 @@ These tests create temporary `e2e-test-` accounts, test records, imports, dismis
 | `npm run dev:phone` | Same as `dev`, over https and open to your network. Use it on a trusted network only. |
 
 Local mode and the browser tests need the local dataset, so run `npm run build:local-seed` once.
+
+The colors, type and spacing come from `design/tokens.json`, the signed-off design. After it changes, run `npm run build:tokens` to rewrite `src/app/tokens.css`. `npm test` fails while the two disagree.
 
 `npm test` and `npm run test:e2e` never touch the real project. The browser tests answer every Supabase call themselves.
 

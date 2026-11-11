@@ -10,6 +10,7 @@ import { manilaToday } from '../lib/dates';
 import { statusChoices } from '../lib/form-values';
 import { FLAG_LABELS, recordName } from '../lib/display';
 import { closestBarangays } from '../lib/matching';
+import { recordOnMap } from '../lib/map-paths';
 import { buildQueue, FLAG_ADVICE, FLAG_ORDER, flagCounts, type QueueFilters } from '../lib/qa-queue';
 import { pointOf } from '../lib/qa';
 import { useStore } from '../state/store-context';
@@ -288,7 +289,7 @@ export function QaQueue({ data, user }: { data: MapData; user: AppUser }) {
                   return (
                     <li key={key} className="queue-item" data-record={record.id} data-flag={flag}>
                       <div className="queue-item-main">
-                        <Link to={`/records/${record.id}`}>{recordName(record, data)}</Link>
+                        <Link to={recordOnMap(record.id)}>{recordName(record, data)}</Link>
                         <span>{record.beneficiary ?? 'No beneficiary'}</span>
                         <span className="field-hint">
                           {barangay}
@@ -301,7 +302,7 @@ export function QaQueue({ data, user }: { data: MapData; user: AppUser }) {
                       {!dismissal && (
                         <div className="queue-actions">
                           {FIX_ON_MAP.has(flag) && (
-                            <Link className="secondary-button" to={`/records/${record.id}?fix=resolve`}>
+                            <Link className="secondary-button" to={`${recordOnMap(record.id)}?fix=resolve`}>
                               {flag === 'beneficiary_name_check' ? 'Fix the name' : 'Fix on the map'}
                             </Link>
                           )}

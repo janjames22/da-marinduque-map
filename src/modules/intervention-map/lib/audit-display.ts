@@ -1,6 +1,7 @@
 import type { AuditAction, AuditEntry, FieldSchema, MapData } from '../data/types';
 import { formatPoint } from './coordinates';
 import { fieldValue, recordName } from './display';
+import { barangayOnMap, recordOnMap } from './map-paths';
 
 export interface AuditChange {
   field: string;
@@ -109,11 +110,11 @@ export function auditTarget(entry: AuditEntry, data: Pick<MapData, 'intervention
     const id = entry.table_name === 'interventions' ? entry.record_id : textOf(row.intervention_id);
     const record = data.interventions.find((candidate) => candidate.id === id);
     const recordLabel = record ? [recordName(record, data), record.beneficiary].filter(Boolean).join(' – ') : (textOf(row.title) ?? textOf(row.beneficiary) ?? 'A record no longer here');
-    return { label: recordLabel, link: id ? `/records/${id}` : null };
+    return { label: recordLabel, link: id ? recordOnMap(id) : null };
   }
   if (entry.table_name === 'barangays') {
     const barangay = data.barangays.find((candidate) => String(candidate.id) === entry.record_id);
-    return { label: `Barangay ${barangay?.name ?? name ?? entry.record_id}`, link: entry.record_id ? `/barangays/${entry.record_id}` : null };
+    return { label: `Barangay ${barangay?.name ?? name ?? entry.record_id}`, link: entry.record_id ? barangayOnMap(entry.record_id) : null };
   }
   if (entry.table_name === 'intervention_types') {
     return { label: `Type: ${name ?? entry.record_id}`, link: entry.record_id ? `/admin/types/${entry.record_id}` : null };

@@ -11,6 +11,8 @@ export default defineConfig({
   globalTeardown: './e2e-live/global-teardown.ts',
   use: {
     ...devices['Desktop Chrome'],
+    // The design's width, as in playwright.config.ts.
+    viewport: { width: 1440, height: 900 },
     baseURL: process.env.LIVE_URL ?? 'http://localhost:5177',
     trace: 'retain-on-failure',
   },

@@ -101,7 +101,7 @@ test('each role is offered only what it can do, signed in for real', async ({ br
   const accounts = readAccounts();
 
   const viewer = await open(browser, accounts.viewer);
-  await expect(viewer.locator('.user-menu')).toContainText('Test viewer · Viewer');
+  await expect(viewer.getByRole('button', { name: 'Account: Test viewer, Viewer' })).toBeVisible();
   await expect(viewer.locator('.add-record-button')).toHaveCount(0);
 
   const encoder = await open(browser, accounts.encoder);

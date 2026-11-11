@@ -14,6 +14,7 @@ import {
   type ChoroplethMode,
 } from './lib/choropleth';
 import { isOnMap } from './lib/display';
+import { BARANGAY_ROUTE, barangayOnMap, MAP_PATH, RECORD_ROUTE } from './lib/map-paths';
 import { readViewConfig } from './lib/saved-views';
 import { buildColorScale, viewFields } from './lib/view-fields';
 import { EditPanelHost } from './edit/EditPanelHost';
@@ -46,8 +47,8 @@ function shadingTitle(mode: ChoroplethMode, data: MapData, programId: number | n
 function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundaries }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const recordLink = useMatch('/records/:id');
-  const match = useMatch('/barangays/:id');
+  const recordLink = useMatch(RECORD_ROUTE);
+  const match = useMatch(BARANGAY_ROUTE);
   const selectedId = match ? Number(match.params.id) : null;
   const selected = data.barangays.find((b) => b.id === selectedId) ?? null;
 
@@ -66,7 +67,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
     if (state.defaultViewHandled) return;
     state.markDefaultViewHandled();
     const view = data.savedViews.find((candidate) => candidate.is_default);
-    if (view && location.pathname === '/') {
+    if (view && location.pathname.replace(/\/$/, '') === MAP_PATH) {
       state.applyView(readViewConfig(view.config, data));
       useEditUi.getState().setNotice(`Opened on the shared view "${view.name}".`);
     }
@@ -76,7 +77,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   useEffect(() => {
     const id = recordLink?.params.id;
     if (!id) return;
-    navigate('/', { replace: true });
+    navigate(MAP_PATH, { replace: true });
     const state = useMapUi.getState();
     const edit = useEditUi.getState();
     const record = data.interventions.find((candidate) => candidate.id === id);
@@ -142,9 +143,9 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
 
   const openBarangay = (id: number) => {
     ui.setShowUnassigned(false);
-    navigate(`/barangays/${id}`);
+    navigate(barangayOnMap(id));
   };
-  const closeProfile = () => navigate('/');
+  const closeProfile = () => navigate(MAP_PATH);
 
   // A click on the map belongs to the form while one is open, so it can't navigate away from it.
   const onMapSelectBarangay = (id: number) => {

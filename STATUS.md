@@ -15,7 +15,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-11_
 
-- **Branch:** `main`, in sync with `origin/main`
+- **Branch:** `phase-12-ux-foundation`, pushed, not merged into `main` until Gate 2
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -23,9 +23,12 @@ _Last updated: 2026-11-11_
   - Drawing lines and polygons on the map isn't built yet. Editing works for points only.
   - 27 records stay off the map until the region verifies their location: 26 with no coordinates, 1 outside Marinduque. See [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §2.
   - UI/UX roadmap questions still open: Q-5 (FMR data format), Q-6 (basemap provider).
+  - Laptop screens (below 1440 px): the full sidebar leaves the map page squeezed, and the dashboard's Wider button can't widen. To fix in Phase 14. The computer tests run at 1440 px until then.
+  - This computer has no `.env.local` yet, so it can't build a draft (Gate 2) or deploy, and nobody can sign in to a local copy. The owner adds it from their safe copy of the keys.
 - **Built:** Phases 10 and 11 of the UI/UX roadmap. The design is signed off: 6 desktop and 6 phone screens on the [Intervention Map Design](https://claude.ai/artifact/LvSgChD6pwXb7nXuZsv2Ze) canvas (private to the owner), with its source backed up in [`design/canvas/`](design/canvas/README.md).
 - **Office name, decided at sign-off:** "Intervention Map" with "Provincial Agriculture Office Marinduque" underneath, and the footer line "Provincial Agriculture Office, Marinduque". "Department of Agriculture –" is dropped.
-- **Next:** Phase 12, the foundation, in [`docs/UI-UX-ROADMAP.md`](docs/UI-UX-ROADMAP.md) §12: tokens as CSS variables, Inter font, icons, the new sidebar and top bar, the sign-in screen, and the `/map` address with redirects. It's the first phase that changes app code, so both preview gates apply.
+- **In progress:** Phase 12, the foundation. It's built, and it passed Gate 1 (the owner's local preview) on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
+- **Next:** Gate 2. Once `.env.local` is on this computer, `npm run deploy:preview` makes a private Netlify draft for the owner to check. When it's approved, merge into `main` and run `npm run deploy`. Then Phase 13: the Home and Dashboard pages.
 
 ## Phases completed
 
@@ -53,6 +56,13 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 12 built and through Gate 1, on branch `phase-12-ux-foundation`:
+  - **Look and frame:** `design/tokens.json` turned into `src/app/tokens.css` by `npm run build:tokens`, with a test that keeps the two in step. Inter is bundled with the site, and Lucide gives the icons. A new sidebar (grouped by role), a top bar with an account menu, a drawer on phones, and a two-panel sign-in.
+  - **Addresses:** the map moved to `/map`. Old links to `/`, `/barangays/…` and `/records/…` redirect.
+  - **Previews:** added `npm run deploy:preview` for Gate 2, documented in `docs/OPERATIONS.md`.
+  - **Tests:** the end-to-end tests now use the sidebar, and computer screens are tested at 1440 px. Results: 1,112 unit tests passed, 636 end-to-end tests passed, 0 failed, 11 skipped. The production build passes its check for private data.
+  - **The 4 phone QA and import tests that failed in the baseline run** passed in this run and again one at a time. They failed only in the slow first run.
+  - **Undone at the owner's request:** an icon-only sidebar for laptop screens was tried and taken out.
 - Fixed a flaky unit test, "adds a units column only when a record holds several" (`tests/reports.test.ts`). It changed whichever record came first, but records are sorted by random ids, so about 1 run in 50 it picked an SSIP and failed. It now picks a Farm Machinery record. All 1,102 tests pass. Branch `fix-flaky-units-test`. Also ran `npm install` on this computer for the first time.
 - Phase 11 done: the owner signed off the design, including their own edits (office name written out on Sign in, smaller ID and item text in the Interventions list). The office wording now reads the same on every screen and in the docs. The canvas source is backed up in `design/canvas/`. Branch `design-canvas-signoff`.
 - Phase 11: Claude drew the six phone screens (390 px) on the same canvas: Sign in, Home, Home with the menu open, Dashboard, Map with the selected record in a bottom sheet, and Intervention detail.

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { MapData } from '../data/types';
 import { manilaToday } from '../lib/dates';
+import { recordOnMap } from '../lib/map-paths';
 import { foldText } from '../lib/text';
 import type { Boundaries } from '../state/use-map-data';
 import { beneficiaryMap } from './map-layers';
@@ -98,7 +99,7 @@ function BeneficiaryDetail({ group, data, boundaries }: { group: BeneficiaryGrou
             </p>
             <p>
               {row.place || 'No place yet'}
-              {row.point ? ` · ${row.point.lat.toFixed(6)}, ${row.point.lng.toFixed(6)}` : ' · No coordinates yet'} · <Link to={`/records/${row.record.id}`}>Show on the map</Link>
+              {row.point ? ` · ${row.point.lat.toFixed(6)}, ${row.point.lng.toFixed(6)}` : ' · No coordinates yet'} · <Link to={recordOnMap(row.record.id)}>Show on the map</Link>
             </p>
             <ol className="status-timeline" aria-label={`Status history of ${row.name}`}>
               {row.history.map((entry) => (

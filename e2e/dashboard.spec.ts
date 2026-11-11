@@ -1017,7 +1017,7 @@ test.describe('a link to one record', () => {
   test('shows it, whatever filters were on', async ({ page, isMobile }) => {
     await ready(page, `/records/${onMapRecord.id}`);
     await expect(popup(page).filter({ hasText: onMapRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/map$/);
     if (isMobile) await expect(panel(page)).toHaveCount(0);
   });
 
@@ -1044,6 +1044,6 @@ test.describe('a link to one record', () => {
   test('one that doesn\'t exist says so', async ({ page }) => {
     await ready(page, '/records/00000000-0000-4000-8000-000000000000');
     await expect(page.getByText(/That record wasn't found/)).toBeVisible();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/map$/);
   });
 });

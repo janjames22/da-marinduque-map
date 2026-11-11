@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Download, type Page } from '@playwright/test';
 import * as XLSX from 'xlsx';
+import { sidebar } from './helpers/shell';
 
 interface SeedRecord {
   id: string;
@@ -66,14 +67,15 @@ test.describe('who is offered them', () => {
     test(`${WHO[role]} gets Reports, with the signature blocks that print`, async ({ page }) => {
       await open(page, '/', role);
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
-      await page.getByRole('link', { name: 'Reports' }).click();
+      await (await sidebar(page)).getByRole('link', { name: 'Reports' }).click();
       await expect(page).toHaveURL(/\/reports$/);
       const overview = section(page, 'Reports');
       await expect(overview.getByRole('link')).toContainText(['Municipal profile', 'Beneficiary profile', 'Inventory report']);
       await expect(overview.locator('.signature-list li')).toHaveText(['Prepared by: Engr. Jan James P. Graza, Agricultural and Biosystems Engineer', 'Noted by: Susana Arellano-Uy, RAgr., MPA, OIC Provincial Agriculturist']);
       await expect(overview.getByRole('link', { name: /Change them in Admin/ })).toHaveCount(role === 'admin' ? 1 : 0);
-      await expect(page.getByRole('link', { name: 'Reports' })).toHaveCount(0);
-      await page.getByRole('link', { name: 'Back to the map' }).click();
+      const nav = await sidebar(page);
+      await expect(nav.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page');
+      await nav.getByRole('link', { name: 'Map', exact: true }).click();
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
     });
   }
@@ -100,7 +102,7 @@ test.describe('the reports', () => {
     expect(pages[0]).toContain(`${inBoac} interventions`);
     expect(pages[0]).toContain('Prepared by: Engr. Jan James P. Graza');
 
-    await page.getByRole('link', { name: 'Admin' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Audit log' }).click();
     await expect(page.locator('tr[data-audit-entry]').first()).toContainText(`Profile_Boac_${today}.pdf`);
   });

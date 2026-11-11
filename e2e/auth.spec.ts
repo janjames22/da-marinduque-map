@@ -8,6 +8,7 @@ import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 import { jpegWithGps } from '../tests/helpers/exif-fixture';
 import { FAKE_HOST, installFakeSupabase, inviteHash, PASSWORD, seedData, signIn, USERS, type FakeSupabase } from './helpers/fake-supabase';
+import { fromAccountMenu, sidebar } from './helpers/shell';
 
 const CSP = /Content-Security-Policy = "([^"]+)"/.exec(readFileSync('netlify.toml', 'utf8'))![1];
 
@@ -154,14 +155,14 @@ test.describe('invite and reset links', () => {
 test.describe('signed in', () => {
   test('shows the person\'s name and role, keeps them signed in, and signs out', async ({ page }) => {
     await signedIn(page, USERS.encoder);
-    await expect(page.locator('.user-menu')).toContainText('Enzo Encoder · Encoder');
+    await expect(page.getByRole('button', { name: 'Account: Enzo Encoder, Encoder' })).toBeVisible();
     await expect(page.getByText('Local mode')).toHaveCount(0);
 
     await page.reload();
     await expect(shapes(page)).toHaveCount(SHAPES);
     await expect(signInForm(page)).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await fromAccountMenu(page, 'Sign out');
     await expect(signInForm(page)).toBeVisible();
     await expect(shapes(page)).toHaveCount(0);
 
@@ -171,12 +172,12 @@ test.describe('signed in', () => {
 
   test('a person can change their password, or change their mind', async ({ page }) => {
     const fake = await signedIn(page, USERS.viewer);
-    await page.getByRole('button', { name: 'Change password' }).click();
+    await fromAccountMenu(page, 'Change password');
     const form = page.getByRole('form', { name: 'Set password' });
     await form.getByRole('button', { name: 'Cancel' }).click();
     await expect(shapes(page)).toHaveCount(SHAPES);
 
-    await page.getByRole('button', { name: 'Change password' }).click();
+    await fromAccountMenu(page, 'Change password');
     await form.getByLabel('New password').fill('another long password');
     await form.getByLabel('Repeat it').fill('another long password');
     await form.getByRole('button', { name: 'Save password' }).click();
@@ -435,14 +436,14 @@ test.describe('the admin screens', () => {
 
   async function openUsers(page: Page) {
     const fake = await signedIn(page, USERS.admin);
-    await page.getByRole('link', { name: 'Admin' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await expect(peopleList(page)).toBeVisible();
     return fake;
   }
 
   test('only an Admin is offered them, and nobody else\'s browser calls the service', async ({ page }) => {
     const fake = await signedIn(page, USERS.encoder);
-    await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(0);
+    await expect((await sidebar(page)).getByRole('link', { name: 'Users' })).toHaveCount(0);
     await page.goto('/admin/users');
     await expect(page.getByRole('alert')).toContainText('This page is for Admins');
     expect(fake.functionCalls).toEqual([]);
@@ -654,7 +655,7 @@ test.describe('the dashboard and records table', () => {
   test('a link straight to a record still opens it after signing in', async ({ page }) => {
     await signedIn(page, USERS.viewer, `/records/${record.id}`);
     await expect(page.locator('.record-popup').filter({ hasText: record.beneficiary })).toBeVisible({ timeout: 15_000 });
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/map$/);
   });
 });
 
@@ -934,7 +935,7 @@ test.describe('QA and import', () => {
 
   test('a Viewer isn\'t offered it, and their browser asks the service for nothing there', async ({ page }) => {
     const fake = await signedIn(page, USERS.viewer);
-    await expect(page.getByRole('link', { name: 'QA and import' })).toHaveCount(0);
+    await expect((await sidebar(page)).getByRole('link', { name: 'QA queue' })).toHaveCount(0);
     await page.goto('/qa');
     await expect(page.getByRole('alert')).toContainText('This page is for Encoders and Admins');
     expect(fake.rpcCalls.map(({ name }) => name).filter((name) => /import|flag/.test(name))).toEqual([]);
@@ -946,7 +947,7 @@ test.describe('QA and import', () => {
       if (call.name !== 'dismiss_flag') return undefined;
       return call.args.p_id === flagged[0].id ? { status: 200, body: null } : { status: 400, body: { code: '23514', message: 'That flag is no longer on this record.' } };
     });
-    await page.getByRole('link', { name: 'QA and import' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'QA queue' }).click();
     await expect(page.getByRole('region', { name: 'QA queue' })).toBeVisible();
 
     await item(page, flagged[0].id).getByRole('button', { name: 'Dismiss' }).click();
@@ -1055,7 +1056,7 @@ test.describe('reports', () => {
 
   test('a Viewer downloads each report under the site\'s security rules, each logged before it leaves', async ({ page }) => {
     const fake = await signedIn(page, USERS.viewer);
-    await page.getByRole('link', { name: 'Reports' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Reports' }).click();
     await page.getByRole('navigation', { name: 'Reports' }).getByRole('link', { name: 'Inventory report' }).click();
     const inventory = page.getByRole('region', { name: 'Inventory report', exact: true });
     await expect(inventory.getByRole('status')).toContainText('records');
