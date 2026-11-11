@@ -368,15 +368,15 @@ describe('the audit log page', () => {
     const fresh = await admin.load();
     const { entries } = await page({ recordIds: [recordId] });
     const edit = entries.find((entry) => entry.action === 'update' && entry.table_name === 'interventions')!;
-    expect(auditTarget(edit, fresh)).toMatchObject({ link: `/records/${recordId}` });
+    expect(auditTarget(edit, fresh)).toMatchObject({ link: `/map/records/${recordId}` });
     expect(auditTarget(edit, fresh).label).toContain('Audit test FCA');
     expect(auditDetails(edit, fresh)).toEqual(['Remarks: (none) → Checked']);
     const status = entries.find((entry) => entry.table_name === 'status_history')!;
-    expect(auditTarget(status, fresh).link).toBe(`/records/${recordId}`);
+    expect(auditTarget(status, fresh).link).toBe(`/map/records/${recordId}`);
     expect(auditDetails(status, fresh)[0]).toMatch(/^Status set to /);
 
     const deleted = (await page({ action: 'soft_delete' })).entries[0];
-    expect(auditTarget(deleted, fresh).link).toBe(`/records/${otherRecordId}`);
+    expect(auditTarget(deleted, fresh).link).toBe(`/map/records/${otherRecordId}`);
   });
 });
 
@@ -394,11 +394,11 @@ describe('what a line of the log says about other things', () => {
     expect(auditTarget(entry({ table_name: 'saved_views', new_row: named }), data)).toEqual({ label: 'Saved view: Rice', link: null });
     expect(auditTarget(entry({ table_name: 'exports', action: 'export', record_id: null, context: { file_name: 'Marinduque.kmz' } }), data)).toEqual({ label: 'Export: Marinduque.kmz', link: null });
     const barangay = data.barangays[0];
-    expect(auditTarget(entry({ table_name: 'barangays', record_id: String(barangay.id) }), data)).toEqual({ label: `Barangay ${barangay.name}`, link: `/barangays/${barangay.id}` });
+    expect(auditTarget(entry({ table_name: 'barangays', record_id: String(barangay.id) }), data)).toEqual({ label: `Barangay ${barangay.name}`, link: `/map/barangays/${barangay.id}` });
   });
 
   it('copes with a record that\'s gone, and one it knows nothing about', () => {
-    expect(auditTarget(entry({ table_name: 'interventions', record_id: 'gone', old_row: { beneficiary: 'Old FCA' }, action: 'delete' }), data)).toEqual({ label: 'Old FCA', link: '/records/gone' });
+    expect(auditTarget(entry({ table_name: 'interventions', record_id: 'gone', old_row: { beneficiary: 'Old FCA' }, action: 'delete' }), data)).toEqual({ label: 'Old FCA', link: '/map/records/gone' });
     expect(auditTarget(entry({ table_name: 'something_new' }), data)).toEqual({ label: 'something new', link: null });
   });
 

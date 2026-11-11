@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import { authLink, getSupabase } from '../../modules/intervention-map/data/supabase-client';
 import type { AppUser, UserRole } from '../../modules/intervention-map/data/types';
 import { useEditUi } from '../../modules/intervention-map/state/edit-ui';
+import { AuthLayout } from './AuthLayout';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -103,13 +104,15 @@ export function AuthGate({ children }: { children(session: SignedIn): ReactNode 
 
   if (failure) {
     return (
-      <div className="page-message" role="alert">
-        <h2>Could not open the map</h2>
-        <p>{failure}</p>
-        <button type="button" className="primary-button" onClick={() => window.location.reload()}>
-          Try again
-        </button>
-      </div>
+      <AuthLayout>
+        <div className="auth-card" role="alert">
+          <h2>Could not open the map</h2>
+          <p>{failure}</p>
+          <button type="button" className="ui-button ui-button-primary" onClick={() => window.location.reload()}>
+            Try again
+          </button>
+        </div>
+      </AuthLayout>
     );
   }
 
@@ -117,29 +120,37 @@ export function AuthGate({ children }: { children(session: SignedIn): ReactNode 
     case 'loading':
       return <p className="page-message">Loading…</p>;
     case 'signed-out':
-      return <SignInForm notice={state.notice} />;
+      return (
+        <AuthLayout>
+          <SignInForm notice={state.notice} />
+        </AuthLayout>
+      );
     case 'set-password':
       return (
-        <SetPasswordForm
+        <AuthLayout>
+          <SetPasswordForm
           reason={state.reason}
           onCancel={state.user ? () => setState({ status: 'ready', user: state.user! }) : undefined}
           onDone={async () => {
             const { data } = await getSupabase().auth.getUser();
             if (data.user) await enter(data.user.id, data.user.email ?? '');
           }}
-        />
+          />
+        </AuthLayout>
       );
     case 'no-access':
       return (
-        <div className="page-message" role="alert">
-          <h2>{state.deactivated ? 'This account has been deactivated' : 'This account has no access yet'}</h2>
-          <p>
-            You're signed in as {state.email}, but it doesn't have a role on the map. Ask your Admin to {state.deactivated ? 'reactivate it' : 'add you'}.
-          </p>
-          <button type="button" className="secondary-button" onClick={signOut}>
-            Sign out
-          </button>
-        </div>
+        <AuthLayout>
+          <div className="auth-card" role="alert">
+            <h2>{state.deactivated ? 'This account has been deactivated' : 'This account has no access yet'}</h2>
+            <p>
+              You're signed in as {state.email}, but it doesn't have a role on the map. Ask your Admin to {state.deactivated ? 'reactivate it' : 'add you'}.
+            </p>
+            <button type="button" className="ui-button ui-button-secondary" onClick={signOut}>
+              Sign out
+            </button>
+          </div>
+        </AuthLayout>
       );
     case 'ready':
       return children({
@@ -166,40 +177,38 @@ function SignInForm({ notice }: { notice?: string }) {
   };
 
   return (
-    <div className="auth-page">
-      <form className="auth-card edit-form" onSubmit={submit} aria-label="Sign in">
-        <h2>Sign in</h2>
-        {notice && (
-          <p className="field-error" role="alert">
-            {notice}
-          </p>
-        )}
-        <div className="form-field">
-          <label htmlFor="sign-in-email">Email</label>
-          <input id="sign-in-email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <div className="form-field">
-          <label htmlFor="sign-in-password">Password</label>
-          <input
-            id="sign-in-password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        {failure && (
-          <p className="field-error" role="alert">
-            {failure}
-          </p>
-        )}
-        <button type="submit" className="primary-button" disabled={busy}>
-          Sign in
-        </button>
-        <p className="field-hint">Accounts are by invitation. If you forgot your password or need access, ask your Admin.</p>
-      </form>
-    </div>
+    <form className="auth-card edit-form" onSubmit={submit} aria-label="Sign in">
+      <h2>Sign in</h2>
+      {notice && (
+        <p className="field-error ui-notice ui-notice-danger" role="alert">
+          {notice}
+        </p>
+      )}
+      <div className="form-field">
+        <label htmlFor="sign-in-email">Email</label>
+        <input id="sign-in-email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
+      </div>
+      <div className="form-field">
+        <label htmlFor="sign-in-password">Password</label>
+        <input
+          id="sign-in-password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+      {failure && (
+        <p className="field-error ui-notice ui-notice-danger" role="alert">
+          {failure}
+        </p>
+      )}
+      <button type="submit" className="ui-button ui-button-primary" disabled={busy}>
+        Sign in
+      </button>
+      <p className="field-hint">Accounts are by invitation. If you forgot your password or need access, ask your Admin.</p>
+    </form>
   );
 }
 
@@ -237,34 +246,32 @@ function SetPasswordForm({ reason, onDone, onCancel }: { reason: keyof typeof PA
   };
 
   return (
-    <div className="auth-page">
-      <form className="auth-card edit-form" onSubmit={submit} aria-label="Set password">
-        <h2>{PASSWORD_TITLES[reason]}</h2>
-        <div className="form-field">
-          <label htmlFor="new-password">New password</label>
-          <input id="new-password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-          <span className="field-hint">At least {MIN_PASSWORD_LENGTH} characters.</span>
-        </div>
-        <div className="form-field">
-          <label htmlFor="repeat-password">Repeat it</label>
-          <input id="repeat-password" type="password" autoComplete="new-password" required value={repeat} onChange={(e) => setRepeat(e.target.value)} />
-        </div>
-        {failure && (
-          <p className="field-error" role="alert">
-            {failure}
-          </p>
-        )}
-        <div className="form-actions">
-          <button type="submit" className="primary-button" disabled={busy}>
-            Save password
+    <form className="auth-card edit-form" onSubmit={submit} aria-label="Set password">
+      <h2>{PASSWORD_TITLES[reason]}</h2>
+      <div className="form-field">
+        <label htmlFor="new-password">New password</label>
+        <input id="new-password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+        <span className="field-hint">At least {MIN_PASSWORD_LENGTH} characters.</span>
+      </div>
+      <div className="form-field">
+        <label htmlFor="repeat-password">Repeat it</label>
+        <input id="repeat-password" type="password" autoComplete="new-password" required value={repeat} onChange={(e) => setRepeat(e.target.value)} />
+      </div>
+      {failure && (
+        <p className="field-error ui-notice ui-notice-danger" role="alert">
+          {failure}
+        </p>
+      )}
+      <div className="form-actions">
+        <button type="submit" className="ui-button ui-button-primary" disabled={busy}>
+          Save password
+        </button>
+        {onCancel && (
+          <button type="button" className="ui-button ui-button-secondary" onClick={onCancel}>
+            Cancel
           </button>
-          {onCancel && (
-            <button type="button" className="secondary-button" onClick={onCancel}>
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
-    </div>
+        )}
+      </div>
+    </form>
   );
 }

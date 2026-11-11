@@ -13,6 +13,7 @@ import { manilaToday } from '../lib/dates';
 import { FLAG_LABELS } from '../lib/display';
 import { defaultStatusId, statusChoices } from '../lib/form-values';
 import { looseKey } from '../lib/matching';
+import { MAP_PATH } from '../lib/map-paths';
 import { FLAG_ORDER } from '../lib/qa-queue';
 import { useStore } from '../state/store-context';
 import { personName } from './people';
@@ -638,7 +639,7 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
                 Open the QA queue
               </Link>
             )}
-            <Link className="secondary-button" to="/">
+            <Link className="secondary-button" to={MAP_PATH}>
               See them on the map
             </Link>
             <button type="button" className="secondary-button" onClick={restart}>

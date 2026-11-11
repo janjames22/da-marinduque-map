@@ -1,6 +1,7 @@
 // /admin: people, types, forms and lists. Loaded only when opened, so the map doesn't carry it. The
 // screens offer it to Admins only, and the database refuses everyone else whatever the screens do.
 import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { MAP_PATH } from '../lib/map-paths';
 import type { AppUser, MapData } from '../data/types';
 import { StoreContext } from '../state/store-context';
 import { useMapData } from '../state/use-map-data';
@@ -169,7 +170,7 @@ export function AdminPage({ user }: { user: AppUser }) {
       <div className="page-message" role="alert">
         <h2>This page is for Admins</h2>
         <p>
-          Your account can't change these settings. <Link to="/">Back to the map</Link>
+          Your account can't change these settings. <Link to={MAP_PATH}>Back to the map</Link>
         </p>
       </div>
     );

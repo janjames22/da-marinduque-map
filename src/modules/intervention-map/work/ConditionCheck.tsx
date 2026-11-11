@@ -8,6 +8,7 @@ import { TextField } from '../edit/FormParts';
 import { manilaToday } from '../lib/dates';
 import { recordName } from '../lib/display';
 import { looseKey } from '../lib/matching';
+import { recordOnMap } from '../lib/map-paths';
 import { awaitingCheck } from '../lib/qa-queue';
 import { foldText } from '../lib/view-fields';
 import { useStore } from '../state/store-context';
@@ -152,7 +153,7 @@ export function ConditionCheck({ data }: { data: MapData }) {
             return (
               <li key={record.id} className="queue-item" data-record={record.id}>
                 <div className="queue-item-main">
-                  <Link to={`/records/${record.id}`}>{recordName(record, data)}</Link>
+                  <Link to={recordOnMap(record.id)}>{recordName(record, data)}</Link>
                   <span>{record.beneficiary ?? 'No beneficiary'}</span>
                   <span className="field-hint">
                     {barangay}, {municipality}

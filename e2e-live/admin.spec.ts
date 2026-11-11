@@ -4,6 +4,7 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import type { TestAccount } from '../scripts/lib/test-accounts';
 import { readAccounts } from './accounts';
+import { sidebar } from '../e2e/helpers/shell';
 
 const LIVE_LIMIT_MS = 2500; // "about 2 s" in the spec
 
@@ -109,7 +110,7 @@ test('anyone else is refused by the deployed function, whatever the screens do',
   const accounts = readAccounts();
   const viewer = await open(browser, accounts.viewer);
   await expect(viewer.locator('.barangay-shape')).toHaveCount(218, { timeout: 30_000 });
-  await expect(viewer.getByRole('link', { name: 'Admin' })).toHaveCount(0);
+  await expect((await sidebar(viewer)).getByRole('link', { name: 'Users' })).toHaveCount(0);
   await viewer.goto('/admin/users');
   await expect(viewer.getByRole('alert')).toContainText('This page is for Admins');
 });

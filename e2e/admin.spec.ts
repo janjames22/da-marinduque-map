@@ -3,6 +3,7 @@
 // the real database, and e2e/auth.spec.ts covers the Users page under the site's real security headers.
 import { readFileSync } from 'node:fs';
 import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { sidebar } from './helpers/shell';
 
 const BUTTON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>';
 
@@ -23,7 +24,7 @@ async function openAdmin(page: Page, path = '/admin/types') {
 }
 
 async function goToMap(page: Page) {
-  await page.getByRole('link', { name: 'Back to the map' }).click();
+  await (await sidebar(page)).getByRole('link', { name: 'Map', exact: true }).click();
   await expect(page.locator('.barangay-shape')).toHaveCount(218);
 }
 
@@ -60,7 +61,7 @@ test.describe('who is offered it', () => {
     await tilesOff(page);
     await page.goto('/');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
-    await page.getByRole('link', { name: 'Admin' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await expect(page).toHaveURL(/\/admin\/users$/);
     await expect(page.getByRole('region', { name: 'Users' })).toContainText('Local mode has no accounts');
     await goToMap(page);
@@ -72,13 +73,14 @@ test.describe('who is offered it', () => {
       await page.addInitScript((value) => localStorage.setItem('da-local-role', value), role);
       await page.goto('/');
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
-      await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(0);
+      await expect((await sidebar(page)).getByRole('link', { name: 'Users' })).toHaveCount(0);
 
       await page.goto('/admin/types');
       await expect(page.getByRole('alert')).toContainText('This page is for Admins');
       await expect(page.getByRole('navigation', { name: 'Admin' })).toHaveCount(0);
-      // The header has a way back on every page but the map, and so does the message.
-      await expect(page.getByRole('banner').getByRole('link', { name: 'Back to the map' })).toBeVisible();
+      // The sidebar has a way back on every page, and so does the message.
+      await expect((await sidebar(page)).getByRole('link', { name: 'Map', exact: true })).toBeVisible();
+      await page.keyboard.press('Escape');
       await page.getByRole('alert').getByRole('link', { name: 'Back to the map' }).click();
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
     });
@@ -220,7 +222,7 @@ test.describe('a type with records', () => {
     await goToMap(page);
     await withLayerPanel(page, (panel) => expect(panel.getByLabel(/SSIP/)).toHaveCount(0));
 
-    await page.getByRole('link', { name: 'Admin' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await goToSection(page, 'Intervention types');
     await row(page, 'SSIP').getByRole('button', { name: /Activate/ }).click();
     await expect(row(page, 'SSIP')).toContainText('Active');
@@ -332,7 +334,7 @@ test.describe('the form builder', () => {
     await expect(add.getByLabel('Variant')).toHaveCount(0);
     await add.getByRole('button', { name: 'Cancel', exact: true }).click();
 
-    await page.getByRole('link', { name: 'Admin' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await goToSection(page, 'Intervention types');
     await row(page, 'Farm Machinery').getByRole('link', { name: /Edit/ }).click();
     await fieldNamed(form(page, 'Type'), 'Variant').getByRole('button', { name: /Restore/ }).click();
@@ -434,7 +436,7 @@ test.describe('the lists', () => {
     await expect(select(form(page, 'Add intervention'), 'Banner program').locator('option', { hasText: 'Rice Program' })).toHaveCount(0);
     await form(page, 'Add intervention').getByRole('button', { name: 'Cancel', exact: true }).click();
 
-    await page.getByRole('link', { name: 'Admin' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await goToSection(page, 'Programs');
     await expect(row(page, 'Rice Program')).toContainText('62 records');
     await row(page, 'Rice Program').getByRole('button', { name: /Restore/ }).click();
@@ -482,7 +484,7 @@ test.describe('the lists', () => {
     await expect(status.locator('option:checked')).toHaveText('For Inspection');
     await form(page, 'Add intervention').getByRole('button', { name: 'Cancel', exact: true }).click();
 
-    await page.getByRole('link', { name: 'Admin' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await goToSection(page, 'Statuses');
     await row(page, 'For Inspection').getByRole('button', { name: /Archive/ }).click();
     await expect(row(page, 'For Inspection')).toContainText('Archived');
@@ -827,14 +829,14 @@ test.describe('the audit log', () => {
   test('links to what each line is about', async ({ page }) => {
     await withLog(page, ENTRIES);
     await expect(line(page, 5).getByRole('link')).toHaveAttribute('href', '/admin/programs');
-    await expect(line(page, 6).getByRole('link')).toHaveAttribute('href', `/barangays/${barangay.id}`);
+    await expect(line(page, 6).getByRole('link')).toHaveAttribute('href', `/map/barangays/${barangay.id}`);
     await expect(line(page, 4).getByRole('link')).toHaveCount(0);
-    await expect(line(page, 3).getByRole('link')).toHaveAttribute('href', `/records/${first.id}`);
+    await expect(line(page, 3).getByRole('link')).toHaveAttribute('href', `/map/records/${first.id}`);
 
     await line(page, 1).getByRole('link').click();
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await expect(page.locator('.record-popup').filter({ hasText: first.beneficiary })).toBeVisible({ timeout: 15_000 });
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/map$/);
   });
 
   test('a link shows its record, even if the map\'s filters were hiding it', async ({ page }) => {
@@ -844,7 +846,7 @@ test.describe('the audit log', () => {
     await withLayerPanel(page, (panel) => select(panel, 'Municipality').selectOption(String(elsewhere.id)));
     await expect(page.locator(`.intervention-marker[title="${first.beneficiary}"]`)).toHaveCount(0);
 
-    await page.getByRole('link', { name: 'Admin' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await goToSection(page, 'Audit log');
     await line(page, 1).getByRole('link').click();
     await expect(page.locator('.record-popup').filter({ hasText: first.beneficiary })).toBeVisible({ timeout: 15_000 });

@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import * as XLSX from 'xlsx';
+import { sidebar } from './helpers/shell';
 
 interface SeedRecord {
   id: string;
@@ -93,8 +94,9 @@ test.describe('who is offered it', () => {
     test(`an ${role === 'admin' ? 'Admin' : 'Encoder'} gets a link there and back`, async ({ page }) => {
       await open(page, '/', role);
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
-      await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(role === 'admin' ? 1 : 0);
-      await page.getByRole('link', { name: 'QA and import' }).click();
+      const nav = await sidebar(page);
+      await expect(nav.getByRole('link', { name: 'Users' })).toHaveCount(role === 'admin' ? 1 : 0);
+      await nav.getByRole('link', { name: 'QA queue' }).click();
       await expect(page).toHaveURL(/\/qa$/);
       const sections = page.getByRole('navigation', { name: 'QA and import' });
       await expect(sections.getByRole('link')).toHaveText(['QA queue', 'Condition check', 'Import']);
@@ -103,7 +105,7 @@ test.describe('who is offered it', () => {
       // The RAED file was loaded by script, so it can't be undone here.
       await expect(page.getByRole('region', { name: 'Earlier imports' })).toContainText('Loaded by script');
       await expect(page.getByRole('button', { name: 'Undo this import' })).toHaveCount(0);
-      await page.getByRole('link', { name: 'Back to the map' }).click();
+      await (await sidebar(page)).getByRole('link', { name: 'Map', exact: true }).click();
       await expect(page.locator('.barangay-shape')).toHaveCount(218);
     });
   }
@@ -111,7 +113,8 @@ test.describe('who is offered it', () => {
   test('a Viewer isn\'t, even by going straight to the address', async ({ page }) => {
     await open(page, '/', 'viewer');
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
-    await expect(page.getByRole('link', { name: 'QA and import' })).toHaveCount(0);
+    await expect((await sidebar(page)).getByRole('link', { name: 'QA queue' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
     for (const path of ['/qa', '/qa/condition', '/import']) {
       await page.goto(path);
       await expect(page.getByRole('alert')).toContainText('This page is for Encoders and Admins');

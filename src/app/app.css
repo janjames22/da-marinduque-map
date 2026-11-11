@@ -1,16 +1,17 @@
+/* The names the pages were written with, now taken from the design tokens (tokens.css). The values
+   are the same as before, so the pages look as they did until each is restyled. */
 :root {
-  --da-green: #14532d;
-  --da-green-dark: #0f3f22;
-  --da-yellow: #f9c80e;
-  --surface: #ffffff;
-  --surface-muted: #f7f6f3;
-  --border: #dcdbd6;
-  --text: #1f1e1c;
-  --text-secondary: #52514e;
-  --warning-text: #8a3b00;
-  --warning-bg: #fff3e6;
+  --da-green: var(--color-green-800);
+  --da-green-dark: var(--color-green-900);
+  --da-yellow: var(--color-yellow-400);
+  --surface: var(--bg-surface);
+  --surface-muted: var(--color-neutral-50);
+  --border: var(--border-card);
+  --text: var(--text-primary);
+  --warning-text: var(--status-warning-text);
+  --warning-bg: var(--status-warning-bg);
 
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-family), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   line-height: 1.4;
   color: var(--text);
@@ -27,67 +28,7 @@ body,
   margin: 0;
 }
 
-.app {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  height: 100%;
-}
-
-/* Header and footer */
-
-.app-header {
-  align-items: center;
-  background: var(--da-green);
-  border-bottom: 3px solid var(--da-yellow);
-  color: #ffffff;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  justify-content: space-between;
-  padding: 8px 16px;
-}
-
-.user-menu {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 12px;
-  gap: 2px 12px;
-}
-
-.header-button {
-  background: none;
-  border: 0;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  padding: 6px 0;
-  text-decoration: underline;
-}
-
-/* Sign-in */
-
-.auth-page {
-  align-items: flex-start;
-  display: flex;
-  justify-content: center;
-  overflow-y: auto;
-  padding: 32px 16px;
-}
-
-.auth-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  max-width: 360px;
-  padding: 20px;
-  width: 100%;
-}
-
-.auth-card h2 {
-  font-size: 18px;
-  margin: 0 0 8px;
-}
+/* The frame, the top bar, the sign-in screen and the sources line are in shell.css. */
 
 .connection-notice {
   background: #fff4e0;
@@ -102,33 +43,6 @@ body,
   transform: translateX(-50%);
   width: max-content;
   z-index: 850;
-}
-
-.app-agency {
-  display: block;
-  font-size: 12px;
-  opacity: 0.9;
-}
-
-.app-header h1 {
-  font-size: 18px;
-  font-weight: 650;
-  margin: 0;
-}
-
-.app-footer {
-  background: var(--surface-muted);
-  border-top: 1px solid var(--border);
-  color: var(--text-secondary);
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 12px;
-  gap: 2px 16px;
-  padding: 4px 16px;
-}
-
-.app-footer a {
-  color: inherit;
 }
 
 /* Layout */
@@ -1124,13 +1038,6 @@ body,
     max-width: 170px;
   }
 
-  .app-agency {
-    font-size: 11px;
-  }
-
-  .app-header h1 {
-    font-size: 16px;
-  }
 }
 
 /* Admin */

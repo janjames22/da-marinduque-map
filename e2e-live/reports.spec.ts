@@ -4,6 +4,7 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { readAccounts } from './accounts';
 import { skipNetlifyBadge } from './netlify';
+import { sidebar } from '../e2e/helpers/shell';
 
 const contexts: BrowserContext[] = [];
 test.afterEach(async () => {
@@ -36,7 +37,7 @@ test('a Viewer downloads each report and prints the map, with nothing blocked', 
   const map = await downloadOf(page, () => page.getByRole('dialog', { name: 'Print map' }).getByRole('button', { name: 'Download PDF' }).click());
   expect(map.suggestedFilename()).toMatch(/^Map_Marinduque_Province_\d{4}-\d{2}-\d{2}\.pdf$/);
 
-  await page.getByRole('link', { name: 'Reports' }).click();
+  await (await sidebar(page)).getByRole('link', { name: 'Reports' }).click();
   await page.getByRole('navigation', { name: 'Reports' }).getByRole('link', { name: 'Inventory report' }).click();
   const inventory = page.getByRole('region', { name: 'Inventory report', exact: true });
   await expect(inventory.getByRole('status')).toContainText('records', { timeout: 30_000 });

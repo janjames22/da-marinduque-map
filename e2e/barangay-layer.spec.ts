@@ -134,7 +134,7 @@ test.describe('barangay profile', () => {
   test('closes back to the map', async ({ page }) => {
     await page.goto(`/barangays/${emptyBarangay.id}`);
     await profile(page).getByRole('button', { name: 'Close profile' }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/map$/);
     await expect(profile(page)).toHaveCount(0);
   });
 });

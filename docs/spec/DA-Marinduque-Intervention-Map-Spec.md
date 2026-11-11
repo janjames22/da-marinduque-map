@@ -462,7 +462,7 @@ Layout: left panel for layers and filters, center map, right panel for the dashb
   - Organic: teal
   - SPIS/Irrigation: blue
 - Status colors, starting with: green = serviceable/turned-over, amber = needs repair, red = unserviceable, grey = unknown.
-- Header: "Department of Agriculture – Provincial Agriculture Office, Marinduque | Intervention Map"
+- Frame: a sidebar with "Intervention Map" and "Provincial Agriculture Office Marinduque", the page links grouped as Overview, Records, Reports and Administration, and a top bar with the person's name, role and account menu. On a phone the sidebar is a drawer. The look follows `design/tokens.json` and the signed-off design in `design/canvas/` (Phase 11). The header line "Department of Agriculture – Provincial Agriculture Office, Marinduque" was retired at that sign-off.
 - Footer: data sources, "as of" date, and boundary attribution (NAMRIA, PSA via HDX).
 - Readable on a phone, for field validation and encoding.
 

@@ -7,6 +7,10 @@ const FAKE_SUPABASE = {
 };
 
 // Needs the local dataset: npm run build:local-seed
+// Computer screens are tested at the design's width. Below 1440 px the full sidebar leaves the map
+// page too little room, which Phase 14 (map restyle) is to fix. See docs/UI-UX-ROADMAP.md.
+const DESKTOP = { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } };
+
 // e2e/auth.spec.ts runs on a dev server and a production build that both think they have Supabase.
 // Neither ever reaches the network: the tests answer every call. See e2e/helpers/fake-supabase.ts.
 export default defineConfig({
@@ -18,11 +22,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'desktop', testIgnore: /auth\.spec/, use: { ...devices['Desktop Chrome'] } },
+    { name: 'desktop', testIgnore: /auth\.spec/, use: DESKTOP },
     { name: 'mobile', testIgnore: /auth\.spec/, use: { ...devices['Pixel 7'] } },
-    { name: 'auth-desktop', testMatch: /auth\.spec/, use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:5175' } },
+    { name: 'auth-desktop', testMatch: /auth\.spec/, use: { ...DESKTOP, baseURL: 'http://localhost:5175' } },
     { name: 'auth-mobile', testMatch: /auth\.spec/, use: { ...devices['Pixel 7'], baseURL: 'http://localhost:5175' } },
-    { name: 'production', testMatch: /auth\.spec/, use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:5176' } },
+    { name: 'production', testMatch: /auth\.spec/, use: { ...DESKTOP, baseURL: 'http://localhost:5176' } },
   ],
   webServer: [
     {

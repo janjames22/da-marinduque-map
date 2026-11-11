@@ -153,7 +153,7 @@ test.describe('adding', () => {
     await expect(readout(page)).not.toContainText('Not set');
     await expect(page.locator('.draft-marker')).toBeVisible();
     // The click placed a point. It must not have opened a barangay profile.
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/map$/);
     await expect(select(add, 'Municipality')).not.toHaveValue('');
     const barangayId = await select(add, 'Barangay').inputValue();
     expect(barangayId).not.toBe('');
