@@ -50,7 +50,8 @@ export interface Shading {
   barangaysWithout: number;
 }
 
-const FILL_OPACITY = 0.7;
+// Light enough that the markers on top stay the first thing seen.
+const FILL_OPACITY = 0.55;
 
 // Inactive types are hidden throughout the UI, and deleted records aren't shown at all.
 export function liveRecords(records: Intervention[], types: InterventionType[]): Intervention[] {

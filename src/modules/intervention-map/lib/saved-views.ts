@@ -4,7 +4,7 @@ import type { MapData, SavedView } from '../data/types';
 import type { ChoroplethMode } from './choropleth';
 import { DEFAULT_COLOR_BY, viewFields, type FieldFilter } from './view-fields';
 
-export type BasemapId = 'osm' | 'imagery' | 'topo' | 'hybrid';
+export type BasemapId = 'light' | 'osm' | 'imagery' | 'topo' | 'hybrid';
 
 export interface MapExtent {
   center: [number, number];
@@ -62,7 +62,7 @@ export function captureView(state: ViewableState, extent: MapExtent | null): Vie
 }
 
 const MODES: ChoroplethMode[] = ['off', 'count', 'program', 'type', 'gap'];
-const BASEMAPS: BasemapId[] = ['osm', 'imagery', 'topo', 'hybrid'];
+const BASEMAPS: BasemapId[] = ['light', 'osm', 'imagery', 'topo', 'hybrid'];
 
 const asObject = (value: unknown): Record<string, unknown> => (value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {});
 const asNumber = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
@@ -125,7 +125,7 @@ export function readViewConfig(config: unknown, data: ViewData): ViewConfig {
       pickedTypeId: hasId(data.types, style.pickedTypeId),
       colorBy,
     },
-    basemap: BASEMAPS.includes(stored.basemap as BasemapId) ? (stored.basemap as BasemapId) : 'osm',
+    basemap: BASEMAPS.includes(stored.basemap as BasemapId) ? (stored.basemap as BasemapId) : 'light',
     extent: center.length === 2 && center[0] !== null && center[1] !== null && zoom !== null ? { center: [center[0], center[1]], zoom } : null,
   };
 }

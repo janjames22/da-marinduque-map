@@ -25,6 +25,8 @@ async function open(browser: Browser, account: TestAccount, path = '/map') {
   contexts.push(context);
   await skipNetlifyBadge(context);
   const page = await context.newPage();
+  // The panel beside the map starts closed since Phase 14. These tests are about it.
+  await page.addInitScript(() => localStorage.setItem('da-map-insights-open', 'yes'));
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.abort());
   await page.goto(path);
   await page.getByLabel('Email').fill(account.email);

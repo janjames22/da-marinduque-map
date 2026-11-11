@@ -9,7 +9,9 @@ import { FieldFilters, FieldOptions } from './FieldFilters';
 import { LocalDataSection } from './LocalDataSection';
 import { SavedViews } from './SavedViews';
 
+// Light comes first and is the default: it keeps the map calm, so the data stands out.
 const BASEMAP_OPTIONS: { id: BasemapId; label: string }[] = [
+  { id: 'light', label: 'Light' },
   { id: 'osm', label: 'OpenStreetMap' },
   { id: 'imagery', label: 'Satellite' },
   { id: 'topo', label: 'Topographic' },
@@ -68,98 +70,6 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
 
   return (
     <aside className={`panel panel-left${ui.panelOpen ? ' is-open' : ''}`} aria-label="Layers and filters">
-      <section>
-        <label className="field">
-          <span className="section-title">Go to barangay</span>
-          <select
-            value=""
-            onChange={(event) => {
-              if (event.target.value) onGoToBarangay(Number(event.target.value));
-            }}
-          >
-            <option value="">Choose a barangay</option>
-            {barangaysByMunicipality.map(({ municipality, barangays }) => (
-              <optgroup key={municipality.id} label={municipality.name}>
-                {barangays.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-      </section>
-
-      <SavedViews data={data} />
-
-      <section>
-        <h2 className="section-title">Shade barangays by</h2>
-        {MODE_OPTIONS.map((option) => (
-          <label className="choice" key={option.id}>
-            <input
-              type="radio"
-              name="choropleth-mode"
-              checked={ui.mode === option.id}
-              onChange={() => ui.setMode(option.id)}
-            />
-            {option.label}
-          </label>
-        ))}
-        {ui.mode === 'program' && (
-          <label className="field">
-            <span>Program</span>
-            <select
-              value={ui.pickedProgramId ?? ''}
-              onChange={(event) => ui.setPickedProgram(Number(event.target.value))}
-            >
-              {programs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {ui.mode === 'type' && (
-          <label className="field">
-            <span>Type</span>
-            <select value={ui.pickedTypeId ?? ''} onChange={(event) => ui.setPickedType(Number(event.target.value))}>
-              {activeTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </section>
-
-      <section>
-        <label className="field">
-          <span className="section-title">Color markers by</span>
-          <select value={ui.colorBy} onChange={(event) => ui.setColorBy(event.target.value)}>
-            <FieldOptions fields={colorFields} />
-          </select>
-        </label>
-      </section>
-
-      <section>
-        <h2 className="section-title">Intervention layers</h2>
-        {activeTypes.map((type) => (
-          <label className="choice" key={type.id}>
-            <input
-              type="checkbox"
-              checked={!ui.hiddenTypeIds.includes(type.id)}
-              onChange={() => ui.toggleType(type.id)}
-            />
-            <span className="swatch" style={{ background: type.color }} aria-hidden="true" />
-            {type.name}
-            <span className="count">{recordsOfType(type.id)}</span>
-          </label>
-        ))}
-      </section>
-
       <section>
         <h2 className="section-title">Filters</h2>
         {ui.mode !== 'program' && (
@@ -242,18 +152,71 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
       </section>
 
       <section>
-        <h2 className="section-title">Boundaries</h2>
-        <label className="choice">
-          <input type="checkbox" checked disabled />
-          Barangays (always on)
-        </label>
-        <label className="choice">
-          <input type="checkbox" checked={ui.showMunicipal} onChange={(e) => ui.setShowMunicipal(e.target.checked)} />
-          Municipalities
-        </label>
-        <label className="choice">
-          <input type="checkbox" checked={ui.showProvince} onChange={(e) => ui.setShowProvince(e.target.checked)} />
-          Province
+        <h2 className="section-title">Intervention layers</h2>
+        {activeTypes.map((type) => (
+          <label className="choice" key={type.id}>
+            <input
+              type="checkbox"
+              checked={!ui.hiddenTypeIds.includes(type.id)}
+              onChange={() => ui.toggleType(type.id)}
+            />
+            <span className="swatch" style={{ background: type.color }} aria-hidden="true" />
+            {type.name}
+            <span className="count">{recordsOfType(type.id)}</span>
+          </label>
+        ))}
+      </section>
+
+      <section>
+        <h2 className="section-title">Shade barangays by</h2>
+        {MODE_OPTIONS.map((option) => (
+          <label className="choice" key={option.id}>
+            <input
+              type="radio"
+              name="choropleth-mode"
+              checked={ui.mode === option.id}
+              onChange={() => ui.setMode(option.id)}
+            />
+            {option.label}
+          </label>
+        ))}
+        {ui.mode === 'program' && (
+          <label className="field">
+            <span>Program</span>
+            <select
+              value={ui.pickedProgramId ?? ''}
+              onChange={(event) => ui.setPickedProgram(Number(event.target.value))}
+            >
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {ui.mode === 'type' && (
+          <label className="field">
+            <span>Type</span>
+            <select value={ui.pickedTypeId ?? ''} onChange={(event) => ui.setPickedType(Number(event.target.value))}>
+              {activeTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </section>
+
+      <div className="panel-group-title" aria-hidden="true">Map style</div>
+
+      <section>
+        <label className="field">
+          <span className="section-title">Color markers by</span>
+          <select value={ui.colorBy} onChange={(event) => ui.setColorBy(event.target.value)}>
+            <FieldOptions fields={colorFields} />
+          </select>
         </label>
       </section>
 
@@ -271,6 +234,49 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
           </label>
         ))}
       </section>
+
+      <section>
+        <h2 className="section-title">Boundaries</h2>
+        <label className="choice">
+          <input type="checkbox" checked disabled />
+          Barangays (always on)
+        </label>
+        <label className="choice">
+          <input type="checkbox" checked={ui.showMunicipal} onChange={(e) => ui.setShowMunicipal(e.target.checked)} />
+          Municipalities
+        </label>
+        <label className="choice">
+          <input type="checkbox" checked={ui.showProvince} onChange={(e) => ui.setShowProvince(e.target.checked)} />
+          Province
+        </label>
+      </section>
+
+      <div className="panel-group-title" aria-hidden="true">Shortcuts</div>
+
+      <section>
+        <label className="field">
+          <span className="section-title">Go to barangay</span>
+          <select
+            value=""
+            onChange={(event) => {
+              if (event.target.value) onGoToBarangay(Number(event.target.value));
+            }}
+          >
+            <option value="">Choose a barangay</option>
+            {barangaysByMunicipality.map(({ municipality, barangays }) => (
+              <optgroup key={municipality.id} label={municipality.name}>
+                {barangays.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+      </section>
+
+      <SavedViews data={data} />
 
       {canRestore && (
         <section>

@@ -1,0 +1,342 @@
+/* The map page restyled in Phase 14, after the design's Map screen (design/canvas/Map.dc.html): a
+   header with how many records are on the map, then the layers card, the map and any side panel as
+   separate cards. Loaded after app.css, which it overrides. */
+
+.map-page {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.map-header {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-4) var(--space-6) var(--space-3);
+}
+
+.map-header h1 {
+  font-size: 24px;
+  font-weight: var(--font-weight-bold);
+  line-height: 32px;
+  margin: 0;
+}
+
+.map-header-note {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.map-coverage {
+  align-items: center;
+  background: var(--status-info-bg);
+  border: 1px solid var(--status-info-border);
+  border-radius: var(--radius-sm);
+  color: var(--status-info-text);
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-4);
+}
+
+.map-coverage svg {
+  flex: none;
+  height: 18px;
+  width: 18px;
+}
+
+.map-coverage span {
+  flex: 1 1 320px;
+}
+
+.map-coverage strong {
+  font-weight: var(--font-weight-semibold);
+}
+
+.map-coverage a {
+  color: inherit;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Cards: the layers, the map, and whichever panel is open beside it. */
+
+.map-page .workspace {
+  gap: var(--space-4);
+  padding: 0 var(--space-6) var(--space-4);
+}
+
+.map-page .panel-left,
+.map-page .panel-right {
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+/* The edge is drawn as a shadow, so it takes none of the map's width. */
+.map-page .map-area {
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px var(--border-card), var(--shadow-card);
+  overflow: hidden;
+}
+
+/* The layers card */
+
+.map-page .panel-left {
+  padding: var(--space-4) 18px;
+}
+
+.map-page .panel-left section + section {
+  border-top: 1px solid var(--border-card);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.map-page .panel-left .section-title,
+.panel-group-title {
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+  line-height: var(--font-line-height-caption);
+  margin: 0 0 var(--space-2);
+  text-transform: none;
+}
+
+/* The smaller settings sit under a quieter heading, so the filters and layers come first. */
+.panel-group-title {
+  border-top: 1px solid var(--border-card);
+  color: var(--color-green-700);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  text-transform: uppercase;
+}
+
+.panel-group-title + section {
+  border-top: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.map-page .panel-left .choice {
+  gap: var(--space-2);
+  min-height: 32px;
+}
+
+.map-page .panel-left .choice input {
+  accent-color: var(--action-primary);
+  height: 16px;
+  width: 16px;
+}
+
+.map-page .panel-left .field > span:first-child:not(.section-title) {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-1);
+}
+
+.map-page .panel-left select,
+.map-page .panel-left input:not([type='checkbox'], [type='radio']) {
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  min-height: 36px;
+  padding: 0 var(--space-2);
+}
+
+.map-page .panel-left .swatch {
+  border: 2px solid var(--bg-surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 20%);
+  height: 14px;
+  width: 14px;
+}
+
+/* On the map */
+
+.map-toolbar {
+  gap: var(--space-2);
+  right: var(--space-3);
+  top: var(--space-3);
+}
+
+.add-record-button,
+.export-button {
+  align-items: center;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px rgb(31 30 28 / 18%);
+  display: inline-flex;
+  font-weight: var(--font-weight-semibold);
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+.add-record-button {
+  background: var(--action-primary);
+  border-color: var(--action-primary);
+  color: var(--text-on-primary);
+}
+
+.add-record-button:hover {
+  background: var(--action-primary-hover);
+}
+
+.export-button {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.export-button:hover {
+  background: var(--bg-surface-muted);
+}
+
+.map .leaflet-bar {
+  border: 0;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px rgb(31 30 28 / 22%);
+  overflow: hidden;
+}
+
+.map .leaflet-bar a {
+  border-bottom-color: var(--border-card);
+  color: var(--text-primary);
+  height: 36px;
+  line-height: 36px;
+  width: 36px;
+}
+
+.map .leaflet-control-attribution {
+  background: rgb(255 255 255 / 80%);
+  border-top-left-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+.municipality-label {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  text-shadow:
+    0 0 3px var(--bg-surface),
+    0 0 3px var(--bg-surface),
+    0 0 3px var(--bg-surface);
+}
+
+.intervention-marker span {
+  box-shadow: 0 1px 3px rgb(31 30 28 / 35%);
+}
+
+/* A group of nearby records, in the interface's green, with a soft halo so it reads as a group. */
+.marker-cluster-count span {
+  background: var(--action-primary);
+  border: 2px solid var(--bg-surface);
+  box-shadow:
+    0 0 0 5px rgb(27 107 63 / 22%),
+    0 1px 3px rgb(31 30 28 / 30%);
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+}
+
+.legend {
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  bottom: var(--space-6);
+  box-shadow: var(--shadow-card);
+  left: var(--space-3);
+  padding: var(--space-3) 14px;
+}
+
+.legend-title {
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.map .leaflet-popup-content-wrapper {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-dialog);
+}
+
+.map .leaflet-popup-content {
+  font-family: var(--font-family), system-ui, sans-serif;
+  margin: 14px 16px;
+}
+
+.record-popup h3 {
+  font-size: 15px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 20px;
+}
+
+/* Phones: the map has the whole screen, as before, so the cards' space goes back to it. */
+@media (max-width: 800px) {
+  .map-header {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .map-header h1,
+  .map-header-note {
+    display: none;
+  }
+
+  /* One short line: the count and the link. */
+  .map-coverage {
+    flex-wrap: nowrap;
+    font-size: 13px;
+    margin: 0;
+    padding: 6px var(--space-3);
+  }
+
+  .map-coverage-detail {
+    display: none;
+  }
+
+  .map-coverage span {
+    flex: 1 1 auto;
+  }
+
+  /* The phone tabs already have the dashboard. */
+  .insights-open-button {
+    display: none !important;
+  }
+
+  .add-record-button,
+  .export-button {
+    font-size: 13px;
+    min-height: 36px;
+    padding: 0 10px;
+  }
+
+  .legend {
+    bottom: var(--space-4);
+    font-size: 11px;
+    left: var(--space-2);
+    max-width: 160px;
+    padding: var(--space-2) 10px;
+  }
+
+  .legend-note {
+    display: none;
+  }
+
+  .map-page .workspace {
+    gap: 0;
+    padding: 0;
+  }
+
+  .map-page .panel-left,
+  .map-page .panel-right,
+  .map-page .map-area {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .panel-toggle {
+    border-radius: var(--radius-pill);
+    box-shadow: 0 1px 3px rgb(31 30 28 / 25%);
+    min-height: 40px;
+    padding: 0 14px;
+  }
+}

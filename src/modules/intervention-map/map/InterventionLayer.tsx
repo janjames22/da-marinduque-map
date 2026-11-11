@@ -16,6 +16,9 @@ import { usePermissions } from '../state/store-context';
 const FOCUS_WAIT_MS = 3000;
 // How long a record just shown keeps its popup through a reload. After that it's the person's.
 const FOCUS_HOLD_MS = 2000;
+// A popup folded away by a redraw is opened again after this long, this many times at most.
+const REOPEN_DELAY_MS = 150;
+const MAX_REOPENS = 3;
 
 // Icons load through <img>, so even an uploaded icon couldn't run a script, and uploads are checked too.
 function iconDataUrl(svg: string): string {
@@ -121,7 +124,7 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
   const map = useMap();
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const shown = useRef(new Map<string, ShownMarker>());
-  const pendingFocus = useRef<{ id: string; until: number; release?: () => void } | null>(null);
+  const pendingFocus = useRef<{ id: string; until: number; release?: () => void; reopened?: number } | null>(null);
   const cancelFocus = useRef<() => void>(() => {});
   const focusRecord = useMapUi((state) => state.focusRecord);
   const moveNonce = useEditUi((state) => state.moveNonce);
@@ -283,11 +286,16 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
       if (pendingFocus.current === pending) pendingFocus.current = null;
     };
     // Closed while its marker is still on the map, the person closed it: by its button, a drag or a
-    // click elsewhere. That stays closed. If the marker has left the map, a redraw folded it into its
-    // cluster, and the next call opens it again.
+    // click elsewhere. That stays closed. If the marker has left the map, a redraw or a move as the
+    // page settles folded it into its cluster, so it's opened again. Nothing else may call for it,
+    // as the data hasn't changed, so this asks itself, a few times at most.
     const closed = () => {
       setTimeout(() => {
         if (map.hasLayer(marker)) done();
+        else if (pendingFocus.current === pending && (pending.reopened ?? 0) < MAX_REOPENS) {
+          pending.reopened = (pending.reopened ?? 0) + 1;
+          setTimeout(tryFocus, REOPEN_DELAY_MS);
+        }
       }, 0);
     };
     const opened = () => {

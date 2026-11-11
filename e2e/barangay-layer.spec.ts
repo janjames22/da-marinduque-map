@@ -282,11 +282,14 @@ test.describe('layer panel', () => {
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
   });
 
-  test('offers the four basemaps', async ({ page }) => {
+  test('offers five basemaps, and opens on the light one', async ({ page }) => {
     const panel = page.getByLabel('Layers and filters');
-    for (const name of ['OpenStreetMap', 'Satellite', 'Topographic', 'Satellite with labels']) {
+    for (const name of ['Light', 'OpenStreetMap', 'Satellite', 'Topographic', 'Satellite with labels']) {
       await expect(panel.getByRole('radio', { name, exact: true })).toBeVisible();
     }
+    // A quiet base, so the barangays and markers are what stands out.
+    await expect(panel.getByRole('radio', { name: 'Light', exact: true })).toBeChecked();
+    await expect(page.locator('img.leaflet-tile[src*="World_Light_Gray_Base"]').first()).toBeAttached();
     await panel.getByRole('radio', { name: 'Satellite', exact: true }).check();
     await expect(page.locator('img.leaflet-tile[src*="World_Imagery"]').first()).toBeAttached();
   });

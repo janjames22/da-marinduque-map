@@ -15,7 +15,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-11_
 
-- **Branch:** `main`, in sync with `origin/main`. Phase 12 is merged.
+- **Branch:** `phase-14-map-style`, pushed. It isn't merged into `main` until Gate 2.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -23,13 +23,14 @@ _Last updated: 2026-11-11_
   - Drawing lines and polygons on the map isn't built yet. Editing works for points only.
   - 27 records stay off the map until the region verifies their location: 26 with no coordinates, 1 outside Marinduque. See [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §2.
   - UI/UX roadmap questions still open: Q-5 (FMR data format), Q-6 (basemap provider).
-  - Laptop screens (below 1440 px): the full sidebar leaves the map page squeezed, and the dashboard's Wider button can't widen. To fix in Phase 14. The computer tests run at 1440 px until then.
+  - Laptop screens: since Phase 14 the map opens without the dashboard panel, so it has room at 1280 px. With the panel opened at that width, Wider can still only widen a little. The computer tests run at 1440 px.
 - **Built:** Phases 10 and 11 of the UI/UX roadmap. The design is signed off: 6 desktop and 6 phone screens on the [Intervention Map Design](https://claude.ai/artifact/LvSgChD6pwXb7nXuZsv2Ze) canvas (private to the owner), with its source backed up in [`design/canvas/`](design/canvas/README.md).
 - **Office name, decided at sign-off:** "Intervention Map" with "Provincial Agriculture Office Marinduque" underneath, and the footer line "Provincial Agriculture Office, Marinduque". "Department of Agriculture –" is dropped.
 - **Built:** Phase 12, the foundation, through both gates on 2026-11-11. It brings the design tokens as CSS, the Inter font, the Lucide icons, the new sidebar and top bar, the new sign-in screens, and the map at `/map` with old addresses redirected.
 - **Live:** Phase 12 is on https://da-marinduque-map.netlify.app since 2026-11-11. The owner deployed it with `npm run deploy`, because Claude Code's permissions don't let Claude deploy to production. Checked signed out: the security headers are on, Inter loads, and the only blocked script is Netlify's own badge, which is known since Phase 9.
 - **Live:** Phase 13, the Home and Dashboard pages, is on https://da-marinduque-map.netlify.app since 2026-11-11 (deploy `6af47bcaae5f3dff886714f1`). Checked signed out: the security headers are on and Inter loads. The only blocked script is Netlify's badge, as before.
-- **Next after that:** Phase 14, the map restyle. The owner's brief from Gate 1 is that the map overwhelms users, and it should be simple and clean but detailed, like the canvas's Map screen. See `docs/UI-UX-ROADMAP.md` §12.
+- **In progress:** Phase 14, the map restyle. Built, and it passed Gate 1 on 2026-11-11. Next is the Gate 2 draft.
+- **Report PDFs keep the full header:** "Department of Agriculture – Provincial Agriculture Office, Marinduque" stays on the reports, as official documents. Only the app's screens use the shorter office name. The owner decided this on 2026-11-11.
 
 ## Phases completed
 
@@ -50,6 +51,7 @@ The phases were built in a different order from the spec's §9. Export came befo
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
 | 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
 | 11. Design | `design-figma-kit`, `design-canvas-signoff` | 2026-11-11 | Tokens, kit preview and Figma guide, then 12 screens on a claude.ai design canvas, signed off by the owner. Source in `design/canvas/` |
+| 14. Map restyle | `phase-14-map-style` | 2026-11-11 | Light basemap, dimmed outside the province, green clusters, card-style map parts, the dashboard panel closed by default, an on-the-map count, and fixes for record popups and page overflow |
 | 13. Home and Dashboard | `phase-13-dashboard` | 2026-11-11 | Home at `/` with work waiting and a card per type, and the Dashboard page with shared filters, CSVs and the list of records awaiting coordinate verification. Live |
 | 12. Foundation | `phase-12-ux-foundation` | 2026-11-11 | Design tokens as CSS, Inter font, Lucide icons, the new sidebar, top bar and sign-in screens, the map at `/map` with old links redirected, and `npm run deploy:preview`. Live |
 
@@ -59,6 +61,14 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-11
 
+- Phase 14 built and through Gate 1, on branch `phase-14-map-style`. The owner's brief was that the map overwhelmed users:
+  - **Calmer map:** a Light grey basemap by default (Esri World Light Gray, with labels; OpenStreetMap and the others are still offered), the area outside Marinduque dimmed, lighter barangay shading and lines, green group markers with a halo, and card-style buttons, legend, popup and zoom controls.
+  - **Less at once:** the dashboard panel beside the map starts closed and opens from its button, remembered per person. A header shows "X of Y records are on the map", with a link to the list of records waiting for coordinates. The layers card has Filters first, then layers and shading, then Map style and Shortcuts.
+  - **Phones:** a one-line note, no duplicate Dashboard button, smaller buttons and legend.
+  - **Fixed:** a link straight to a record could leave its popup closed, when the map re-grouped the markers while settling. It reopens now.
+  - **Fixed:** in a short window, hidden labels and chart tooltips stretched the page past the frame onto blank space. The scrolling panels now contain them, and a new test checks six pages.
+  - **Not done, as decided at Gate 1:** the filters stay in the left card rather than a bar above the map.
+  - **Tests:** 1,119 unit tests passed. 652 end-to-end tests passed, 0 failed, 11 skipped.
 - Phase 13 is live: the owner ran `npm run deploy`, and it was checked signed out on the live site.
 - Phase 13 passed Gate 2 and is merged into `main`.
 - Phase 13 built and through Gate 1, on branch `phase-13-dashboard`:

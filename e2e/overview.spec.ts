@@ -74,6 +74,22 @@ test.describe('Home', () => {
   });
 });
 
+test.describe('the frame', () => {
+  // A hidden label or a chart's tooltip deep in a scrolling panel once stretched the window itself, so
+  // a short window scrolled past the frame onto blank space.
+  test('only the panels scroll, never the window, even when it is short', async ({ page, isMobile }) => {
+    if (!isMobile) await page.setViewportSize({ width: 1290, height: 610 });
+    await page.addInitScript(() => localStorage.setItem('da-map-insights-open', 'yes'));
+    for (const path of ['/', '/dashboard', '/map', '/reports', '/admin/types', '/qa']) {
+      await open(page, path);
+      await expect(page.getByRole('banner')).toBeVisible();
+      if (path === '/map') await expect(page.locator('.barangay-shape')).toHaveCount(218);
+      if (path === '/dashboard') await expect(tile(page, 'records')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => document.scrollingElement!.scrollHeight - innerHeight), { message: path }).toBeLessThanOrEqual(0);
+    }
+  });
+});
+
 test.describe('the Dashboard page', () => {
   test('shares its filters with the map, and the totals follow them', async ({ page, isMobile }) => {
     await open(page, '/dashboard');

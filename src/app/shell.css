@@ -15,12 +15,15 @@
   min-width: 0;
 }
 
-/* Every page keeps the layout it had: it fills this box and scrolls itself. */
+/* Every page keeps the layout it had: it fills this box and scrolls itself. Nothing inside may make
+   the window itself scroll past the frame. */
 .shell-content {
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   outline: none;
+  overflow: hidden;
+  position: relative;
 }
 
 .skip-link {

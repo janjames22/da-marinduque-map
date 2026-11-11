@@ -197,7 +197,8 @@ test.describe('the reports', () => {
     expect(pages[0]).toContain('Date: ');
     expect(pages[0]).toContain('Data: Intervention Map records (RAED 2026-10-21)');
     // The tiles are blocked in tests, so the basemap is just not there, not refused.
-    expect(pages[0]).toContain('Basemap: © OpenStreetMap contributors');
+    // The Light basemap is the default since Phase 14.
+    expect(pages[0]).toContain('Basemap: Esri World Light Gray Canvas, © OpenStreetMap contributors');
     expect(pages[0]).toContain('Noted by:');
   });
 });

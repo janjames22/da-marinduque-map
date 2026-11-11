@@ -67,7 +67,10 @@ const rows = (page: Page) => page.locator('.records-table tbody tr');
 const count = (page: Page) => page.locator('.records-count');
 const popup = (page: Page) => page.locator('.record-popup');
 
-async function ready(page: Page, path = '/map') {
+// The panel starts closed since Phase 14, and stays open for someone who opened it. These tests are
+// about the panel, so they start as that person.
+async function ready(page: Page, path = '/map', { panelOpen = true } = {}) {
+  if (panelOpen) await page.addInitScript(() => localStorage.setItem('da-map-insights-open', 'yes'));
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.fulfill({ status: 204 }));
   await page.goto(path);
   await expect(page.locator('.barangay-shape')).toHaveCount(218);
@@ -112,30 +115,31 @@ async function goToBarangayAndCloseIt(page: Page, isMobile: boolean, name: strin
 const filterToGasan = (page: Page, isMobile: boolean) => withLayers(page, isMobile, () => layers(page).getByRole('combobox', { name: /^Municipality/ }).selectOption(String(gasan.id)));
 
 test.describe('where it sits', () => {
-  test('beside the map on a computer, and it can be closed and reopened', async ({ page, isMobile }) => {
+  test('beside the map on a computer, closed until opened, and remembered either way', async ({ page, isMobile }) => {
     test.skip(isMobile, 'the computer layout');
-    await ready(page);
-    await expect(panel(page)).toBeVisible();
-    await expect(kpi(page, 'records')).toBeVisible({ timeout: 30_000 });
-
+    // The map opens on its own, so it isn't crowded. The Dashboard page has the full figures.
+    await ready(page, '/map', { panelOpen: false });
+    await expect(panel(page)).toHaveCount(0);
     const map = page.locator('.leaflet-container');
-    const beside = (await map.boundingBox())!;
-    const box = (await panel(page).boundingBox())!;
-    expect(box.x).toBeGreaterThanOrEqual(beside.x + beside.width - 1);
-
-    await panel(page).getByRole('button', { name: 'Close the dashboard' }).click();
-    await expect(panel(page)).toHaveCount(0);
-    await expect.poll(async () => (await map.boundingBox())!.width).toBeGreaterThan(beside.width);
-
-    // Closing it is remembered, for someone who wants the whole map.
-    await page.reload();
-    await expect(page.locator('.barangay-shape')).toHaveCount(218);
-    await expect(panel(page)).toHaveCount(0);
+    const alone = (await map.boundingBox())!;
 
     await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
     await expect(kpi(page, 'records')).toBeVisible({ timeout: 30_000 });
+    const beside = (await map.boundingBox())!;
+    const box = (await panel(page).boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(beside.x + beside.width - 1);
+    expect(beside.width).toBeLessThan(alone.width);
+
+    // Opening it is remembered, for someone who works with it.
     await page.reload();
+    await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await expect(panel(page)).toBeVisible();
+
+    await panel(page).getByRole('button', { name: 'Close the dashboard' }).click();
+    await expect(panel(page)).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator('.barangay-shape')).toHaveCount(218);
+    await expect(panel(page)).toHaveCount(0);
   });
 
   test('it can be made wider, for the table', async ({ page, isMobile }) => {
@@ -162,7 +166,8 @@ test.describe('where it sits', () => {
     await page.getByRole('searchbox', { name: 'Search these records' }).fill(onMapRecord.source_id);
     await expect(rows(page)).toHaveCount(1);
 
-    await page.locator('.barangay-shape').first().click({ force: true });
+    // Through Leaflet's own click, wherever the shape is: the legend card can be over its middle.
+    await page.locator('.barangay-shape').first().dispatchEvent('click');
     await expect(page.getByLabel(/^Profile of barangay/)).toBeVisible();
     await expect(panel(page)).toHaveCount(0);
 
