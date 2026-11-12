@@ -477,13 +477,21 @@ describe('intervention type rules', () => {
     expect(polygon.geom).not.toBeNull();
   });
 
-  it('needs a line or polygon record to have its shape, while a point record can wait for coordinates', async () => {
-    await expect(insertRecord({ type: 'fmr' })).rejects.toThrow(/needs its shape/);
+  it('lets a line record wait for its traced line, as a point waits for coordinates, but not a polygon', async () => {
+    // Since 0012_lines.sql: a road is counted before its line is traced, and kept off the map.
+    const waiting = await insertRecord({ type: 'fmr' });
+    expect(waiting.geom).toBeNull();
+    expect(waiting.qa_flags).toContain('no_coords');
     await expect(insertRecord({ type: 'service-area' })).rejects.toThrow(/needs its shape/);
     expect((await insertRecord({ type: 'other' })).geom).toBeNull();
 
     const line = await insertRecord({ type: 'fmr', wkt: 'LINESTRING(121.85 13.45, 121.86 13.46)' });
-    await expect(db.query('update interventions set geom = null where id = $1', [line.id])).rejects.toThrow(/needs its shape/);
+    expect(line.qa_flags).not.toContain('no_coords');
+    await db.query('update interventions set geom = null where id = $1', [line.id]);
+    expect(await flagsOf(line.id)).toContain('no_coords');
+
+    const polygon = await insertRecord({ type: 'service-area', wkt: 'POLYGON((121.85 13.45, 121.86 13.45, 121.86 13.46, 121.85 13.45))' });
+    await expect(db.query('update interventions set geom = null where id = $1', [polygon.id])).rejects.toThrow(/needs its shape/);
   });
 
   it('rejects an invalid polygon', async () => {

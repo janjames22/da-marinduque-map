@@ -452,6 +452,8 @@ Phase numbers continue from the project history, which ends at Phase 9.
 | **Goal** | FMR on the map and the dashboard |
 | **Branch** | `phase-16-fmr` |
 | **Blocked by** | The FMR data, and its format (KML, Shapefile, or a table of start and end points) |
+| **Owner's decision (2026-11-12)** | Build it without the data, on made-up sample roads in local mode only. The real import is checked when the data comes |
+| **Parts** | 16a: roads on the map and the dashboard (the database change, M-11, length, the cards, the record pages). 16b: drawing and reshaping lines on the map. 16c: importing lines from KML, KMZ and GeoJSON. Each with its own gates, as Phase 15's were |
 | **Scope** | Activate the existing Farm-to-Market Road type. Import lines. Draw and reshape lines if needed (spec §5.4). Requirement M-11. Dashboard cards for count and total length. Roads without a traced line follow the rule in [§7](#7-records-without-coordinates) |
 | **Deliverables** | The FMR layer, import path, dashboard cards |
 | **Done when** | The FMR counts and total length match the source. Lines export to KMZ and open in Google Earth |
@@ -515,6 +517,7 @@ A phase is done when all of these hold:
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 2026-11-13 | Phase 16 split into 16a, 16b and 16c, and built on sample roads until the FMR data arrives. A road's length is the one its form reports, or else its traced line's. The next production deploy waits until Phase 17 |
 | 0.5 | 2026-11-11 | Phase 14 built. The filters stay in the layers card rather than a bar above the map, approved by the owner at Gate 1. The map opens without the dashboard panel, which also gives it room on laptop screens |
 | 0.4 | 2026-11-11 | Phase 11 done: the design was drawn on a claude.ai design canvas instead of in Figma and signed off. Source in `design/canvas/`. Office name written out in full |
 | 0.3 | 2026-11-11 | Phase 11 kit: tokens moved to `design/tokens.json`, map and chart colors kept as they are (M-4, M-7), Q-2 answered |

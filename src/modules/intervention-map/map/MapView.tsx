@@ -10,6 +10,7 @@ import { BarangayLayer } from './BarangayLayer';
 import { BoundaryLines } from './BoundaryLines';
 import { DraftLayer } from './DraftLayer';
 import { InterventionLayer } from './InterventionLayer';
+import { RoadLayer } from './RoadLayer';
 
 const DEFAULT_CENTER: [number, number] = [13.4, 121.97];
 const DEFAULT_ZOOM = 11;
@@ -124,6 +125,7 @@ export function MapView({ data, boundaries, shading, counts, markers, colorOf, s
       />
       <GoToSavedExtent />
       <BoundaryLines province={boundaries.province} municipalities={boundaries.municipalities} />
+      <RoadLayer data={data} records={markers} colorOf={colorOf} />
       <InterventionLayer data={data} records={markers} colorOf={colorOf} />
       <DraftLayer />
     </MapContainer>

@@ -19,6 +19,13 @@ async function tilesOff(page: Page) {
 
 const adminPage = (page: Page) => page.locator('main.admin-page');
 
+// The records on the Rice Program, in the local seed with its sample roads.
+const riceRecords = (() => {
+  const local = JSON.parse(readFileSync('data/local/local-seed.json', 'utf8')) as { lookups: { programs: { id: number; code: string }[] }; interventions: { banner_program_id: number | null }[] };
+  const rice = local.lookups.programs.find((program) => program.code === 'rice')!.id;
+  return local.interventions.filter((record) => record.banner_program_id === rice).length;
+})();
+
 async function openAdmin(page: Page, path = '/admin/types') {
   await tilesOff(page);
   await page.goto(path);
@@ -255,16 +262,19 @@ test.describe('a type with records', () => {
   });
 });
 
-test.describe('a line or polygon type', () => {
+// Since Phase 16 (0012_lines.sql) the map draws lines, so a line type can be switched on. Polygons
+// still wait for drawing tools.
+test.describe('a polygon type, and a line type', () => {
   const NOTE = 'Needs drawing tools (not yet built)';
 
-  test('can\'t be activated from the list or its own page, and is never offered for a record', async ({ page }) => {
+  test("a polygon type can't be activated from the list or its own page, and is never offered for a record", async ({ page }) => {
     await openAdmin(page);
-    for (const name of ['Farm-to-Market Road', 'Irrigation Canal', 'Service Area']) {
-      await expect(row(page, name)).toContainText(NOTE);
-      await expect(row(page, name).getByRole('button', { name: /Activate/ })).toBeDisabled();
-    }
-    await expect(row(page, 'Postharvest Facility')).not.toContainText(NOTE);
+    await expect(row(page, 'Service Area')).toContainText(NOTE);
+    await expect(row(page, 'Service Area').getByRole('button', { name: /Activate/ })).toBeDisabled();
+    // Local mode has the Farm-to-Market Road on, with its sample roads. The other line type can be.
+    for (const name of ['Farm-to-Market Road', 'Irrigation Canal', 'Postharvest Facility']) await expect(row(page, name)).not.toContainText(NOTE);
+    await expect(row(page, 'Farm-to-Market Road').getByRole('button', { name: /Deactivate/ })).toBeEnabled();
+    await expect(row(page, 'Irrigation Canal').getByRole('button', { name: /Activate/ })).toBeEnabled();
     await expect(row(page, 'Postharvest Facility').getByRole('button', { name: /Activate/ })).toBeEnabled();
 
     await row(page, 'Service Area').getByRole('link', { name: /Edit/ }).click();
@@ -283,10 +293,11 @@ test.describe('a line or polygon type', () => {
     await page.getByRole('button', { name: '+ Add intervention' }).click();
     const choices = select(form(page, 'Add intervention'), 'Type').locator('option');
     await expect(choices.filter({ hasText: 'Farm Machinery' })).toHaveCount(1);
-    await expect(choices.filter({ hasText: /Farm-to-Market Road|Irrigation Canal|Service Area/ })).toHaveCount(0);
+    await expect(choices.filter({ hasText: 'Farm-to-Market Road' })).toHaveCount(1);
+    await expect(choices.filter({ hasText: /Irrigation Canal|Service Area/ })).toHaveCount(0);
   });
 
-  test('a new one saves as inactive, and going back to Point gives the switch back', async ({ page }) => {
+  test('a new line type stays on, a polygon one saves as inactive, and going back to Point gives the switch back', async ({ page }) => {
     await openAdmin(page, '/admin/types/new');
     const editor = form(page, 'Type');
     const active = editor.getByLabel(/^Active/);
@@ -294,6 +305,11 @@ test.describe('a line or polygon type', () => {
     await expect(editor.getByText(NOTE)).toHaveCount(0);
 
     await select(editor, 'Geometry').selectOption('line');
+    await expect(active).toBeEnabled();
+    await expect(active).toBeChecked();
+    await expect(editor.getByText(NOTE)).toHaveCount(0);
+
+    await select(editor, 'Geometry').selectOption('polygon');
     await expect(active).toBeDisabled();
     await expect(active).not.toBeChecked();
     await expect(editor.getByText(NOTE)).toBeVisible();
@@ -441,7 +457,7 @@ test.describe('the lists', () => {
 
   test('an archived program leaves new records\' choices, stays on records that have it, and can come back', async ({ page }) => {
     await openAdmin(page, '/admin/programs');
-    await expect(row(page, 'Rice Program')).toContainText('62 records');
+    await expect(row(page, 'Rice Program')).toContainText(`${riceRecords} records`);
     await row(page, 'Rice Program').getByRole('button', { name: /Archive/ }).click();
     await expect(notice(page)).toContainText('Existing records keep it');
     await expect(row(page, 'Rice Program')).toContainText('Archived');
@@ -453,7 +469,7 @@ test.describe('the lists', () => {
 
     await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
     await goToSection(page, 'Programs');
-    await expect(row(page, 'Rice Program')).toContainText('62 records');
+    await expect(row(page, 'Rice Program')).toContainText(`${riceRecords} records`);
     await row(page, 'Rice Program').getByRole('button', { name: /Restore/ }).click();
     await expect(row(page, 'Rice Program')).not.toContainText('Archived');
   });
@@ -525,6 +541,8 @@ test.describe('the lists', () => {
     await expect(row(page, 'Turned-over')).not.toContainText('Not counted as assessed');
 
     await goToMap(page);
+    // The figure for the RAED records alone: local mode's sample roads have one at Needs Repair.
+    await withLayerPanel(page, (panel) => panel.getByRole('checkbox', { name: /Farm-to-Market Road/ }).uncheck());
     if (isMobile) await page.getByRole('navigation', { name: 'Views' }).getByRole('button', { name: 'Dashboard' }).click();
     else await page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true }).click();
     const notes = page.locator('[data-kpi="operational"] .kpi-note');

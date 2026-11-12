@@ -10,6 +10,7 @@ import { buildDashboard, type BarRow } from '../lib/dashboard';
 import { ADD_ON_MAP, AWAITING_LIST, MAP_PATH } from '../lib/map-paths';
 import { awaitingCount, awaitingLocation, hasRoads, unitsByCategoryGroup } from '../lib/overview';
 import { permissionsFor } from '../lib/permissions';
+import { formatKm, ROAD_TYPE_CODE, roadNote, roadTotals } from '../lib/roads';
 import { useMapData } from '../state/use-map-data';
 import './overview.css';
 
@@ -92,7 +93,9 @@ function Home({ data, user }: { data: MapData; user: AppUser }) {
     const statusUnits = new Map<number, number>();
     for (const record of ofType) if (record.status_id !== null) statusUnits.set(record.status_id, (statusUnits.get(record.status_id) ?? 0) + record.quantity);
     const statuses = data.statuses.filter((status) => statusUnits.has(status.id)).sort((a, b) => statusUnits.get(b.id)! - statusUnits.get(a.id)!);
-    return { type, ofType, units, groups: unitsByCategoryGroup(ofType, data), statuses: statuses.map((status) => ({ status, units: statusUnits.get(status.id)! })) };
+    // Roads are counted in km, with the number of roads beside it.
+    const road = type.code === ROAD_TYPE_CODE ? roadTotals(ofType, data) : null;
+    return { type, ofType, units, road, groups: unitsByCategoryGroup(ofType, data), statuses: statuses.map((status) => ({ status, units: statusUnits.get(status.id)! })) };
   });
 
   const work = canEdit
@@ -158,15 +161,21 @@ function Home({ data, user }: { data: MapData; user: AppUser }) {
       </dl>
 
       <div className="type-cards">
-        {typeCards.map(({ type, units, groups, statuses }) => (
+        {typeCards.map(({ type, units, road, groups, statuses }) => (
           <section key={type.id} className="overview-card type-card" aria-labelledby={`type-${type.id}`}>
             <header className="overview-card-header">
               <div>
                 <h2 id={`type-${type.id}`}>{type.name}</h2>
-                <p>{groups.length > 1 ? `${plural(units, 'unit')} by category group` : 'Units, by status'}</p>
+                <p>{road ? roadNote(road) : groups.length > 1 ? `${plural(units, 'unit')} by category group` : 'Units, by status'}</p>
               </div>
             </header>
-            {groups.length > 1 ? <SegmentedBar rows={groups} label={`${type.name} units by category group`} /> : <p className="overview-big-number">{count(units)}</p>}
+            {road ? (
+              <p className="overview-big-number">{formatKm(road.km)}</p>
+            ) : groups.length > 1 ? (
+              <SegmentedBar rows={groups} label={`${type.name} units by category group`} />
+            ) : (
+              <p className="overview-big-number">{count(units)}</p>
+            )}
             {statuses.length > 0 && (
               <ul className="status-pills" aria-label={`${type.name} by status`}>
                 {statuses.slice(0, 4).map(({ status, units: statusCount }) => (

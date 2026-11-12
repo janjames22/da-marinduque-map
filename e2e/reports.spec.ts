@@ -23,6 +23,8 @@ const seed = JSON.parse(readFileSync('data/local/local-seed.json', 'utf8')) as {
 };
 const boac = seed.municipalities.find((municipality) => municipality.name === 'Boac')!;
 const inBoac = seed.interventions.filter((record) => record.deleted_at === null && record.municipality_id === boac.id).length;
+// Every record, the sample roads among them, as the inventory covers every type that's on.
+const everyRecord = seed.interventions.filter((record) => record.deleted_at === null).length;
 const counts = new Map<string, number>();
 for (const record of seed.interventions) counts.set(record.beneficiary, (counts.get(record.beneficiary) ?? 0) + 1);
 // Someone with more than one intervention, on the map, so its popup can be opened from a barangay.
@@ -110,7 +112,7 @@ test.describe('the reports', () => {
   test('the inventory is chosen by municipality, program and year, and downloads as a PDF and a workbook', async ({ page }) => {
     await open(page, '/reports/inventory');
     const report = section(page, 'Inventory report');
-    await expect(report.getByRole('status')).toHaveText('199 records, 199 units.');
+    await expect(report.getByRole('status')).toHaveText(`${everyRecord} records, ${everyRecord} units.`);
     await report.getByLabel('Municipality').selectOption({ label: 'Boac' });
     await report.getByLabel('Banner program').selectOption({ label: 'Rice Program' });
     await expect(report.locator('.report-heading')).toContainText('Municipality of Boac, Province of Marinduque');
@@ -195,7 +197,10 @@ test.describe('the reports', () => {
     expect(pages[0]).toContain('Markers by program');
     expect(pages[0]).toMatch(/\d+ km/);
     expect(pages[0]).toContain('Date: ');
-    expect(pages[0]).toContain('Data: Intervention Map records (RAED 2026-10-21)');
+    expect(pages[0]).toContain('Data: Intervention Map records (RAED 2026-10-21');
+    // The sample roads are drawn, so the legend explains their lines.
+    expect(pages[0]).toContain('Roads');
+    expect(pages[0]).toContain('Proposed or on-going');
     // The tiles are blocked in tests, so the basemap is just not there, not refused.
     // The Light basemap is the default since Phase 14.
     expect(pages[0]).toContain('Basemap: Esri World Light Gray Canvas, © OpenStreetMap contributors');

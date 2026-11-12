@@ -17,13 +17,32 @@ import {
   type FormState,
 } from '../lib/form-values';
 import { photoProblem } from '../lib/photo-meta';
-import { editWarnings, locatePoint, pointOf } from '../lib/qa';
+import { editWarnings, linePartsOf, locatePoint, pointOf } from '../lib/qa';
 import { activeFields, attributeKey, validateIntervention, validateStatus, type FieldErrors } from '../lib/validation';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
 import { useStore } from '../state/store-context';
 import { CustomField, PanelFrame, PhotoField, PlaceFields, SelectField, TextField, WarningList } from './FormParts';
 import { LocationInput } from './LocationInput';
+import { formatKm, lineLength } from '../lib/roads';
+
+// A road's location is its line. The form shows what it has, and keeps it through the edit.
+function LineLocation({ record }: { record: Intervention | null }) {
+  const traced = record ? lineLength(record).tracedKm : null;
+  return (
+    <fieldset className="location-input">
+      <legend>Location</legend>
+      <p className="location-readout" data-testid="location-readout">
+        {traced === null ? 'No traced line yet' : `Traced line, ${formatKm(traced)}`}
+      </p>
+      <p className="field-hint">
+        {traced === null
+          ? "Drawing a road's line on the map isn't built yet. Until it's traced, the road is counted in every total and kept off the map."
+          : 'The line stays as it is. Reshaping it on the map isn\'t built yet.'}
+      </p>
+    </fieldset>
+  );
+}
 
 interface InterventionFormProps {
   data: MapData;
@@ -93,7 +112,10 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     required: rule(key) === 'required',
   });
 
-  const values: InterventionValues | null = type ? { ...valuesFromForm(form, draft, type.field_schema, base?.attributes), field_photos: photoFiles } : null;
+  // A road is a line, so a point placed on the map isn't its location. Its line stays as it is.
+  const isLine = type?.geometry_kind === 'line';
+  const point = isLine ? null : draft;
+  const values: InterventionValues | null = type ? { ...valuesFromForm(form, point, type.field_schema, base?.attributes), field_photos: photoFiles } : null;
 
   const warnings = useMemo(() => {
     const municipalityId = Number(form.municipality_id);
@@ -102,7 +124,8 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     return editWarnings(
       {
         id: record?.id ?? null,
-        point: draft,
+        point,
+        ...(isLine ? { line: base ? linePartsOf(base) : null } : {}),
         municipality_id: municipalityId,
         barangay_id: barangayId,
         barangay_raw: latest?.barangay_raw ?? null,
@@ -116,7 +139,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
       places,
       data,
     );
-  }, [form, draft, data, places, record, latest]);
+  }, [form, point, isLine, base, data, places, record, latest]);
 
   const isDirty = () => JSON.stringify(form) !== JSON.stringify(initialForm.current) || JSON.stringify(draft) !== JSON.stringify(initialPoint.current);
 
@@ -340,7 +363,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
           />
         )}
 
-        <LocationInput />
+        {isLine ? <LineLocation record={base} /> : <LocationInput />}
 
         <PlaceFields
           data={data}

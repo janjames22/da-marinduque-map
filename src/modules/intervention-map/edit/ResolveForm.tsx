@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { ConflictError, ValidationError, type InterventionPatch } from '../data/store';
 import type { Intervention, MapData } from '../data/types';
 import { FLAG_LABELS, isOnMap, recordName } from '../lib/display';
-import { computeFlags, editWarnings, pointOf, samePoint } from '../lib/qa';
+import { computeFlags, editWarnings, linePartsOf, pointOf, samePoint } from '../lib/qa';
 import type { FieldErrors } from '../lib/validation';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
@@ -36,9 +36,12 @@ export function ResolveForm({ data, record: latest }: { data: MapData; record: I
   const nextBasis = basisId === '' ? null : Number(basisId);
   const nextBeneficiary = beneficiary.trim() === '' ? null : beneficiary.trim();
 
+  // A road keeps its line here, as reshaping it isn't built yet.
+  const isLine = data.types.find((type) => type.id === record.intervention_type_id)?.geometry_kind === 'line';
   const candidate = {
     id: record.id,
-    point: draft,
+    point: isLine ? null : draft,
+    ...(isLine ? { line: linePartsOf(record) } : {}),
     municipality_id: Number(municipalityId),
     barangay_id: nextBarangay,
     barangay_raw: record.barangay_raw,
@@ -65,7 +68,7 @@ export function ResolveForm({ data, record: latest }: { data: MapData; record: I
   if (nextBasis !== record.location_basis_id) patch.location_basis_id = nextBasis;
   if (nextBeneficiary !== record.beneficiary) patch.beneficiary = nextBeneficiary;
   const originalPoint = pointOf(record);
-  if (draft === null ? originalPoint !== null : !samePoint(originalPoint, draft)) patch.point = draft;
+  if (!isLine && (draft === null ? originalPoint !== null : !samePoint(originalPoint, draft))) patch.point = draft;
   if (nameChecked) patch.clear_name_check = true;
 
   const submit = async (event: FormEvent) => {
@@ -127,7 +130,7 @@ export function ResolveForm({ data, record: latest }: { data: MapData; record: I
             setBarangayId(barangay);
           }}
         />
-        <LocationInput />
+        {!isLine && <LocationInput />}
         <SelectField
           label="Location basis"
           value={basisId}

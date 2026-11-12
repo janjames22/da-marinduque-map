@@ -160,10 +160,10 @@ export function statusListProblem(list: TypeStatusValues[]): string | null {
   return null;
 }
 
-// Drawing lines and polygons isn't built, so these types can be set up but not switched on. Their
-// records would have no shape.
+// Drawing polygons isn't built, so a polygon type can be set up but not switched on, as its records
+// would have no shape. The map draws lines since Phase 16, and a road can wait for its traced line.
 export const NEEDS_DRAWING = 'Needs drawing tools (not yet built)';
-export const needsDrawing = (kind: InterventionType['geometry_kind']) => kind !== 'point';
+export const needsDrawing = (kind: InterventionType['geometry_kind']) => kind === 'polygon';
 
 // Everything the database would refuse about saving a type, keyed by what to fix. Mirrors
 // intervention_types_before_write and type_status_before_delete.

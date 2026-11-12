@@ -324,7 +324,8 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
   return null;
 }
 
-async function onPopupClick(event: MouseEvent, record: Intervention, navigate: NavigateFunction) {
+// The popup's buttons and links, for markers and roads alike.
+export async function onPopupClick(event: MouseEvent, record: Intervention, navigate: NavigateFunction) {
   const button = (event.target as HTMLElement).closest<HTMLElement>('[data-action]');
   if (!button) return;
   const action = button.dataset.action as PopupAction;

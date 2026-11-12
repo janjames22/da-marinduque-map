@@ -4,7 +4,7 @@
 // the real triggers.
 import { manilaDayEnd, manilaDayStart } from '../lib/dates';
 import { valuesFromRecord } from '../lib/form-values';
-import { pointOf, computeFlags, locatePoint, samePoint, type PlaceIndex } from '../lib/qa';
+import { barangaysCrossed, computeFlags, linePartsOf, locateShape, pointOf, samePoint, type LineParts, type PlaceIndex } from '../lib/qa';
 import type { LatLng } from '../lib/coordinates';
 import { validateAttributes, validateIntervention, validateStatus } from '../lib/validation';
 import { ConflictError, ValidationError, type AuditPage, type AuditQuery, type ChangeNote, type ExportLogEntry, type InterventionPatch, type InterventionValues, type PhotoMeta } from './store';
@@ -117,9 +117,13 @@ export function logExport(rows: LocalRows, context: EngineContext, entry: Export
   });
 }
 
+// A line type's record gives its line, or null while it waits for one. A point type's gives none.
+function lineOf(record: Intervention, context: EngineContext): LineParts | null | undefined {
+  return typeOf(context, record.intervention_type_id).geometry_kind === 'line' ? linePartsOf(record) : undefined;
+}
+
 function setPlotted(record: Intervention, context: EngineContext, barangays: Barangay[]) {
-  const point = pointOf(record);
-  const id = point ? locatePoint(point, context.places) : null;
+  const id = locateShape({ point: pointOf(record), line: linePartsOf(record) }, context.places);
   const barangay = barangays.find((b) => b.id === id);
   record.plotted_barangay_id = barangay?.id ?? null;
   record.plotted_barangay = barangay?.name ?? null;
@@ -131,6 +135,7 @@ function recomputeFlags(record: Intervention, rows: LocalRows, context: EngineCo
     {
       id: record.id,
       point: pointOf(record),
+      line: lineOf(record, context),
       municipality_id: record.municipality_id,
       barangay_id: record.barangay_id,
       barangay_raw: record.barangay_raw,
@@ -154,11 +159,18 @@ function refreshNeighbours(rows: LocalRows, context: EngineContext, record: Inte
   }
 }
 
-// Points link to their encoded barangay. Lines and polygons will also link to those they cross.
-function syncLinks(rows: LocalRows, record: Intervention) {
+// Points link to their encoded barangay. Lines also link to every barangay they cross, as
+// interventions_sync_barangays does. Polygons will too, once they can be drawn.
+function syncLinks(rows: LocalRows, record: Intervention, context: EngineContext) {
   rows.links = rows.links.filter((link) => link.intervention_id !== record.id);
   if (record.barangay_id !== null) {
     rows.links.push({ intervention_id: record.id, barangay_id: record.barangay_id, link_source: 'encoded' });
+  }
+  const line = linePartsOf(record);
+  if (line) {
+    for (const barangayId of barangaysCrossed(line, context.places)) {
+      if (barangayId !== record.barangay_id) rows.links.push({ intervention_id: record.id, barangay_id: barangayId, link_source: 'spatial' });
+    }
   }
 }
 
@@ -196,7 +208,7 @@ export function createIntervention(rows: LocalRows, context: EngineContext, inpu
   setPlotted(record, context, rows.barangays);
   rows.interventions.push(record);
   refreshNeighbours(rows, context, record, [point]);
-  syncLinks(rows, record);
+  syncLinks(rows, record, context);
   audit(rows, context, 'interventions', record.id, 'insert', null, rowImage(record), note);
   return record;
 }
@@ -234,7 +246,8 @@ export function updateIntervention(
   const before = rowImage(record);
   const { point, ...newColumns } = values;
   Object.assign(record, newColumns, {
-    geojson: geojsonOf(point),
+    // An edit that leaves the location alone keeps the shape as it is, so a road keeps its line.
+    geojson: patchedPoint === undefined ? record.geojson : geojsonOf(point),
     version: record.version + 1,
     updated_at: context.now(),
     qa_flags: clearNameCheck ? record.qa_flags.filter((flag) => flag !== 'beneficiary_name_check') : record.qa_flags,
@@ -243,7 +256,7 @@ export function updateIntervention(
   recomputeFlags(record, rows, context);
   setPlotted(record, context, rows.barangays);
   if (!samePoint(previous.point, point)) refreshNeighbours(rows, context, record, [previous.point, point]);
-  syncLinks(rows, record);
+  syncLinks(rows, record, context);
   audit(rows, context, 'interventions', record.id, 'update', before, rowImage(record), note);
   return record;
 }

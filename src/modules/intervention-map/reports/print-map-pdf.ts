@@ -25,9 +25,9 @@ import {
 
 export interface LegendSection {
   title: string;
-  // Squares for shaded barangays, dots for markers.
-  shape: 'square' | 'dot';
-  entries: { color: string; label: string; count?: number }[];
+  // Squares for shaded barangays, dots for markers, short lines for roads.
+  shape: 'square' | 'dot' | 'line';
+  entries: { color: string; label: string; count?: number; dashed?: boolean }[];
 }
 
 export interface PrintMapInput {
@@ -74,7 +74,13 @@ function drawLegend(doc: ReturnType<typeof newDocument>, sections: LegendSection
       doc.setDrawColor('#9e9d98');
       doc.setLineWidth(0.4);
       if (section.shape === 'dot') doc.circle(left + 4, at + 4, 3.6, 'FD');
-      else doc.rect(left, at, 8, 8, 'FD');
+      else if (section.shape === 'line') {
+        doc.setDrawColor(entry.color);
+        doc.setLineWidth(1.6);
+        if (entry.dashed) doc.setLineDashPattern([2.5, 1.5], 0);
+        doc.line(left, at + 4, left + 9, at + 4);
+        doc.setLineDashPattern([], 0);
+      } else doc.rect(left, at, 8, 8, 'FD');
       const lines = labelLines(doc, entry.label, columnWidth - 40);
       lines.forEach((line, index) => text(doc, line, left + 12, at + index * 9, { size: 7.5 }));
       if (entry.count !== undefined) text(doc, String(entry.count), left + columnWidth - 8, at, { size: 7.5, align: 'right', color: '#52514e' });

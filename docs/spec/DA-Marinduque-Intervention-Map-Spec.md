@@ -280,7 +280,7 @@ This is the main use of the system. Phase 3 builds point editing only, since bot
 - **Barangay baseline fields:** the same form builder, without photo fields, as photos belong to a record.
 - **Users:** invite by email or by link, set a role, correct a name, deactivate and reactivate, all from `/admin`. A Supabase Edge Function holds the secret key this needs, and the database refuses any change that would leave no active Admin.
 - Changes appear on open maps without a code release.
-- **Not built yet: drawing lines and polygons** (§5.3). A line or polygon type can be set up but not activated. Its Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses both activating it and any line or polygon record without a shape.
+- **Not built yet: drawing lines and polygons** (§5.3). A polygon type can be set up but not activated. Its Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses both activating it and any polygon record without a shape. Since Phase 16 (`0012_lines.sql`) a line type can be activated: the map draws its lines, and a record of it can wait for its traced line, counted and kept off the map, as a point record waits for coordinates.
 - **Audit log page:** Admin only, in the database as well as on screen. Who changed what and when, with filters by person, record, action and date (whole days, Philippine time), one page at a time. Each line links to its record, or to where the item is managed. A record's lines include its status entries and photos. The raw source row is left out.
 
 ### 5.5 Dashboard

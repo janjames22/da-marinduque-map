@@ -9,12 +9,18 @@ import { describeFilters, exportFileStem, filterLines } from '../export/records'
 import type { ChoroplethMode, Shading } from '../lib/choropleth';
 import { pickViewFilters } from '../lib/choropleth';
 import { manilaToday } from '../lib/dates';
+import { isOnMap } from '../lib/display';
+import { linePartsOf } from '../lib/qa';
+import { isUnfinished } from '../lib/roads';
 import { downloadFile } from '../lib/download';
 import type { ColorScale } from '../lib/view-fields';
 import { useExportUi } from '../state/export-ui';
 import { useMapUi, type BasemapId } from '../state/map-ui';
 import { useStore } from '../state/store-context';
 import type { LegendSection } from './print-map-pdf';
+
+// A road's legend sample is grey, as the line itself takes its Color by color.
+const ROAD_SAMPLE_COLOR = '#52514e';
 import { dataSourceLine } from './report-data';
 
 const BASEMAP_CREDITS: Record<BasemapId, string> = {
@@ -67,6 +73,14 @@ export function PrintMapDialog({ open, onClose, data, mode, shading, scale, mark
     for (const record of markers) counts.set(scale.keyOf(record), (counts.get(scale.keyOf(record)) ?? 0) + 1);
     const entries = scale.entries.filter((entry) => counts.has(entry.key)).map((entry) => ({ color: entry.color, label: entry.label, count: counts.get(entry.key) }));
     if (entries.length > 0) sections.push({ title: `Markers by ${scale.title.toLowerCase()}`, shape: 'dot', entries });
+    // The roads drawn, as the map's legend counts them: solid once finished, dashed before.
+    const drawn = markers.filter((record) => isOnMap(record) && linePartsOf(record) !== null);
+    const unfinished = drawn.filter((record) => isUnfinished(record, data)).length;
+    const roads = [
+      { color: ROAD_SAMPLE_COLOR, label: 'Completed or in use', count: drawn.length - unfinished },
+      { color: ROAD_SAMPLE_COLOR, label: 'Proposed or on-going', count: unfinished, dashed: true },
+    ].filter((entry) => entry.count > 0);
+    if (roads.length > 0) sections.push({ title: 'Roads', shape: 'line', entries: roads });
     return sections;
   };
 

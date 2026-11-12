@@ -5,13 +5,14 @@ import { join } from 'node:path';
 import type { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildLocalSeed } from '../scripts/build-local-seed';
+import { addSampleRoads, SAMPLE_ROADS_SOURCE } from '../scripts/sample-roads';
 import { loadSeedFiles, seedInterventions } from '../scripts/seed-interventions';
 import * as engine from '../src/modules/intervention-map/data/local-engine';
 import { stateFromSeed, type LocalSeed, type LocalState } from '../src/modules/intervention-map/data/local-store';
 import { MANUAL_DATA_SOURCE, type EngineContext } from '../src/modules/intervention-map/data/local-engine';
 import type { ChangeNote, InterventionPatch, InterventionValues } from '../src/modules/intervention-map/data/store';
 import { ConflictError, ValidationError } from '../src/modules/intervention-map/data/store';
-import { buildPlaceIndex, computeFlags, locatePoint, pointOf, type PlaceIndex } from '../src/modules/intervention-map/lib/qa';
+import { barangaysCrossed, buildPlaceIndex, computeFlags, locatePoint, locateShape, pointOf, pointOnLine, type LineParts, type PlaceIndex } from '../src/modules/intervention-map/lib/qa';
 import type { LatLng } from '../src/modules/intervention-map/lib/coordinates';
 import { createTestDb } from './helpers/db';
 
@@ -194,6 +195,146 @@ describe('flags and plotted barangay on generated points', () => {
 
     expect(near.qa_flags).not.toContain('duplicate_point');
     expect(same.qa_flags).toContain('duplicate_point');
+  });
+});
+
+describe('flags, plotted barangay and links on generated lines', () => {
+  // The same fixed-seed generator as for points, so a failure can be reproduced.
+  function random(seed: number) {
+    let value = seed;
+    return () => {
+      value = (Math.imul(value, 1664525) + 1013904223) >>> 0;
+      return value / 2 ** 32;
+    };
+  }
+
+  // A road-like line: a few vertices, each a short step on from the last.
+  function lineFrom(start: [number, number], next: () => number, stepDegrees: number): LineParts {
+    const vertices: [number, number][] = [start];
+    const count = 1 + Math.floor(next() * 4);
+    let bearing = next() * 2 * Math.PI;
+    for (let i = 0; i < count; i++) {
+      bearing += (next() - 0.5) * 1.2;
+      const [lng, lat] = vertices[vertices.length - 1];
+      const step = stepDegrees * (0.3 + next());
+      vertices.push([Number((lng + step * Math.sin(bearing)).toFixed(6)), Number((lat + step * Math.cos(bearing)).toFixed(6))]);
+    }
+    return [vertices];
+  }
+
+  it('agree on 300 lines across the island and along barangay borders', async () => {
+    const next = random(20261113);
+    const features = boundary('barangays').features;
+    const lines: LineParts[] = [];
+    for (let i = 0; i < 150; i++) lines.push(lineFrom([121.75 + next() * 0.5, 13.1 + next() * 0.55], next, 0.02));
+    // Starting 240 m or 260 m from a barangay corner, so the tolerance is tested from both sides.
+    for (let i = 0; i < 150; i++) {
+      const geometry = features[Math.floor(next() * features.length)].geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon;
+      const ring = geometry.type === 'Polygon' ? geometry.coordinates[0] : geometry.coordinates[0][0];
+      const [lng, lat] = ring[Math.floor(next() * ring.length)];
+      const metres = next() < 0.5 ? 240 : 260;
+      const bearing = next() * 2 * Math.PI;
+      lines.push(lineFrom([lng + (metres * Math.sin(bearing)) / 108_200, lat + (metres * Math.cos(bearing)) / 110_700], next, 0.004));
+    }
+    const roadTypeId = state.fixed.types.find((t) => t.code === 'fmr')!.id;
+    const { barangays } = state.rows;
+
+    await db.exec('begin');
+    const differences: unknown[] = [];
+    for (const line of lines) {
+      const barangay = barangays[Math.floor(next() * barangays.length)];
+      const [row] = await rows<{ id: string; qa_flags: string[] }>(
+        `insert into interventions (intervention_type_id, title, year_funded, municipality_id, barangay_id, geom)
+         values ($1, 'Parity road', 2024, $2, $3, ST_SetSRID(ST_GeomFromGeoJSON($4), 4326))
+         returning id, qa_flags`,
+        [roadTypeId, barangay.municipality_id, barangay.id, JSON.stringify({ type: 'LineString', coordinates: line[0] })],
+      );
+      const [view] = await rows<{ plotted_barangay_id: number | null }>('select plotted_barangay_id from interventions_v where id = $1', [row.id]);
+      const links = (await rows<{ barangay_id: number }>('select barangay_id from intervention_barangays where intervention_id = $1 order by barangay_id', [row.id])).map((link) => link.barangay_id);
+
+      const flags = computeFlags(
+        { id: null, point: null, line, municipality_id: barangay.municipality_id, barangay_id: barangay.id, barangay_raw: null, qa_flags: [], deleted_at: null },
+        [],
+        places,
+      );
+      const plotted = locateShape({ point: null, line }, places);
+      const crossed = [...new Set([barangay.id, ...barangaysCrossed(line, places)])].sort((a, b) => a - b);
+      if (JSON.stringify(sorted(flags)) !== JSON.stringify(sorted(row.qa_flags)) || plotted !== view.plotted_barangay_id || JSON.stringify(crossed) !== JSON.stringify(links)) {
+        differences.push({ line, barangay: barangay.id, flags, fromDb: row.qa_flags, plotted, dbPlotted: view.plotted_barangay_id, crossed, links });
+      }
+    }
+    await db.exec('rollback');
+
+    expect(differences).toEqual([]);
+  }, 180_000);
+
+  it('find the point on a line that the database plots it by', async () => {
+    const cases: LineParts[] = [
+      [[[121.85, 13.45], [121.86, 13.46]]],
+      [[[121.85, 13.45], [121.851, 13.452], [121.86, 13.46], [121.87, 13.47]]],
+      [[[121.85, 13.45], [121.86, 13.45]], [[121.9, 13.4], [121.91, 13.41], [121.92, 13.4]]],
+    ];
+    for (const line of cases) {
+      const geometry = line.length === 1 ? { type: 'LineString', coordinates: line[0] } : { type: 'MultiLineString', coordinates: line };
+      const [surface] = await rows<{ lng: number; lat: number }>('select ST_X(p) lng, ST_Y(p) lat from (select ST_PointOnSurface(ST_GeomFromGeoJSON($1)) p) s', [JSON.stringify(geometry)]);
+      expect(pointOnLine(line)).toEqual({ lng: surface.lng, lat: surface.lat });
+    }
+  });
+});
+
+describe('a road edited through the triggers and the local engine', () => {
+  it('keeps its line, and agrees on flags, plotted barangay and links after each edit', async () => {
+    await db.exec('begin');
+    try {
+      await addSampleRoads(db);
+      const local = stateFromSeed(JSON.parse(JSON.stringify(await buildLocalSeed(db))) as LocalSeed, 'roads');
+      const context: EngineContext = {
+        types: local.fixed.types,
+        categories: local.fixed.categories,
+        typeStatuses: local.fixed.typeStatuses,
+        municipalities: local.fixed.municipalities,
+        barangayFields: local.fixed.barangayFields,
+        lists: local.fixed,
+        places,
+        now: () => '2026-11-13T00:00:00.000Z',
+        newId: () => 'local-road',
+      };
+      const road = local.rows.interventions.find((record) => record.data_source === SAMPLE_ROADS_SOURCE && record.geojson !== null)!;
+      const line = road.geojson;
+      const version = road.version; // the engine updates the record in place
+      // A barangay of the same municipality that the road doesn't touch, so the edit raises a flag.
+      const touched = new Set(local.rows.links.filter((link) => link.intervention_id === road.id).map((link) => link.barangay_id));
+      const elsewhere = local.rows.barangays.filter((b) => b.municipality_id === road.municipality_id && !touched.has(b.id)).at(-1)!;
+
+      const fromDb = async () => {
+        const [row] = await rows<{ flags: string[]; plotted: number | null; geojson: unknown; links: number[] }>(
+          `select v.qa_flags as flags, v.plotted_barangay_id as plotted, v.geojson,
+                  coalesce((select array_agg(l.barangay_id order by l.barangay_id) from intervention_barangays l where l.intervention_id = v.id), '{}') as links
+           from interventions_v v where v.id = $1`,
+          [road.id],
+        );
+        return { ...row, flags: sorted(row.flags) };
+      };
+      const fromEngine = () => {
+        const record = local.rows.interventions.find((candidate) => candidate.id === road.id)!;
+        const links = local.rows.links.filter((link) => link.intervention_id === road.id).map((link) => link.barangay_id).sort((a, b) => a - b);
+        return { flags: sorted(record.qa_flags), plotted: record.plotted_barangay_id, geojson: record.geojson, links };
+      };
+
+      expect(fromEngine()).toEqual(await fromDb());
+
+      await db.query(`update interventions set title = 'Renamed road' where id = $1`, [road.id]);
+      engine.updateIntervention(local.rows, context, road.id, version, { title: 'Renamed road' } as InterventionPatch);
+      expect(fromEngine().geojson).toEqual(line);
+      expect(fromEngine()).toEqual(await fromDb());
+
+      await db.query(`update interventions set barangay_id = $2 where id = $1`, [road.id, elsewhere.id]);
+      engine.updateIntervention(local.rows, context, road.id, version + 1, { barangay_id: elsewhere.id } as InterventionPatch);
+      expect(fromEngine().flags).toContain('barangay_mismatch');
+      expect(fromEngine()).toEqual(await fromDb());
+    } finally {
+      await db.exec('rollback');
+    }
   });
 });
 

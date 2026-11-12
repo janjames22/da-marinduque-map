@@ -15,6 +15,8 @@ import {
   type ChoroplethMode,
 } from './lib/choropleth';
 import { isOnMap } from './lib/display';
+import { linePartsOf } from './lib/qa';
+import { isUnfinished } from './lib/roads';
 import { AWAITING_LIST, BARANGAY_ROUTE, barangayOnMap, MAP_PATH, RECORD_ROUTE } from './lib/map-paths';
 import { readViewConfig } from './lib/saved-views';
 import { buildColorScale, viewFields } from './lib/view-fields';
@@ -174,6 +176,12 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   // Counted, but not drawn: no coordinates yet, or coordinates outside Marinduque.
   const onMap = markers.filter(isOnMap).length;
   const offMap = markers.length - onMap;
+  // Roads drawn on the map, solid once finished and dashed before, for the legend.
+  const roads = useMemo(() => {
+    const drawn = markers.filter((record) => isOnMap(record) && linePartsOf(record) !== null);
+    const unfinished = drawn.filter((record) => isUnfinished(record, data)).length;
+    return { finished: drawn.length - unfinished, unfinished };
+  }, [markers, data]);
 
   return (
     <main className="map-page" aria-labelledby="map-title">
@@ -301,6 +309,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
             unassigned={unassigned.length}
             scale={scale}
             markers={markers}
+            roads={roads}
             onShowUnassigned={() => {
               closeProfile();
               ui.setShowUnassigned(true);
