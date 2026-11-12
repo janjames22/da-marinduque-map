@@ -644,6 +644,19 @@ test.describe('nothing covers what is being worked on', () => {
     await expect(confirm.getByRole('button', { name: /^Move and set barangay/ })).toBeInViewport();
     expect(overlaps((await marker.boundingBox())!, (await confirm.boundingBox())!)).toBe(false);
   });
+
+  // Focusing a field low in the form once scrolled the page, taking the map and the new marker off the
+  // top of a phone's screen. It made "the orange marker can be dragged" fail about half the time.
+  test('typing coordinates keeps the map and the new marker on screen', async ({ page }) => {
+    await ready(page);
+    await page.getByRole('button', { name: '+ Add intervention' }).click();
+    for (let i = 0; i < 3; i++) {
+      await typeCoordinates(page, `13.4${671 + i}, 121.9686`);
+      await expect(page.locator('.draft-marker')).toBeInViewport();
+      await expect(page.locator('.leaflet-container')).toBeInViewport();
+      expect(await page.evaluate(() => document.querySelector('.shell-content')!.scrollTop)).toBe(0);
+    }
+  });
 });
 
 test.describe('status updates', () => {
