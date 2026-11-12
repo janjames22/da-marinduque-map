@@ -15,12 +15,9 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-12_
 
-- **Branch:** `phase-15c-admin-forms`, started from `phase-15b-work-pages`. Phase 15a is merged into `main`.
-- **Phase 15c through Gate 1, draft up for Gate 2:** the Admin pages, the forms and the shared controls in the new design, and the old styles taken out of `app.css`. The owner approved Gate 1 on 2026-11-12. As 15c is built on 15b, this one draft covers both: https://6af5cd2cd58be030f21e6c44--da-marinduque-map.netlify.app. Once it's approved, `phase-15b-work-pages` and then `phase-15c-admin-forms` are merged into `main`.
-- **Phase 16 after 15c:** the owner decided on 2026-11-12 to finish 15c first, then build Phase 16 (Farm-to-Market Roads) without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
-- **Phase 15b through Gate 1, draft up for Gate 2:** the QA queue, Condition check, Import and Reports pages and the Export and Print map dialogs in the new design. The owner approved Gate 1 on 2026-11-12. Its own draft was https://6af5bbfd98ca670dce805e44--da-marinduque-map.netlify.app, and the 15c draft above now covers it too.
-- **Going live in one deploy:** to save Netlify credits, 15a, 15b and 15c go live together with one `npm run deploy` after 15c, instead of one deploy each. Each production deploy costs 15 credits, and drafts cost none. The owner decided this on 2026-11-12. Until then the live site stays on Phase 14.
-- **Phase 15a approved, live deploy pending:** the Interventions pages, the phone map rework and the faster page changes passed both gates on 2026-11-12 and are merged into `main`. They go live when the owner runs `npm run deploy`.
+- **Branch:** `main`, in sync with `origin/main`. Phases 15b and 15c are merged.
+- **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. They go live together when the owner runs `npm run deploy`, one production deploy for both, to save Netlify credits (15 credits a deploy, drafts free). Until then the live site is on Phase 15a.
+- **Next:** Phase 16, Farm-to-Market Roads, on branch `phase-16-fmr`. The owner decided on 2026-11-12 to build it without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -35,7 +32,7 @@ _Last updated: 2026-11-12_
 - **Live:** Phase 12 is on https://da-marinduque-map.netlify.app since 2026-11-11. The owner deployed it with `npm run deploy`, because Claude Code's permissions don't let Claude deploy to production. Checked signed out: the security headers are on, Inter loads, and the only blocked script is Netlify's own badge, which is known since Phase 9.
 - **Live:** Phase 13, the Home and Dashboard pages, is on https://da-marinduque-map.netlify.app since 2026-11-11 (deploy `6af47bcaae5f3dff886714f1`). Checked signed out: the security headers are on and Inter loads. The only blocked script is Netlify's badge, as before.
 - **Live:** Phase 14, the map restyle, is on https://da-marinduque-map.netlify.app since 2026-11-12 (deploy `6af4953cc6a4eec06e04faca`). Checked signed out: the security headers are on, Inter loads, and the new map code is served. The only blocked script is Netlify's badge, as before.
-- **Next:** Phase 15, the remaining pages in the new design, in three parts: 15a the Interventions list and record page, with the phone map and speed fixes (merged), 15b the QA queue, Condition check, Import and Reports, 15c the Admin pages, forms, and removing the old styles.
+- **Live:** Phase 15a, the Interventions pages, the phone map rework and the faster page changes, is on https://da-marinduque-map.netlify.app since 2026-11-12 (deploy `6af4ffdaa684b00e692f1740`). Claude ran `npm run deploy` from `main` at the owner's request. Checked signed out: the security headers are on, Inter loads, `/records` is served, and none of the Phase 15b work went out. The only blocked script is Netlify's badge, as before.
 - **Report PDFs keep the full header:** "Department of Agriculture – Provincial Agriculture Office, Marinduque" stays on the reports, as official documents. Only the app's screens use the shorter office name. The owner decided this on 2026-11-11.
 
 ## Phases completed
@@ -57,7 +54,9 @@ The phases were built in a different order from the spec's §9. Export came befo
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
 | 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
 | 11. Design | `design-figma-kit`, `design-canvas-signoff` | 2026-11-11 | Tokens, kit preview and Figma guide, then 12 screens on a claude.ai design canvas, signed off by the owner. Source in `design/canvas/` |
-| 15a. Interventions pages | `phase-15a-records` | 2026-11-12 | The Interventions list at `/records` and a page per record, the owner's phone map fixes (one row of buttons, layers as a sliding sheet, folded legend), transitions, data loaded once per sign-in for faster page changes, and Philippine dates for saved times |
+| 15c. Admin pages and forms | `phase-15c-admin-forms` | 2026-11-12 | Admin pages each with a sidebar link, Types and fields and Lists with tabs, shared buttons, fields and notices in the new design, a Change history card on the record page, and the old styles out of `app.css` |
+| 15b. Work pages and Reports | `phase-15b-work-pages` | 2026-11-12 | QA queue, Condition check and Import as pages of their own, Import as a stepper, Reports as cards, and the Export and Print map dialogs in one frame that keeps the keyboard inside |
+| 15a. Interventions pages | `phase-15a-records` | 2026-11-12 | The Interventions list at `/records` and a page per record, the owner's phone map fixes (one row of buttons, layers as a sliding sheet, folded legend), transitions, data loaded once per sign-in for faster page changes, and Philippine dates for saved times. Live |
 | 14. Map restyle | `phase-14-map-style` | 2026-11-11 | Light basemap, dimmed outside the province, green clusters, card-style map parts, the dashboard panel closed by default, an on-the-map count, and fixes for record popups and page overflow. Live |
 | 13. Home and Dashboard | `phase-13-dashboard` | 2026-11-11 | Home at `/` with work waiting and a card per type, and the Dashboard page with shared filters, CSVs and the list of records awaiting coordinate verification. Live |
 | 12. Foundation | `phase-12-ux-foundation` | 2026-11-11 | Design tokens as CSS, Inter font, Lucide icons, the new sidebar, top bar and sign-in screens, the map at `/map` with old links redirected, and `npm run deploy:preview`. Live |
@@ -68,6 +67,8 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Phases 15b and 15c passed Gate 2, approved by the owner, and are merged into `main`: `phase-15b-work-pages` first, then `phase-15c-admin-forms`. After the merges `main` matches the tested 15c branch file for file. Going live waits for the owner to run `npm run deploy`.
+- Corrected this file: Phase 15a went live this morning, recorded on `main` only, so the 15b and 15c branches still said the live site was on Phase 14. The one deploy after 15c therefore covers 15b and 15c, not 15a.
 - Phase 15c passed Gate 1, approved by the owner. The Gate 2 draft, which covers 15b too, is up: https://6af5cd2cd58be030f21e6c44--da-marinduque-map.netlify.app. Checked signed out: the security headers are on (framing blocked by the security policy, as on the live site), Inter loads, and there are no console errors or failed requests.
 - Phase 15c finished on branch `phase-15c-admin-forms`, ready for Gate 1:
   - **Fixed:** on a phone, tapping the menu link of the page already open left the menu over the page, as the address didn't change. Every menu link now closes it (`src/app/shell/AppShell.tsx`).
@@ -98,6 +99,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
   - **Shared parts:** an `EmptyState` card for empty lists, and new button, badge, notice and page-tab styles in `src/app/shell.css`. The work and report styles moved out of `app.css` into `work/work.css` and `reports/reports.css`.
   - **Tests updated** for the new page landmarks and headings: `e2e/work.spec.ts`, `e2e/reports.spec.ts`, and one line of `e2e/auth.spec.ts`.
   - **Checks:** typecheck, 1,120 unit tests, and the production build with its check for private data. The full e2e run had 670 passed, 0 failed and 11 skipped. Its first pass had 7 failures. Three were the `auth.spec.ts` line still looking for the old QA queue region, and they pass after the fix. The other four were mobile map editing tests that stalled for 28 minutes in the long run, and all 56 mobile editing tests pass when run again on their own.
+- Phase 15a is live (deploy `6af4ffdaa684b00e692f1740`). Claude switched from `phase-15b-work-pages` to `main` first, so only 15a went out, then ran `npm run deploy` at the owner's request. Checked signed out on the live site: the security headers are on, Inter loads, `/records` and the record pages are served, and the Work pages are still the 15a version.
 - Phase 15a passed Gate 2 and is merged into `main`. Going live waits for the owner to run `npm run deploy`.
 - Phase 15a, second round, through Gate 1. The owner tried the live map on a phone and found the buttons overlapping, the layers panel covering the map, and each page slow to open:
   - **Phone map:** one row of buttons over the map (Layers; + Add, Export and Print as icon buttons), the layers panel as a sheet that slides up with the map dimmed behind it and its own close button, the legend folded into a Legend button, zoom at the bottom right, Map / Dashboard / List as one rounded switch, and the sources on one line. Styles in `src/app/map-phone.css`; the computer layout is unchanged.
