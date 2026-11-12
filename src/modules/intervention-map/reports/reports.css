@@ -1,0 +1,528 @@
+/* Reports, in the Phase 11 design: tabs under the page header, a card of choices and downloads, then the
+   report as it will print, in cards. */
+
+.report-section {
+  animation: fade-up 0.18s ease-out both;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.report-note {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  margin: 0;
+}
+
+/* The overview: a card for each report. */
+
+.report-cards {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.report-cards li {
+  display: flex;
+}
+
+.report-card {
+  align-items: flex-start;
+  color: var(--text-primary);
+  display: flex;
+  flex: 1;
+  gap: var(--space-4);
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.report-card:hover {
+  border-color: var(--color-green-300);
+  box-shadow: 0 4px 12px rgb(31 30 28 / 8%);
+}
+
+.report-card:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.report-card-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.report-card-text strong {
+  font-size: var(--font-size-title-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--font-line-height-title-sm);
+}
+
+.report-card-text > span {
+  color: var(--text-secondary);
+}
+
+.report-card-text .report-card-format {
+  color: var(--text-link);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  margin-top: var(--space-1);
+}
+
+.report-card-arrow {
+  align-self: center;
+  color: var(--text-secondary);
+  flex: none;
+  height: 20px;
+  width: 20px;
+}
+
+.report-card:hover .report-card-arrow {
+  color: var(--text-link);
+}
+
+/* Signature blocks, laid out as they print. */
+.signature-list {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+}
+
+.signature-list li {
+  background: var(--bg-page);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+}
+
+.signature-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-6);
+}
+
+.signature-name {
+  border-top: 1px solid var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+  padding-top: var(--space-2);
+}
+
+.signature-position {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+}
+
+/* A report's choices and downloads */
+
+.report-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.report-controls .overview-card-header {
+  margin-bottom: 0;
+}
+
+.report-controls .filter-bar-fields {
+  margin: 0;
+}
+
+.report-picker {
+  max-width: 360px;
+}
+
+.report-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.report-count {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.report-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.report-heading strong {
+  font-size: var(--font-size-title-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--font-line-height-title-sm);
+}
+
+.report-heading > span:not(.report-note, .report-count) {
+  color: var(--text-secondary);
+}
+
+/* The inventory's title as it heads the printed report. */
+.report-title-block {
+  align-items: center;
+  text-align: center;
+}
+
+.report-title-block .report-count {
+  font-weight: var(--font-weight-semibold);
+  margin-top: var(--space-2);
+}
+
+/* The map and the figures beside it */
+
+.report-overview {
+  align-items: start;
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: minmax(0, 3fr) minmax(240px, 2fr);
+}
+
+.report-map-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.report-map {
+  border-radius: var(--radius-sm);
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.report-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.report-legend li {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  font-size: var(--font-size-caption);
+  gap: 6px;
+}
+
+.report-legend .swatch {
+  border-radius: 50%;
+  height: 10px;
+  margin: 0;
+  width: 10px;
+}
+
+.report-figures {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.report-figure {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-4);
+}
+
+.report-figure dt {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.report-figure dd {
+  font-size: var(--font-size-title);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-line-height-title);
+  margin: 0;
+}
+
+.report-figure dd.report-figure-note {
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--font-line-height-caption);
+}
+
+.report-figure.is-hero {
+  background: linear-gradient(140deg, var(--bg-hero), var(--color-green-800));
+  border-color: transparent;
+  color: var(--text-on-dark);
+  grid-column: 1 / -1;
+}
+
+.report-figure.is-hero dt {
+  color: var(--text-on-dark-muted);
+}
+
+.report-figure.is-hero dd {
+  font-size: var(--font-size-display);
+  line-height: var(--font-line-height-display);
+}
+
+/* Tables */
+
+.report-tallies {
+  align-items: start;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+}
+
+.report-tally {
+  padding: var(--space-4);
+}
+
+.report-tally h3,
+.report-gaps h3,
+.report-block-header h3,
+.beneficiary-record h3 {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.report-tally .table-scroll {
+  max-height: 360px;
+}
+
+.report-table tbody tr:hover > * {
+  background: none;
+}
+
+.report-tally .data-table td:first-child {
+  min-width: 120px;
+}
+
+.report-block-header {
+  margin-bottom: var(--space-3);
+}
+
+.report-block-header h3 {
+  margin: 0;
+}
+
+.report-block-header p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  margin: var(--space-1) 0 0;
+}
+
+.report-table-scroll {
+  max-height: 520px;
+}
+
+.inventory-table td {
+  font-size: var(--font-size-body-sm);
+  white-space: nowrap;
+}
+
+.report-gaps .report-note {
+  margin-top: var(--space-3);
+}
+
+.gap-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gap-list li {
+  background: var(--color-orange-50);
+  border-radius: var(--radius-pill);
+  color: var(--status-warning-text);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  padding: 2px 10px;
+}
+
+/* Beneficiaries */
+
+.beneficiary-card {
+  padding: 0;
+}
+
+.beneficiary-card .report-count {
+  border-bottom: 1px solid var(--border-card);
+  padding: var(--space-4) var(--space-6);
+}
+
+.beneficiary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.beneficiary-list li + li {
+  border-top: 1px solid var(--border-card);
+}
+
+.beneficiary-row {
+  align-items: center;
+  color: var(--text-primary);
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  text-decoration: none;
+}
+
+.beneficiary-row:hover {
+  background: var(--bg-page);
+}
+
+.beneficiary-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.beneficiary-row-text strong {
+  color: var(--text-link);
+  font-weight: var(--font-weight-semibold);
+}
+
+.beneficiary-row-text span {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+}
+
+.beneficiary-records {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.beneficiary-record {
+  padding: 20px;
+}
+
+.beneficiary-record > p {
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2);
+}
+
+.beneficiary-place {
+  align-items: flex-start;
+  display: flex;
+  font-size: var(--font-size-body-sm);
+  gap: 6px;
+}
+
+.beneficiary-place svg {
+  flex: none;
+  height: 16px;
+  margin-top: 2px;
+  width: 16px;
+}
+
+.beneficiary-place a {
+  color: var(--text-link);
+  font-weight: var(--font-weight-semibold);
+}
+
+.beneficiary-record .timeline {
+  border-top: 1px solid var(--border-card);
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.beneficiary-record .status-remarks {
+  display: block;
+}
+
+@media (max-width: 1100px) {
+  .report-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .report-section {
+    gap: var(--space-4);
+  }
+
+  .beneficiary-card .report-count,
+  .beneficiary-row {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+}
+
+@media (max-width: 640px) {
+  .report-figures {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .report-figure dd {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .report-downloads,
+  .report-downloads .ui-button,
+  .report-controls .overview-card-header > .ui-button {
+    width: 100%;
+  }
+
+  .report-picker {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report-section {
+    animation: none;
+  }
+
+  .report-card {
+    transition: none;
+  }
+}
+
+/* The header's text takes what's left, so the downloads stay on its right while they fit. */
+.report-controls .overview-card-header > div:first-child {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+/* A field on its own in the card, which is a column, keeps its own height. */
+.report-controls > .filter-field {
+  flex: none;
+}

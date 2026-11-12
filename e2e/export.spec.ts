@@ -92,6 +92,23 @@ test('offers Export on the toolbar, and shows the count before anything download
   await expect(dialog(page)).toHaveCount(0);
 });
 
+test('the dialog works by keyboard: Tab stays inside it, and Escape closes it and goes back to Export', async ({ page }) => {
+  await open(page);
+  await toolbarExport(page).click();
+  await expect(dialog(page).getByRole('button', { name: 'Close export' })).toBeFocused();
+  // Shift+Tab from the first control comes round to the last, not out onto the page.
+  await page.keyboard.press('Shift+Tab');
+  await expect(dialog(page).getByRole('button', { name: 'Download' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(dialog(page).getByRole('button', { name: 'Close export' })).toBeFocused();
+  // What will go stays in view beside the button, however far the choices scroll.
+  await expect(summary(page)).toBeInViewport();
+
+  await page.keyboard.press('Escape');
+  await expect(dialog(page)).toHaveCount(0);
+  await expect(toolbarExport(page)).toBeFocused();
+});
+
 test('Export stands out, right beside "+ Add intervention"', async ({ page }) => {
   await open(page);
   const add = (await page.locator('.add-record-button').boundingBox())!;

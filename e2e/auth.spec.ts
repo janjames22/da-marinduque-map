@@ -954,7 +954,7 @@ test.describe('QA and import', () => {
       return call.args.p_id === flagged[0].id ? { status: 200, body: null } : { status: 400, body: { code: '23514', message: 'That flag is no longer on this record.' } };
     });
     await (await sidebar(page)).getByRole('link', { name: 'QA queue' }).click();
-    await expect(page.getByRole('region', { name: 'QA queue' })).toBeVisible();
+    await expect(page.getByRole('main', { name: 'QA queue' })).toBeVisible();
 
     await item(page, flagged[0].id).getByRole('button', { name: 'Dismiss' }).click();
     await page.getByRole('form', { name: /^Dismiss: / }).getByLabel(/^Reason/).fill('At the FCA office');

@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CircleAlert, Download, FileDown, Info } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Intervention, MapData } from '../data/types';
+import { Dialog } from '../overview/Dialog';
 import { barangaysInScope, pickViewFilters } from '../lib/choropleth';
 import { manilaToday } from '../lib/dates';
 import {
@@ -52,12 +54,9 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
   const [layers, setLayers] = useState({ municipalBoundaries: false, barangayBoundaries: false, gapMap: false });
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!open) return;
-    setFailure(null);
-    closeButton.current?.focus();
+    if (open) setFailure(null);
   }, [open]);
 
   const view = pickViewFilters(ui);
@@ -121,99 +120,121 @@ export function ExportDialog({ data, boundaries, allRecords }: ExportDialogProps
     }
   };
 
-  return (
-    <div className="export-dialog-backdrop">
-      <div className="export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-title">
-        <header className="panel-header">
-          <h2 id="export-title">{barangayName ? `Export ${barangayName}` : table ? 'Export the records table' : 'Export'}</h2>
-          <button type="button" ref={closeButton} className="close-button" onClick={closeExport} aria-label="Close export">
-            ×
-          </button>
-        </header>
+  const title = barangayName ? `Export ${barangayName}` : table ? 'Export the records table' : 'Export';
+  const hasNotes = (leavesOutUnlocated(format) && unlocated > 0) || toCheck > 0 || (nothingToPlot && records.length > 0);
 
-        <fieldset>
-          <legend className="section-title">Format</legend>
+  return (
+    <Dialog
+      title={title}
+      closeLabel="Close export"
+      onClose={closeExport}
+      subtitle="Download the records for Google Earth, QGIS or Excel."
+      footer={
+        <>
+          {/* Beside the button, so what will go is in view however far the choices scroll. */}
+          <div className="export-summary" role="status">
+            <p className="export-summary-count">
+              <strong className="export-count">{plural(records.length, 'record')}</strong> will be exported.
+            </p>
+            <p className="export-file">
+              <FileDown aria-hidden="true" />
+              <span className="export-file-name">
+                {stem}.{fileExtension}
+              </span>
+            </p>
+          </div>
+          <div className="ui-dialog-actions">
+            <button type="button" className="ui-button ui-button-secondary" onClick={closeExport}>
+              Cancel
+            </button>
+            <button type="button" className="ui-button ui-button-primary" disabled={busy || records.length === 0 || nothingToPlot} onClick={() => void runExport()}>
+              <Download aria-hidden="true" />
+              {busy ? 'Preparing…' : 'Download'}
+            </button>
+          </div>
+        </>
+      }
+    >
+      <fieldset className="dialog-section">
+        <legend>Format</legend>
+        <div className="option-cards">
           {FORMATS.map((option) => (
-            <label className="choice export-format" key={option.id}>
+            <label className="option-card" key={option.id}>
               <input type="radio" name="export-format" checked={format === option.id} onChange={() => setFormat(option.id)} />
-              <span>
-                {option.label} <span className="field-hint">{option.note}</span>
+              <span className="option-card-text">
+                <strong>{option.label}</strong> <span>{option.note}</span>
               </span>
             </label>
           ))}
-        </fieldset>
-
-        <fieldset>
-          <legend className="section-title">What to include</legend>
-          {table && <p className="field-hint">The table's rows, in its order.</p>}
-          {shownLines.length > 0 ? (
-            <ul className="export-filters" aria-label="Filters in force">
-              {shownLines.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="field-hint">The whole province. No filters are on.</p>
-          )}
-          {!table && (
-            <label className="choice">
-              <input type="checkbox" checked={onlyMapView} onChange={(event) => setOnlyMapView(event.target.checked)} />
-              Only what's in the current map view
-            </label>
-          )}
-        </fieldset>
-
-        {isGoogleEarth(format) && (
-          <fieldset>
-            <legend className="section-title">Extra layers</legend>
-            <label className="choice">
-              <input type="checkbox" checked={layers.municipalBoundaries} onChange={(event) => setLayers({ ...layers, municipalBoundaries: event.target.checked })} />
-              Municipal boundaries
-            </label>
-            <label className="choice">
-              <input type="checkbox" checked={layers.barangayBoundaries} onChange={(event) => setLayers({ ...layers, barangayBoundaries: event.target.checked })} />
-              Barangay boundaries
-            </label>
-            <label className="choice">
-              <input type="checkbox" checked={layers.gapMap} onChange={(event) => setLayers({ ...layers, gapMap: event.target.checked })} />
-              <span>
-                Barangay gap map <span className="field-hint">Off when the file opens. Switch it on in Google Earth to show it.</span>
-              </span>
-            </label>
-          </fieldset>
-        )}
-
-        <div className="export-summary" role="status">
-          <p>
-            <strong className="export-count">{plural(records.length, 'record')}</strong> will be exported.
-          </p>
-          {leavesOutUnlocated(format) && unlocated > 0 && (
-            <p className="field-hint">
-              {located} on the map. {plural(unlocated, 'record')} without coordinates can't be plotted, so {unlocated === 1 ? 'it is' : 'they are'} listed by name
-              {format === 'shp' ? ' in a text file in the .zip' : ' in the file\'s "Read me" folder'}.
-            </p>
-          )}
-          {toCheck > 0 && (
-            <p className="field-hint">
-              {plural(toCheck, 'record')} with coordinates outside Marinduque {isGoogleEarth(format) ? `${toCheck === 1 ? 'goes' : 'go'} in the folder "${NEEDS_LOCATION_CHECK}"` : `${toCheck === 1 ? 'is' : 'are'} marked in the first column, "${NEEDS_LOCATION_CHECK}"`}.
-            </p>
-          )}
-          {nothingToPlot && records.length > 0 && <p className="field-hint">None of these have coordinates, so choose CSV or GeoJSON for them.</p>}
-          <p className="field-hint export-file-name">
-            {stem}.{fileExtension}
-          </p>
         </div>
+      </fieldset>
 
-        {failure && (
-          <p className="record-warning" role="alert">
-            Nothing was exported. {failure}
-          </p>
+      <fieldset className="dialog-section">
+        <legend>What to include</legend>
+        {table && <p className="dialog-hint">The table's rows, in its order.</p>}
+        {shownLines.length > 0 ? (
+          <ul className="filter-chips" aria-label="Filters in force">
+            {shownLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="dialog-hint">The whole province. No filters are on.</p>
         )}
+        {!table && (
+          <label className="dialog-check">
+            <input type="checkbox" checked={onlyMapView} onChange={(event) => setOnlyMapView(event.target.checked)} />
+            <span>Only what's in the current map view</span>
+          </label>
+        )}
+      </fieldset>
 
-        <button type="button" className="primary-button" disabled={busy || records.length === 0 || nothingToPlot} onClick={() => void runExport()}>
-          {busy ? 'Preparing…' : 'Download'}
-        </button>
-      </div>
-    </div>
+      {isGoogleEarth(format) && (
+        <fieldset className="dialog-section">
+          <legend>Extra layers</legend>
+          <label className="dialog-check">
+            <input type="checkbox" checked={layers.municipalBoundaries} onChange={(event) => setLayers({ ...layers, municipalBoundaries: event.target.checked })} />
+            <span>Municipal boundaries</span>
+          </label>
+          <label className="dialog-check">
+            <input type="checkbox" checked={layers.barangayBoundaries} onChange={(event) => setLayers({ ...layers, barangayBoundaries: event.target.checked })} />
+            <span>Barangay boundaries</span>
+          </label>
+          <label className="dialog-check">
+            <input type="checkbox" checked={layers.gapMap} onChange={(event) => setLayers({ ...layers, gapMap: event.target.checked })} />
+            <span>
+              Barangay gap map <span className="dialog-hint">Off when the file opens. Switch it on in Google Earth to show it.</span>
+            </span>
+          </label>
+        </fieldset>
+      )}
+
+      {hasNotes && (
+        <div className="ui-notice ui-notice-info export-notes" role="status">
+          <Info aria-hidden="true" />
+          <div>
+            {leavesOutUnlocated(format) && unlocated > 0 && (
+              <p>
+                {located} on the map. {plural(unlocated, 'record')} without coordinates can't be plotted, so {unlocated === 1 ? 'it is' : 'they are'} listed by name
+                {format === 'shp' ? ' in a text file in the .zip' : ' in the file\'s "Read me" folder'}.
+              </p>
+            )}
+            {toCheck > 0 && (
+              <p>
+                {plural(toCheck, 'record')} with coordinates outside Marinduque {isGoogleEarth(format) ? `${toCheck === 1 ? 'goes' : 'go'} in the folder "${NEEDS_LOCATION_CHECK}"` : `${toCheck === 1 ? 'is' : 'are'} marked in the first column, "${NEEDS_LOCATION_CHECK}"`}.
+              </p>
+            )}
+            {nothingToPlot && records.length > 0 && <p>None of these have coordinates, so choose CSV or GeoJSON for them.</p>}
+          </div>
+        </div>
+      )}
+
+      {failure && (
+        <p className="ui-notice ui-notice-danger" role="alert">
+          <CircleAlert aria-hidden="true" />
+          <span>Nothing was exported. {failure}</span>
+        </p>
+      )}
+    </Dialog>
   );
 }

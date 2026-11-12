@@ -1,8 +1,10 @@
 // Print map: the map as it is on screen, as a PDF with a title, legend, north arrow, scale bar, date, data
 // sources and the signature blocks. The PDF code loads only when it's used.
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { CircleAlert, Info, Printer } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Intervention, MapData } from '../data/types';
 import { SelectField, TextField } from '../edit/FormParts';
+import { Dialog } from '../overview/Dialog';
 import { describeFilters, exportFileStem, filterLines } from '../export/records';
 import type { ChoroplethMode, Shading } from '../lib/choropleth';
 import { pickViewFilters } from '../lib/choropleth';
@@ -47,13 +49,11 @@ export function PrintMapDialog({ open, onClose, data, mode, shading, scale, mark
   const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setFailure(null);
     setTitle(`DA Interventions in ${filters.municipality ? `${filters.municipality}, ` : ''}Marinduque`);
-    closeButton.current?.focus();
     // Only when it opens, so a title being typed isn't replaced.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -70,8 +70,7 @@ export function PrintMapDialog({ open, onClose, data, mode, shading, scale, mark
     return sections;
   };
 
-  const print = async (event: FormEvent) => {
-    event.preventDefault();
+  const print = async () => {
     const container = document.querySelector<HTMLElement>('.map.leaflet-container');
     if (!container || !mapBounds) {
       setFailure('The map isn\'t ready yet. Try again in a moment.');
@@ -111,22 +110,37 @@ export function PrintMapDialog({ open, onClose, data, mode, shading, scale, mark
   };
 
   return (
-    <div className="export-dialog-backdrop">
-      <div className="export-dialog" role="dialog" aria-modal="true" aria-labelledby="print-map-title">
-        <header className="panel-header">
-          <h2 id="print-map-title">Print map</h2>
-          <button type="button" ref={closeButton} className="close-button" onClick={onClose} aria-label="Close print map">
-            ×
+    <Dialog
+      title="Print map"
+      closeLabel="Close print map"
+      onClose={onClose}
+      subtitle="The map as it is now, as a PDF with its legend, a north arrow, a scale bar, the date, the data sources and the signature blocks."
+      onSubmit={() => void print()}
+      formLabel="Print map"
+      footer={
+        <>
+          <button type="button" className="ui-button ui-button-secondary" onClick={onClose}>
+            Cancel
           </button>
-        </header>
-        <form className="edit-form" aria-label="Print map" onSubmit={(event) => void print(event)} noValidate>
-          <p className="field-hint">The map as it is now, with its legend, a north arrow, a scale bar, the date, the data sources and the signature blocks. Move or zoom the map first to choose what shows, and close the side panels for a wider map.</p>
-          <TextField label="Title" value={title} onChange={setTitle} />
-          {lines.length > 0 && (
-            <p className="field-hint" aria-label="Under the title">
-              Under the title: {lines.join('; ')}
-            </p>
-          )}
+          <button type="submit" className="ui-button ui-button-primary" disabled={busy}>
+            <Printer aria-hidden="true" />
+            {busy ? 'Preparing the map…' : 'Download PDF'}
+          </button>
+        </>
+      }
+    >
+      <p className="ui-notice ui-notice-info">
+        <Info aria-hidden="true" />
+        <span>Move or zoom the map first to choose what shows, and close the side panels for a wider map.</span>
+      </p>
+      <div className="dialog-fields">
+        <TextField label="Title" value={title} onChange={setTitle} />
+        {lines.length > 0 && (
+          <p className="dialog-hint" aria-label="Under the title">
+            Under the title: {lines.join('; ')}
+          </p>
+        )}
+        <div className="dialog-field-row">
           <SelectField
             label="Paper"
             value={paper}
@@ -146,18 +160,14 @@ export function PrintMapDialog({ open, onClose, data, mode, shading, scale, mark
               { value: 'portrait', label: 'Portrait' },
             ]}
           />
-          {failure && (
-            <p className="field-error" role="alert">
-              {failure}
-            </p>
-          )}
-          <div className="form-actions">
-            <button type="submit" className="primary-button" disabled={busy}>
-              {busy ? 'Preparing the map…' : 'Download PDF'}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
-    </div>
+      {failure && (
+        <p className="ui-notice ui-notice-danger" role="alert">
+          <CircleAlert aria-hidden="true" />
+          <span>{failure}</span>
+        </p>
+      )}
+    </Dialog>
   );
 }

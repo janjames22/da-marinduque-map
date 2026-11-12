@@ -598,3 +598,239 @@
     padding: 14px var(--space-4);
   }
 }
+
+/* Forms, notices and tables on the pages in the new design (Phase 15). The map's own forms keep
+   app.css until they're restyled. */
+
+.overview-page .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.overview-page .form-field label,
+.overview-page .filter-field label {
+  color: var(--text-primary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.overview-page .form-field input:not([type='file'], [type='checkbox'], [type='radio']),
+.overview-page .form-field select,
+.overview-page .form-field textarea,
+.overview-page .filter-field input,
+.overview-page .filter-field select,
+.overview-page .data-table select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-body);
+  height: var(--size-control-height);
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 var(--space-3);
+  width: 100%;
+}
+
+.overview-page .form-field textarea {
+  height: auto;
+  line-height: var(--font-line-height-body);
+  min-height: 88px;
+  padding: 10px var(--space-3);
+  resize: vertical;
+}
+
+.overview-page .form-field [aria-invalid='true'] {
+  border: 2px solid var(--status-danger-text);
+  box-shadow: none;
+}
+
+.overview-page .form-field :disabled {
+  background: var(--bg-surface-muted);
+  cursor: not-allowed;
+}
+
+.overview-page .required-mark,
+.overview-page span.field-error {
+  color: var(--status-danger-text);
+}
+
+.overview-page .field-hint {
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: var(--font-line-height-caption);
+}
+
+.overview-page span.field-error {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--font-line-height-caption);
+}
+
+/* A save that failed, or one that worked, as a notice. */
+.overview-page p.field-error,
+.overview-page .admin-notice {
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-body-sm);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.overview-page p.field-error {
+  background: var(--status-danger-bg);
+  border-color: #f4c3bd;
+  color: var(--status-danger-text);
+}
+
+.overview-page .admin-notice {
+  background: var(--status-success-bg);
+  border-color: var(--color-green-200);
+  color: var(--status-success-text);
+}
+
+.overview-page .link-button {
+  color: var(--text-link);
+  font-weight: var(--font-weight-semibold);
+  text-underline-offset: 2px;
+}
+
+.overview-page .link-button:hover {
+  text-decoration-thickness: 2px;
+}
+
+.overview-page .count {
+  background: var(--status-neutral-bg);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--status-neutral-text);
+  display: inline-block;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  line-height: 20px;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  vertical-align: 2px;
+}
+
+.ui-check {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  gap: var(--space-2);
+  min-height: var(--size-touch-target);
+}
+
+.ui-check input {
+  accent-color: var(--action-primary);
+  flex: none;
+  height: 18px;
+  margin: 0;
+  width: 18px;
+}
+
+.form-actions-bar {
+  align-items: center;
+  border-top: 1px solid var(--border-card);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
+}
+
+.form-actions-bar .is-start {
+  margin-right: auto;
+}
+
+/* A table in the design kit's look: caption headings, 48 px rows, numbers on the right. */
+.table-scroll {
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  max-width: 100%;
+  overflow: auto;
+}
+
+.data-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-1) var(--space-3);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.data-table thead th {
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  padding-bottom: 10px;
+  padding-top: 10px;
+  position: sticky;
+  top: 0;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.data-table tbody td,
+.data-table tbody th {
+  border-top: 1px solid var(--border-card);
+  height: 48px;
+}
+
+.data-table tbody tr:first-child td,
+.data-table tbody tr:first-child th {
+  border-top: 0;
+}
+
+.data-table tbody th {
+  font-weight: var(--font-weight-semibold);
+}
+
+.data-table .number {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.data-table tbody tr:hover > * {
+  background: var(--bg-page);
+}
+
+.card-pager {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: space-between;
+  padding-top: var(--space-4);
+}
+
+.card-pager > span {
+  font-variant-numeric: tabular-nums;
+}
+
+.card-pager div {
+  display: flex;
+  gap: var(--space-2);
+}
+
+@media (max-width: 640px) {
+  .form-actions-bar {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .form-actions-bar .is-start {
+    margin-right: 0;
+  }
+}

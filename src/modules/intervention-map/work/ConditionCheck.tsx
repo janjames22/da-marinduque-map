@@ -1,6 +1,7 @@
 // Units delivered but not yet looked at, such as Turned-over, for a MAO to go through and set what they
 // found. Each status button saves a new status for the record, dated today unless changed.
-import { useMemo, useState, type FormEvent } from 'react';
+import { ClipboardCheck } from 'lucide-react';
+import { useId, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { Intervention, MapData } from '../data/types';
 import { plural, useSaving, Feedback } from '../admin/parts';
@@ -8,9 +9,9 @@ import { TextField } from '../edit/FormParts';
 import { manilaToday } from '../lib/dates';
 import { recordName } from '../lib/display';
 import { looseKey } from '../lib/matching';
-import { recordOnMap } from '../lib/map-paths';
 import { awaitingCheck } from '../lib/qa-queue';
 import { foldText } from '../lib/view-fields';
+import { EmptyState } from '../overview/EmptyState';
 import { useStore } from '../state/store-context';
 
 const PAGE = 50;
@@ -25,20 +26,23 @@ function SetStatus({ record, statusId, data, onDone, onSaved }: { record: Interv
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const saved = await run(() => store.addStatus(record.id, { status_id: statusId, status_date: statusDate, remarks: remarks.trim() || null }, { kind: 'status' }));
-    if (saved) onSaved(`${recordName(record, data)} (${record.beneficiary ?? "no beneficiary"}) set to ${name}.`);
+    if (saved) onSaved(`${recordName(record, data)} (${record.beneficiary ?? 'no beneficiary'}) set to ${name}.`);
   };
 
   return (
     <form className="queue-action" aria-label={`Set ${name}: ${recordName(record, data)}`} onSubmit={(event) => void submit(event)} noValidate>
-      <TextField label="Checked on" type="date" required value={statusDate} onChange={setStatusDate} error={errors.status_date} />
-      <TextField label="What was found (optional)" value={remarks} onChange={setRemarks} />
+      <strong className="queue-action-title">Set to {name}</strong>
+      <div className="queue-action-fields">
+        <TextField label="Checked on" type="date" required value={statusDate} onChange={setStatusDate} error={errors.status_date} />
+        <TextField label="What was found (optional)" value={remarks} onChange={setRemarks} />
+      </div>
       <Feedback failure={failure ?? errors.status_id ?? null} />
-      <div className="form-actions">
-        <button type="submit" className="primary-button" disabled={busy}>
-          Save as {name}
-        </button>
-        <button type="button" className="secondary-button" onClick={onDone}>
+      <div className="queue-action-buttons">
+        <button type="button" className="ui-button ui-button-quiet" onClick={onDone}>
           Cancel
+        </button>
+        <button type="submit" className="ui-button ui-button-primary" disabled={busy}>
+          Save as {name}
         </button>
       </div>
     </form>
@@ -46,6 +50,7 @@ function SetStatus({ record, statusId, data, onDone, onSaved }: { record: Interv
 }
 
 export function ConditionCheck({ data }: { data: MapData }) {
+  const id = useId();
   // The statuses that don't say a unit's condition, with how many records are at each, here.
   const [municipalityId, setMunicipalityId] = useState<number | null>(null);
   const waiting = useMemo(
@@ -92,128 +97,145 @@ export function ConditionCheck({ data }: { data: MapData }) {
   };
 
   return (
-    <section className="admin-section condition-check" aria-label="Condition check">
-      <header className="admin-section-header">
-        <div>
-          <h2>Condition check</h2>
-          <p className="field-hint">
-            Units at a status that doesn't say what condition they're in, such as Turned-over. They're left out of % operational until checked. Set what you found on a visit, dated the day you saw it.
-          </p>
-        </div>
+    <main className="overview-page work-page" aria-labelledby="condition-title">
+      <header className="page-header">
+        <h1 id="condition-title">Condition check</h1>
+        <p>Units at a status that doesn't say what condition they're in, such as Turned-over. They're left out of % operational until checked. Set what you found on a visit, dated the day you saw it.</p>
       </header>
 
-      <form className="audit-filters" aria-label="Filter the units" onSubmit={(event) => event.preventDefault()}>
-        <label className="field">
-          <span>Municipality</span>
-          <select value={municipalityId ?? ''} onChange={(event) => filter(() => setMunicipalityId(event.target.value ? Number(event.target.value) : null))}>
-            <option value="">All</option>
-            {data.municipalities.map((municipality) => (
-              <option key={municipality.id} value={municipality.id}>
-                {municipality.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Status</span>
-          <select value={statusId ?? ''} onChange={(event) => filter(() => setStatusId(event.target.value ? Number(event.target.value) : null))}>
-            <option value="">All not yet assessed ({waiting.reduce((sum, entry) => sum + entry.records, 0)})</option>
-            {waiting.map(({ status, records: count }) => (
-              <option key={status.id} value={status.id}>
-                {status.name} ({count})
-              </option>
-            ))}
-            {statusId !== null && !waiting.some((entry) => entry.status.id === statusId) && (
-              <option value={statusId}>{data.statuses.find((status) => status.id === statusId)?.name} (0)</option>
-            )}
-          </select>
-        </label>
-        <label className="field">
-          <span>Record</span>
-          <input type="search" placeholder="Name, beneficiary, barangay or ID" value={search} onChange={(event) => filter(() => setSearch(event.target.value))} />
-        </label>
+      <form className="overview-card filter-bar" aria-label="Filter the units" onSubmit={(event) => event.preventDefault()}>
+        <div className="filter-bar-fields">
+          <div className="filter-field">
+            <label htmlFor={`${id}-municipality`}>Municipality</label>
+            <select id={`${id}-municipality`} value={municipalityId ?? ''} onChange={(event) => filter(() => setMunicipalityId(event.target.value ? Number(event.target.value) : null))}>
+              <option value="">All</option>
+              {data.municipalities.map((municipality) => (
+                <option key={municipality.id} value={municipality.id}>
+                  {municipality.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-field is-wide">
+            <label htmlFor={`${id}-status`}>Status</label>
+            <select id={`${id}-status`} value={statusId ?? ''} onChange={(event) => filter(() => setStatusId(event.target.value ? Number(event.target.value) : null))}>
+              <option value="">All not yet assessed ({waiting.reduce((sum, entry) => sum + entry.records, 0)})</option>
+              {waiting.map(({ status, records: count }) => (
+                <option key={status.id} value={status.id}>
+                  {status.name} ({count})
+                </option>
+              ))}
+              {statusId !== null && !waiting.some((entry) => entry.status.id === statusId) && (
+                <option value={statusId}>{data.statuses.find((status) => status.id === statusId)?.name} (0)</option>
+              )}
+            </select>
+          </div>
+          <div className="filter-field is-wide">
+            <label htmlFor={`${id}-search`}>Record</label>
+            <input id={`${id}-search`} type="search" placeholder="Name, beneficiary, barangay or ID" value={search} onChange={(event) => filter(() => setSearch(event.target.value))} />
+          </div>
+        </div>
       </form>
 
-      <p className="records-count" role="status">
-        {records.length === 0 ? 'Nothing waiting here.' : `${plural(records.length, 'record')} waiting, ${plural(units, 'unit')}.`}
-        {saved && ` ${saved}`}
-      </p>
+      <section className="overview-card condition-card" aria-label="Units waiting">
+        <header className="condition-card-header">
+          <p className="condition-count" role="status">
+            {records.length === 0 ? 'Nothing waiting here.' : `${plural(records.length, 'record')} waiting, ${plural(units, 'unit')}.`}
+            {saved && <span className="condition-saved"> {saved}</span>}
+          </p>
+        </header>
 
-      {shown.length > 0 && (
-        <ul className="queue-list condition-list">
-          {shown.map((record) => {
-            const current = data.statuses.find((status) => status.id === record.status_id);
-            const barangay = data.barangays.find((candidate) => candidate.id === record.barangay_id)?.name ?? record.barangay_raw ?? 'No barangay';
-            const municipality = data.municipalities.find((candidate) => candidate.id === record.municipality_id)?.name ?? '';
-            const choices = data.typeStatuses
-              .filter((entry) => entry.intervention_type_id === record.intervention_type_id)
-              .map((entry) => data.statuses.find((status) => status.id === entry.status_id))
-              .filter((status) => status !== undefined && status.is_active && status.counts_as_assessed);
-            const type = data.types.find((candidate) => candidate.id === record.intervention_type_id);
-            return (
-              <li key={record.id} className="queue-item" data-record={record.id}>
-                <div className="queue-item-main">
-                  <Link to={recordOnMap(record.id)}>{recordName(record, data)}</Link>
-                  <span>{record.beneficiary ?? 'No beneficiary'}</span>
-                  <span className="field-hint">
-                    {barangay}, {municipality}
-                    {record.year_funded ? ` · ${record.year_funded}` : ''}
-                    {record.quantity > 1 ? ` · ${record.quantity} units` : ''}
-                  </span>
-                  <span className="field-hint">
-                    {current?.name ?? 'No status'}
-                    {since.get(record.id) ? ` since ${since.get(record.id)}` : ''}
-                  </span>
-                </div>
-                {type?.is_active !== false && (
-                  <div className="queue-actions" role="group" aria-label={`Set the status of ${recordName(record, data)}`}>
-                    {choices.map((status) => (
-                      <button
-                        key={status!.id}
-                        type="button"
-                        className="secondary-button"
-                        aria-expanded={open?.id === record.id && open.statusId === status!.id}
-                        onClick={() => {
-                          setSaved(null);
-                          setOpen(open?.id === record.id && open.statusId === status!.id ? null : { id: record.id, statusId: status!.id });
-                        }}
-                      >
-                        {status!.name}
-                      </button>
-                    ))}
+        {shown.length === 0 && (
+          <EmptyState icon={ClipboardCheck} title="Every unit here has been checked">
+            {search ? 'Or none matches the search. Try another name, barangay or ID.' : 'Choose another municipality or status to see more.'}
+          </EmptyState>
+        )}
+
+        {shown.length > 0 && (
+          <ul className="queue-list condition-list">
+            {shown.map((record) => {
+              const current = data.statuses.find((status) => status.id === record.status_id);
+              const barangay = data.barangays.find((candidate) => candidate.id === record.barangay_id)?.name ?? record.barangay_raw ?? 'No barangay';
+              const municipality = data.municipalities.find((candidate) => candidate.id === record.municipality_id)?.name ?? '';
+              const choices = data.typeStatuses
+                .filter((entry) => entry.intervention_type_id === record.intervention_type_id)
+                .map((entry) => data.statuses.find((status) => status.id === entry.status_id))
+                .filter((status) => status !== undefined && status.is_active && status.counts_as_assessed);
+              const type = data.types.find((candidate) => candidate.id === record.intervention_type_id);
+              const isOpen = open?.id === record.id;
+              return (
+                <li key={record.id} className={`queue-item${isOpen ? ' is-open' : ''}`} data-record={record.id}>
+                  <div className="queue-item-main">
+                    <Link to={`/records/${record.id}`} className="queue-item-name">
+                      {recordName(record, data)}
+                    </Link>
+                    <span>{record.beneficiary ?? 'No beneficiary'}</span>
+                    <span className="queue-item-meta">
+                      {barangay}, {municipality}
+                      {record.year_funded ? ` · ${record.year_funded}` : ''}
+                      {record.quantity > 1 ? ` · ${record.quantity} units` : ''}
+                    </span>
+                    <span className="queue-item-status">
+                      <span className="pill">
+                        <span className="pill-dot" style={{ background: current?.color }} aria-hidden="true" />
+                        {current?.name ?? 'No status'}
+                      </span>
+                      {since.get(record.id) && <span className="queue-item-meta"> since {since.get(record.id)}</span>}
+                    </span>
                   </div>
-                )}
-                {open?.id === record.id && (
-                  <SetStatus
-                    record={record}
-                    statusId={open.statusId}
-                    data={data}
-                    onDone={() => setOpen(null)}
-                    onSaved={(message) => {
-                      setOpen(null);
-                      setSaved(message);
-                    }}
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  {type?.is_active !== false && (
+                    <div className="queue-actions" role="group" aria-label={`Set the status of ${recordName(record, data)}`}>
+                      {choices.map((status) => (
+                        <button
+                          key={status!.id}
+                          type="button"
+                          className="ui-button ui-button-secondary ui-button-small status-choice"
+                          aria-expanded={isOpen && open.statusId === status!.id}
+                          onClick={() => {
+                            setSaved(null);
+                            setOpen(isOpen && open.statusId === status!.id ? null : { id: record.id, statusId: status!.id });
+                          }}
+                        >
+                          <span className="pill-dot" style={{ background: status!.color }} aria-hidden="true" />
+                          {status!.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {isOpen && (
+                    <SetStatus
+                      record={record}
+                      statusId={open.statusId}
+                      data={data}
+                      onDone={() => setOpen(null)}
+                      onSaved={(message) => {
+                        setOpen(null);
+                        setSaved(message);
+                      }}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
-      {records.length > PAGE && (
-        <div className="records-pages">
-          <span className="records-count">
-            {shownPage * PAGE + 1}–{Math.min((shownPage + 1) * PAGE, records.length)} of {records.length}
-          </span>
-          <button type="button" className="secondary-button" disabled={shownPage === 0} onClick={() => setPage(shownPage - 1)}>
-            Previous
-          </button>
-          <button type="button" className="secondary-button" disabled={shownPage >= lastPage} onClick={() => setPage(shownPage + 1)}>
-            Next
-          </button>
-        </div>
-      )}
-    </section>
+        {records.length > PAGE && (
+          <div className="card-pager">
+            <span>
+              {shownPage * PAGE + 1}–{Math.min((shownPage + 1) * PAGE, records.length)} of {records.length}
+            </span>
+            <div>
+              <button type="button" className="ui-button ui-button-secondary ui-button-small" disabled={shownPage === 0} onClick={() => setPage(shownPage - 1)}>
+                Previous
+              </button>
+              <button type="button" className="ui-button ui-button-secondary ui-button-small" disabled={shownPage >= lastPage} onClick={() => setPage(shownPage + 1)}>
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
