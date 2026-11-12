@@ -16,7 +16,8 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 _Last updated: 2026-11-12_
 
 - **Branch:** `phase-15b-work-pages`, started from `main`. Phase 15a is merged into `main`.
-- **Phase 15b built, waiting for Gate 1:** the QA queue, Condition check, Import and Reports pages and the Export and Print map dialogs in the new design, committed and pushed as work in progress. The owner checks it with `npm run dev:local`.
+- **Phase 15b through Gate 1, draft up for Gate 2:** the QA queue, Condition check, Import and Reports pages and the Export and Print map dialogs in the new design. The owner approved Gate 1 on 2026-11-12. Draft: https://6af5bbfd98ca670dce805e44--da-marinduque-map.netlify.app.
+- **Going live in one deploy:** to save Netlify credits, 15a, 15b and 15c go live together with one `npm run deploy` after 15c, instead of one deploy each. Each production deploy costs 15 credits, and drafts cost none. The owner decided this on 2026-11-12. Until then the live site stays on Phase 14.
 - **Phase 15a approved, live deploy pending:** the Interventions pages, the phone map rework and the faster page changes passed both gates on 2026-11-12 and are merged into `main`. They go live when the owner runs `npm run deploy`.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
@@ -65,6 +66,8 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Phase 15b passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af5bbfd98ca670dce805e44--da-marinduque-map.netlify.app. Checked signed out: the security headers are on, Inter loads, and there are no console errors or blocked requests.
+- Decided with the owner: Phase 15 goes live in one production deploy after 15c, to save Netlify credits.
 - Phase 15b finished on branch `phase-15b-work-pages`, ready for Gate 1:
   - **Export and Print map dialogs** in the new design (design brief screens 29 and 30). They share one frame, `overview/Dialog.tsx`, which has a title with a line under it, a round close button, a body that scrolls, and Cancel and the main button along the bottom. On a phone the dialog rises from the bottom as a sheet, like the map's layers.
   - **Export:** the formats are cards with the chosen one outlined in green, and the filters in force are chips. The count and the file name sit beside Download, so they stay in view however far the choices scroll. Notes about records that can't be plotted are in a notice.
