@@ -16,7 +16,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 _Last updated: 2026-11-12_
 
 - **Branch:** `phase-15c-admin-forms`, started from `phase-15b-work-pages`. Phase 15a is merged into `main`.
-- **Phase 15c in progress, not yet through Gate 1:** the Admin pages, the forms and the shared controls in the new design, and the old styles taken out of `app.css`. It's committed as work in progress. The last full e2e run had 666 passed and 8 failed, so it isn't ready for Gate 1 yet.
+- **Phase 15c built, waiting for Gate 1:** the Admin pages, the forms and the shared controls in the new design, and the old styles taken out of `app.css`. Committed as work in progress until the owner approves it. As 15c is built on 15b, one Gate 2 draft can cover both.
 - **Phase 16 after 15c:** the owner decided on 2026-11-12 to finish 15c first, then build Phase 16 (Farm-to-Market Roads) without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Phase 15b through Gate 1, draft up for Gate 2:** the QA queue, Condition check, Import and Reports pages and the Export and Print map dialogs in the new design. The owner approved Gate 1 on 2026-11-12. Draft: https://6af5bbfd98ca670dce805e44--da-marinduque-map.netlify.app.
 - **Going live in one deploy:** to save Netlify credits, 15a, 15b and 15c go live together with one `npm run deploy` after 15c, instead of one deploy each. Each production deploy costs 15 credits, and drafts cost none. The owner decided this on 2026-11-12. Until then the live site stays on Phase 14.
@@ -68,6 +68,12 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Phase 15c finished on branch `phase-15c-admin-forms`, ready for Gate 1:
+  - **Fixed:** on a phone, tapping the menu link of the page already open left the menu over the page, as the address didn't change. Every menu link now closes it (`src/app/shell/AppShell.tsx`).
+  - **Signature blocks test:** that list is the only one on its page, so its Add button is in the page header, outside the list. The test looks for it there now.
+  - **Wording:** the Reports page links to "Signature blocks" by its new name, and `docs/OPERATIONS.md` names the Administration pages and their tabs instead of "Admin in the header", which went in Phase 12.
+  - **Old styles:** no class in `app.css` is unused. The three unused classes left in `shell.css` are variants of the shared badge and notice, kept for the screens to come.
+  - **Checks:** typecheck, 1,120 unit tests, and the production build with its check for private data. The full e2e run had 669 passed, 5 failed and 11 skipped. All 5 pass when run again, and the 8 that failed in the run before passed in this one, so both runs' failures came from load during the long run.
 - Phase 15c, work in progress committed on branch `phase-15c-admin-forms`, so it isn't lost. Not yet through Gate 1:
   - **Admin pages:** each has its own sidebar link. Types and fields (Intervention types, Barangay fields) and Lists (Categories, Programs, Statuses, Other lists) are pages with tabs. The old Admin menu down the side is gone. Styles in `admin/admin.css`.
   - **Shared controls:** buttons, fields, hints, errors and notices in the new design, in `src/app/controls.css`. About 750 lines of old rules are out of `app.css`.

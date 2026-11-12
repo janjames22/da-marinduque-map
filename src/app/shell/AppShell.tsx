@@ -41,7 +41,7 @@ function Sidebar({ user, open, onClose }: { user: AppUser; open: boolean; onClos
   return (
     <nav id="main-menu" className={`sidebar${open ? ' is-open' : ''}`} aria-label="Main">
       <div className="sidebar-top">
-        <Link to="/" className="sidebar-brand">
+        <Link to="/" className="sidebar-brand" onClick={onClose}>
           <span className="sidebar-logo">
             <MapPin aria-hidden="true" strokeWidth={2.25} />
           </span>
@@ -65,7 +65,7 @@ function Sidebar({ user, open, onClose }: { user: AppUser; open: boolean; onClos
               const current = isCurrent(item, pathname);
               return (
                 <li key={item.to}>
-                  <Link to={item.to} className="sidebar-link" aria-current={current ? 'page' : undefined}>
+                  <Link to={item.to} className="sidebar-link" aria-current={current ? 'page' : undefined} onClick={onClose}>
                     <Icon aria-hidden="true" />
                     {item.label}
                   </Link>
@@ -157,7 +157,8 @@ export function AppShell({ user, account, footer, children }: { user: AppUser; a
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
 
-  // Following a link closes the drawer.
+  // Following a link closes the drawer. The links close it themselves too, for a link to the page
+  // already open, which leaves the address as it was.
   useEffect(() => setMenuOpen(false), [pathname]);
 
   useEffect(() => {
