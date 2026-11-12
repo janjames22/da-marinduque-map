@@ -16,9 +16,9 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 _Last updated: 2026-11-12_
 
 - **Branch:** `phase-15c-admin-forms`, started from `phase-15b-work-pages`. Phase 15a is merged into `main`.
-- **Phase 15c built, waiting for Gate 1:** the Admin pages, the forms and the shared controls in the new design, and the old styles taken out of `app.css`. Committed as work in progress until the owner approves it. As 15c is built on 15b, one Gate 2 draft can cover both.
+- **Phase 15c through Gate 1, draft up for Gate 2:** the Admin pages, the forms and the shared controls in the new design, and the old styles taken out of `app.css`. The owner approved Gate 1 on 2026-11-12. As 15c is built on 15b, this one draft covers both: https://6af5cd2cd58be030f21e6c44--da-marinduque-map.netlify.app. Once it's approved, `phase-15b-work-pages` and then `phase-15c-admin-forms` are merged into `main`.
 - **Phase 16 after 15c:** the owner decided on 2026-11-12 to finish 15c first, then build Phase 16 (Farm-to-Market Roads) without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
-- **Phase 15b through Gate 1, draft up for Gate 2:** the QA queue, Condition check, Import and Reports pages and the Export and Print map dialogs in the new design. The owner approved Gate 1 on 2026-11-12. Draft: https://6af5bbfd98ca670dce805e44--da-marinduque-map.netlify.app.
+- **Phase 15b through Gate 1, draft up for Gate 2:** the QA queue, Condition check, Import and Reports pages and the Export and Print map dialogs in the new design. The owner approved Gate 1 on 2026-11-12. Its own draft was https://6af5bbfd98ca670dce805e44--da-marinduque-map.netlify.app, and the 15c draft above now covers it too.
 - **Going live in one deploy:** to save Netlify credits, 15a, 15b and 15c go live together with one `npm run deploy` after 15c, instead of one deploy each. Each production deploy costs 15 credits, and drafts cost none. The owner decided this on 2026-11-12. Until then the live site stays on Phase 14.
 - **Phase 15a approved, live deploy pending:** the Interventions pages, the phone map rework and the faster page changes passed both gates on 2026-11-12 and are merged into `main`. They go live when the owner runs `npm run deploy`.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
@@ -68,6 +68,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Phase 15c passed Gate 1, approved by the owner. The Gate 2 draft, which covers 15b too, is up: https://6af5cd2cd58be030f21e6c44--da-marinduque-map.netlify.app. Checked signed out: the security headers are on (framing blocked by the security policy, as on the live site), Inter loads, and there are no console errors or failed requests.
 - Phase 15c finished on branch `phase-15c-admin-forms`, ready for Gate 1:
   - **Fixed:** on a phone, tapping the menu link of the page already open left the menu over the page, as the address didn't change. Every menu link now closes it (`src/app/shell/AppShell.tsx`).
   - **Signature blocks test:** that list is the only one on its page, so its Add button is in the page header, outside the list. The test looks for it there now.
