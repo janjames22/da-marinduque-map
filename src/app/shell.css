@@ -825,3 +825,417 @@
   margin: 0;
   max-width: 420px;
 }
+
+/* A dialog over the page, such as Export and Print map: a card with its title and a round close button,
+   a body that scrolls, and its buttons along the bottom. On a phone it rises from the bottom as a sheet,
+   like the map's layers. */
+.ui-dialog-backdrop {
+  align-items: center;
+  background: rgb(17 24 20 / 40%);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: var(--space-4);
+  position: fixed;
+  z-index: 2000;
+}
+
+.ui-dialog {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dialog);
+  display: flex;
+  flex-direction: column;
+  max-height: min(100%, 780px);
+  overflow: hidden;
+  width: min(560px, 100%);
+}
+
+.ui-dialog-header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-card);
+  display: flex;
+  flex: none;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  position: relative;
+}
+
+.ui-dialog-handle {
+  display: none;
+}
+
+.ui-dialog-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-dialog-heading h2 {
+  font-size: var(--font-size-title-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--font-line-height-title-sm);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ui-dialog-heading p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  margin: var(--space-1) 0 0;
+}
+
+.ui-dialog-close {
+  align-items: center;
+  background: var(--bg-surface-muted);
+  border: 0;
+  border-radius: 50%;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  height: 36px;
+  justify-content: center;
+  margin: -6px -8px 0 0;
+  width: 36px;
+}
+
+.ui-dialog-close:hover {
+  background: var(--color-neutral-200);
+}
+
+.ui-dialog-close:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ui-dialog-close svg {
+  height: 20px;
+  width: 20px;
+}
+
+.ui-dialog-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ui-dialog-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-6);
+}
+
+.ui-dialog-footer {
+  align-items: center;
+  border-top: 1px solid var(--border-card);
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-6);
+}
+
+.ui-dialog-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* The parts inside a dialog */
+
+.dialog-section {
+  border: 0;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.dialog-section > legend {
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-3);
+  padding: 0;
+}
+
+.dialog-hint {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  margin: 0;
+}
+
+/* Choices as a column of cards, the chosen one outlined in green. */
+.option-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.option-card {
+  align-items: flex-start;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.option-card:hover {
+  border-color: var(--border-input);
+}
+
+.option-card:has(input:checked) {
+  background: var(--color-green-50);
+  border-color: var(--action-primary);
+}
+
+.option-card:has(input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.option-card input,
+.dialog-check input {
+  accent-color: var(--action-primary);
+  flex: none;
+  height: 16px;
+  margin: 3px 0 0;
+  width: 16px;
+}
+
+.option-card-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.option-card-text strong {
+  font-weight: var(--font-weight-semibold);
+}
+
+.option-card-text span {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+}
+
+.dialog-check {
+  align-items: flex-start;
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-3);
+  padding: 6px 0;
+}
+
+.dialog-check .dialog-hint {
+  display: block;
+}
+
+/* The filters in force, as small grey chips. */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+}
+
+.filter-chips li {
+  background: var(--status-neutral-bg);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--font-line-height-caption);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 4px 10px;
+}
+
+/* What will go, beside the dialog's buttons: the count and the file's name. */
+.export-summary {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.export-summary p {
+  margin: 0;
+}
+
+.export-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+.export-summary .export-file {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  font-size: var(--font-size-caption);
+  gap: 6px;
+}
+
+.export-notes p {
+  margin: 0;
+}
+
+.export-notes p + p {
+  margin-top: var(--space-2);
+}
+
+.export-file svg {
+  flex: none;
+  height: 14px;
+  width: 14px;
+}
+
+.export-file-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Text boxes and lists in a dialog, in the new look. */
+.dialog-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.dialog-field-row {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr 1fr;
+}
+
+.ui-dialog .form-field {
+  gap: 6px;
+}
+
+.ui-dialog .form-field label {
+  color: var(--text-primary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.ui-dialog .form-field input:not([type='file']),
+.ui-dialog .form-field select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-body);
+  height: var(--size-control-height);
+  padding: 0 var(--space-3);
+}
+
+.ui-dialog .form-field input:focus-visible,
+.ui-dialog .form-field select:focus-visible {
+  border-color: var(--action-primary);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+@media (max-width: 640px) {
+  .ui-dialog-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .ui-dialog {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92dvh;
+    width: 100%;
+  }
+
+  .ui-dialog-header {
+    padding: 22px var(--space-4) var(--space-3);
+  }
+
+  .ui-dialog-handle {
+    background: var(--border-input);
+    border-radius: 2px;
+    display: block;
+    height: 4px;
+    left: 50%;
+    opacity: 0.5;
+    position: absolute;
+    top: 8px;
+    transform: translateX(-50%);
+    width: 36px;
+  }
+
+  .ui-dialog-close {
+    height: 40px;
+    margin: -4px -4px 0 0;
+    width: 40px;
+  }
+
+  .ui-dialog-body {
+    padding: var(--space-4);
+  }
+
+  .ui-dialog-footer {
+    padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ui-dialog-actions {
+    flex: 1 1 100%;
+  }
+
+  .ui-dialog-footer .ui-button {
+    flex: 1;
+  }
+
+  .dialog-field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ui-dialog-backdrop {
+    animation: dialog-backdrop-in 0.2s ease-out both;
+  }
+
+  .ui-dialog {
+    animation: dialog-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .ui-dialog {
+    animation-duration: 0.28s;
+    animation-name: dialog-sheet-in;
+  }
+}
+
+@keyframes dialog-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes dialog-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}

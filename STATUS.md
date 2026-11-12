@@ -16,7 +16,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 _Last updated: 2026-11-12_
 
 - **Branch:** `phase-15b-work-pages`, started from `main`. Phase 15a is merged into `main`.
-- **Phase 15b in progress:** the QA queue, Condition check, Import and Reports pages in the new design, committed and pushed as work in progress. Not yet through Gate 1.
+- **Phase 15b built, waiting for Gate 1:** the QA queue, Condition check, Import and Reports pages and the Export and Print map dialogs in the new design, committed and pushed as work in progress. The owner checks it with `npm run dev:local`.
 - **Phase 15a approved, live deploy pending:** the Interventions pages, the phone map rework and the faster page changes passed both gates on 2026-11-12 and are merged into `main`. They go live when the owner runs `npm run deploy`.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
@@ -65,6 +65,14 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Phase 15b finished on branch `phase-15b-work-pages`, ready for Gate 1:
+  - **Export and Print map dialogs** in the new design (design brief screens 29 and 30). They share one frame, `overview/Dialog.tsx`, which has a title with a line under it, a round close button, a body that scrolls, and Cancel and the main button along the bottom. On a phone the dialog rises from the bottom as a sheet, like the map's layers.
+  - **Export:** the formats are cards with the chosen one outlined in green, and the filters in force are chips. The count and the file name sit beside Download, so they stay in view however far the choices scroll. Notes about records that can't be plotted are in a notice.
+  - **Print map:** the hint is a notice, and Paper and Orientation sit side by side on a computer.
+  - **Keyboard:** Escape closes a dialog, Tab stays inside it, and closing puts the focus back on the button that opened it. A new test in `e2e/export.spec.ts` checks this.
+  - The old `.export-dialog` styles are gone from `app.css`.
+  - **Checks:** typecheck, 1,120 unit tests, and the production build with its check for private data. The full e2e run had 670 passed, 0 failed and 11 skipped, and the new keyboard test passes on a computer and a phone.
+  - **Noticed, not fixed:** in the long e2e run the dev server once logged a Leaflet error (`layerPointToContainerPoint` of null) from `revealMarker` in `InterventionLayer.tsx`. A record's popup opened after the map had already closed. No test failed because of it.
 - Phase 15b started on branch `phase-15b-work-pages`, committed and pushed as work in progress. Not yet through Gate 1:
   - **QA queue, Condition check and Import** are each their own page now, reached from the sidebar under Records. The old "QA and import" tabs are gone, and an unknown address under them opens the QA queue. Each page has a page header, a filter bar card, and cards for its lists.
   - **Import** shows its steps as a stepper, and Earlier imports is a card with an Undone badge on undone batches.
