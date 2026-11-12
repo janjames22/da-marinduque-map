@@ -334,7 +334,7 @@ A backup made before `0011_reports.sql` has no signature blocks. Restoring it ke
 
 ## Changing the database
 
-Run the migration before deploying the site that needs it. Otherwise, people can't use the new features until it's applied. For example, exports are refused until `0006_export.sql` is in. `0012_lines.sql` (Phase 16) only relaxes two rules and switches nothing on, so it's safe to apply while the live site still runs older screens. `npm run test:live` expects it, as its type test is about polygons since then.
+Run the migration before deploying the site that needs it. Otherwise, people can't use the new features until it's applied. For example, exports are refused until `0006_export.sql` is in. `0012_lines.sql` (Phase 16) only relaxes two rules and switches nothing on, so it's safe to apply while the live site still runs older screens. `npm run test:live` passes before and after it, as its type test is about polygons, which stay refused.
 
 Add a new numbered file to `supabase/migrations`, take a backup, then run `npm run db:migrate`. Each file runs once, in its own transaction, and a failed file is rolled back. Never edit a file that has already been applied, because the change won't run.
 
