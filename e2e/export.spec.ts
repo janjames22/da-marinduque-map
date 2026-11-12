@@ -23,6 +23,10 @@ const seed = JSON.parse(readFileSync('data/local/local-seed.json', 'utf8')) as {
 
 const TOTAL = seed.interventions.length;
 const LOCATED = seed.interventions.filter((r) => r.geojson).length;
+// The sample roads are lines, so a Shapefile has a set of files for each kind.
+const kindOf = (r: { geojson: unknown }) => (r.geojson as GeoJSON.Geometry | null)?.type;
+const POINTS = seed.interventions.filter((r) => kindOf(r) === 'Point').length;
+const LINES = seed.interventions.filter((r) => kindOf(r) === 'LineString' || kindOf(r) === 'MultiLineString').length;
 const gasan = seed.municipalities.find((m) => m.name === 'Gasan')!;
 const inGasan = seed.interventions.filter((r) => r.municipality_id === gasan.id);
 const busiest = (() => {
@@ -244,10 +248,15 @@ test('a Shapefile and GeoJSON download whole', async ({ page }) => {
   expect(shapefile.suggestedFilename()).toBe(`Marinduque_Province_${today}.zip`);
   const zip = await JSZip.loadAsync(await bytesOf(shapefile));
   const stem = `Marinduque_Province_${today}`;
-  for (const extension of ['shp', 'shx', 'dbf', 'prj', 'cpg']) expect(zip.files[`${stem}.${extension}`], extension).toBeTruthy();
   expect(zip.files['fields.txt']).toBeTruthy();
-  const collection = await readShapefile(await zip.files[`${stem}.shp`].async('uint8array'), await zip.files[`${stem}.dbf`].async('uint8array'), { encoding: 'utf-8' });
-  expect(collection.features).toHaveLength(LOCATED);
+  expect(POINTS + LINES).toBe(LOCATED);
+  for (const [kind, count, type] of [['points', POINTS, 'Point'], ['lines', LINES, 'LineString']] as const) {
+    const base = `${stem}_${kind}`;
+    for (const extension of ['shp', 'shx', 'dbf', 'prj', 'cpg']) expect(zip.files[`${base}.${extension}`], `${kind} ${extension}`).toBeTruthy();
+    const collection = await readShapefile(await zip.files[`${base}.shp`].async('uint8array'), await zip.files[`${base}.dbf`].async('uint8array'), { encoding: 'utf-8' });
+    expect(collection.features).toHaveLength(count);
+    expect(new Set(collection.features.map((feature) => feature.geometry.type))).toEqual(new Set([type]));
+  }
 
   await toolbarExport(page).click();
   await dialog(page).getByLabel('GeoJSON').check();

@@ -12,7 +12,7 @@ import {
 } from '@tanstack/react-table';
 import { useEffect, useMemo } from 'react';
 import type { Intervention, MapData } from '../data/types';
-import { dismissedKeys, encodedPlace, FLAG_LABELS, isOnMap, needsReview, recordName } from '../lib/display';
+import { dismissedKeys, encodedPlace, FLAG_LABELS, isOnMap, needsReview, recordName, unplottedLabel } from '../lib/display';
 import { foldText } from '../lib/view-fields';
 import { useEditUi } from '../state/edit-ui';
 import { useExportUi } from '../state/export-ui';
@@ -195,7 +195,7 @@ export function RecordsTable({ records, data, state, onChange, onOpen, markUnplo
                         <button type="button" className="link-button">
                           {row.original.name}
                         </button>
-                        {markUnplotted && !isOnMap(row.original.record) && <span className="unplotted-badge">No coordinates yet</span>}
+                        {markUnplotted && !isOnMap(row.original.record) && <span className="unplotted-badge">{unplottedLabel(row.original.record, data)}</span>}
                       </td>
                     ) : (
                       <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>

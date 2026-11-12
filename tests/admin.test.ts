@@ -352,36 +352,43 @@ describe('a type', () => {
     await expect(encoder.createIntervention(recordValues(saved.id, { attributes: { drive: 'solar' } }), { status_id: statusId('Unknown'), status_date: '2024-01-01', remarks: null })).rejects.toThrow();
   });
 
-  it('can be a line or polygon, but stays inactive until drawing exists', async () => {
-    for (const geometry_kind of ['line', 'polygon'] as const) {
-      const active = typeValues({ geometry_kind });
-      await expect(admin.saveType(null, null, active, statusList(['Proposed']))).rejects.toThrow('Needs drawing tools (not yet built)');
-      expect((await attempt(ADMIN, SAVE_TYPE, typeArgs(active, statusList(['Proposed'])))).message).toMatch(/cannot be active until drawing tools are built/);
+  it('can be a polygon, but stays inactive until drawing exists', async () => {
+    const active = typeValues({ geometry_kind: 'polygon' });
+    await expect(admin.saveType(null, null, active, statusList(['Proposed']))).rejects.toThrow('Needs drawing tools (not yet built)');
+    expect((await attempt(ADMIN, SAVE_TYPE, typeArgs(active, statusList(['Proposed'])))).message).toMatch(/cannot be active until drawing tools are built/);
 
-      const saved = await admin.saveType(null, null, { ...active, is_active: false }, statusList(['Proposed']));
-      expect(saved).toMatchObject({ geometry_kind, is_active: false });
-      expect((await attempt(ADMIN, `update public.intervention_types set is_active = true where id = ${saved.id}`)).message).toMatch(/drawing tools/);
-    }
+    const saved = await admin.saveType(null, null, { ...active, is_active: false }, statusList(['Proposed']));
+    expect(saved).toMatchObject({ geometry_kind: 'polygon', is_active: false });
+    expect((await attempt(ADMIN, `update public.intervention_types set is_active = true where id = ${saved.id}`)).message).toMatch(/drawing tools/);
   });
 
-  it('can\'t get there from an active point type, and a point type can still be switched on', async () => {
+  it('can be a line, and switched on, since the map draws lines', async () => {
+    const saved = await admin.saveType(null, null, typeValues({ geometry_kind: 'line' }), statusList(['Proposed']));
+    expect(saved).toMatchObject({ geometry_kind: 'line', is_active: true });
+  });
+
+  it('can\'t get there from an active point type, and a point or line type can still be switched on', async () => {
     const point = await admin.saveType(null, null, typeValues(), statusList(['Proposed']));
     expect((await attempt(ADMIN, `update public.intervention_types set geometry_kind = 'polygon' where id = ${point.id}`)).message).toMatch(/drawing tools/);
     expect((await attempt(ADMIN, `update public.intervention_types set geometry_kind = 'polygon', is_active = false where id = ${point.id}`)).ok).toBe(true);
 
-    expect((await attempt(ADMIN, `update public.intervention_types set is_active = true where code = 'fmr'`)).message).toMatch(/drawing tools/);
+    expect((await attempt(ADMIN, `update public.intervention_types set is_active = true where code = 'service-area'`)).message).toMatch(/drawing tools/);
     expect((await attempt(ADMIN, `update public.intervention_types set is_active = true where code = 'other'`)).ok).toBe(true);
+    expect((await attempt(ADMIN, `update public.intervention_types set is_active = true where code = 'fmr'`)).ok).toBe(true);
   });
 
-  it('takes no record of a line or polygon type without its shape, for anyone', async () => {
-    const line = data.types.find((t) => t.code === 'fmr')!;
+  it('takes no polygon record without its shape, for anyone, while a road can wait for its line', async () => {
+    const polygonType = (await admin.saveType(null, null, { ...typeValues({ geometry_kind: 'polygon' }), is_active: false }, statusList(['Proposed']))).id;
     const status = { status_id: statusId('Proposed'), status_date: '2024-01-01', remarks: null };
-    await encoder.load();
-    await expect(encoder.createIntervention(recordValues(line.id), status)).rejects.toThrow(/drawing tools/);
-
-    const values = { intervention_type_id: line.id, title: 'No shape', municipality_id: data.municipalities[0].id, year_funded: 2024 };
+    const values = { intervention_type_id: polygonType, title: 'No shape', municipality_id: data.municipalities[0].id, year_funded: 2024 };
     const refused = await attempt(ENCODER, 'select public.create_intervention($1::jsonb, $2::jsonb)', [JSON.stringify(values), JSON.stringify(status)]);
     expect(refused.message).toMatch(/needs its shape/);
+
+    const road = await admin.saveType(null, null, typeValues({ geometry_kind: 'line' }), statusList(['Proposed']));
+    await encoder.load();
+    const waiting = await encoder.createIntervention(recordValues(road.id), status);
+    expect(waiting.geojson).toBeNull();
+    expect(waiting.qa_flags).toContain('no_coords');
   });
 
   it('refuses a stale save, and names no winner silently', async () => {
@@ -717,14 +724,20 @@ describe('local mode', () => {
     expect(() => localAdmin.saveType(local.rows, context, saved.id, 1, values, statusList(['Unknown']))).not.toThrow();
   });
 
-  it('keeps a line or polygon type inactive, and takes no record of it without a shape', () => {
-    const line = typeValues({ code: 'local-line', name: 'Local line', geometry_kind: 'line' });
-    expect(() => localAdmin.saveType(local.rows, context, null, null, line, statusList(['Proposed']))).toThrow('Needs drawing tools (not yet built)');
-    const saved = localAdmin.saveType(local.rows, context, null, null, { ...line, is_active: false }, statusList(['Proposed']));
-    expect(saved).toMatchObject({ geometry_kind: 'line', is_active: false });
+  it('keeps a polygon type inactive, and lets a line type be on with a record waiting for its line', () => {
+    const polygon = typeValues({ code: 'local-polygon', name: 'Local polygon', geometry_kind: 'polygon' });
+    expect(() => localAdmin.saveType(local.rows, context, null, null, polygon, statusList(['Proposed']))).toThrow('Needs drawing tools (not yet built)');
+    const saved = localAdmin.saveType(local.rows, context, null, null, { ...polygon, is_active: false }, statusList(['Proposed']));
+    expect(saved).toMatchObject({ geometry_kind: 'polygon', is_active: false });
 
-    const contextNow = { ...context, types: lists().types, typeStatuses: lists().typeStatuses };
-    expect(() => engine.createIntervention(local.rows, contextNow, recordValues(saved.id))).toThrow(/drawing tools/);
+    const contextNow = () => ({ ...context, types: lists().types, typeStatuses: lists().typeStatuses });
+    expect(() => engine.createIntervention(local.rows, contextNow(), recordValues(saved.id))).toThrow(/drawing tools/);
+
+    const line = localAdmin.saveType(local.rows, context, null, null, typeValues({ code: 'local-line', name: 'Local line', geometry_kind: 'line' }), statusList(['Proposed']));
+    expect(line).toMatchObject({ geometry_kind: 'line', is_active: true });
+    const waiting = engine.createIntervention(local.rows, contextNow(), recordValues(line.id));
+    expect(waiting.geojson).toBeNull();
+    expect(waiting.qa_flags).toContain('no_coords');
   });
 
   it('saves the barangay form, refusing a stale save, a lost field and a photo', () => {

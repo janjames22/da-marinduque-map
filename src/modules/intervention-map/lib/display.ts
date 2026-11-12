@@ -1,6 +1,7 @@
 import type { FieldDefinition, Icon, Intervention, MapData, StatusEntry } from '../data/types';
 import { formatPoint, googleMapsUrl } from './coordinates';
 import type { Permissions } from './permissions';
+import { formatKm, isLineType, lineLength } from './roads';
 import { beneficiaryKey } from './text';
 
 const byId = <T extends { id: number }>(items: T[], id: number | null): T | undefined =>
@@ -51,14 +52,22 @@ export function encodedPlace(record: Intervention, data: Pick<MapData, 'barangay
   return [barangay, municipality].filter(Boolean).join(', ');
 }
 
-export function locationWarning(record: Intervention, data: Pick<MapData, 'barangays' | 'municipalities'>): string | null {
+// Given the types, a road's warning speaks of its line.
+export function locationWarning(record: Intervention, data: Pick<MapData, 'barangays' | 'municipalities'> & Partial<Pick<MapData, 'types'>>): string | null {
   const flags = record.qa_flags;
-  if (flags.includes('no_coords')) return 'No coordinates yet, so this record is not on the map';
-  if (flags.includes('out_of_province')) return 'Coordinates are outside Marinduque, so this record is not on the map';
+  const line = isLineType(data.types?.find((type) => type.id === record.intervention_type_id));
+  if (flags.includes('no_coords')) return line ? 'No traced line yet, so this road is not on the map' : 'No coordinates yet, so this record is not on the map';
+  if (flags.includes('out_of_province')) return line ? 'The line runs outside Marinduque, so this road is not on the map' : 'Coordinates are outside Marinduque, so this record is not on the map';
   if ((flags.includes('barangay_mismatch') || flags.includes('muni_mismatch')) && record.plotted_barangay) {
     return `Plotted in ${record.plotted_barangay}, ${record.plotted_municipality}; encoded as ${encodedPlace(record, data)}`;
   }
   return null;
+}
+
+// The badge for a record that's counted but not drawn (NC-7). A road waits for its traced line.
+export function unplottedLabel(record: Intervention, data: Partial<Pick<MapData, 'types'>>): string {
+  if (!isLineType(data.types?.find((type) => type.id === record.intervention_type_id))) return 'No coordinates yet';
+  return record.geojson === null ? 'No traced line yet' : 'Line outside Marinduque';
 }
 
 export const FLAG_LABELS: Record<string, string> = {
@@ -159,6 +168,10 @@ export function popupHtml(record: Intervention, data: MapData, permissions: Perm
       actionButton('copy-coordinates', 'Copy coordinates', ` data-coordinates="${escapeHtml(text)}"`) +
       `<a class="popup-action" href="${escapeHtml(googleMapsUrl({ lat, lng }))}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>` +
       `</div>`;
+  } else if (record.geojson?.type === 'LineString' || record.geojson?.type === 'MultiLineString') {
+    // The form's Length, if the type has one, is the reported figure. This is the line as drawn.
+    const traced = lineLength(record).tracedKm;
+    coordinates = traced === null ? '' : row('Traced line', formatKm(traced));
   }
 
   const editActions = [

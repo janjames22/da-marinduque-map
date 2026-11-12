@@ -1,4 +1,5 @@
-// Builds data/local/local-seed.json, the starting dataset for local mode (Phases 2 and 3).
+// Builds data/local/local-seed.json, the starting dataset for local mode (Phases 2 and 3), with the
+// made-up sample roads of Phase 16.
 // It comes from the real migrations and seed, so the data carries the flags the triggers compute.
 // Barangay polygons aren't included; the map reads them from public/boundaries.
 //
@@ -9,6 +10,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { addSampleRoads } from './sample-roads';
 import { loadSeedFiles, seedInterventions, type Queryable } from './seed-interventions';
 
 const OUTPUT_PATH = resolve(import.meta.dirname, '..', 'data', 'local', 'local-seed.json');
@@ -53,9 +55,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const db = await createTestDb();
   const { rows, corrections } = loadSeedFiles();
   await seedInterventions(db, rows, corrections);
+  // Local mode only: made-up roads until the FMR data arrives. See scripts/sample-roads.ts.
+  const roads = await addSampleRoads(db);
   const seed = await buildLocalSeed(db);
   mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
   writeFileSync(OUTPUT_PATH, JSON.stringify(seed));
-  console.log(`Wrote ${seed.interventions.length} interventions to ${OUTPUT_PATH}`);
+  console.log(`Wrote ${seed.interventions.length} interventions, ${roads} of them sample roads, to ${OUTPUT_PATH}`);
   await db.close();
 }

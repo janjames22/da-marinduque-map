@@ -4,6 +4,7 @@
 import type { Intervention, MapData } from '../data/types';
 import type { BarRow } from './dashboard';
 import { isOnMap, recordName } from './display';
+import { isLineType } from './roads';
 import { CATEGORY_COLORS } from './view-fields';
 
 const NO_GROUP_COLOR = '#bdbdbd';
@@ -37,8 +38,9 @@ export interface AwaitingGroup {
   records: AwaitingRecord[];
 }
 
-function issueOf(record: Intervention): string {
-  const parts = [record.qa_flags.includes('out_of_province') ? 'Coordinates are outside Marinduque' : 'No coordinates yet'];
+function issueOf(record: Intervention, isLine: boolean): string {
+  const outside = record.qa_flags.includes('out_of_province');
+  const parts = [isLine ? (outside ? 'Line runs outside Marinduque' : 'No traced line yet') : outside ? 'Coordinates are outside Marinduque' : 'No coordinates yet'];
   if (record.qa_flags.includes('barangay_not_in_marinduque')) parts.push('barangay not in Marinduque');
   else if (record.barangay_id === null) parts.push('no barangay');
   return parts.join(', ');
@@ -46,8 +48,10 @@ function issueOf(record: Intervention): string {
 
 // The records counted in every total but not drawn on the map, until the region confirms where they
 // are. By municipality, then by ID, as the verification sheet for the MAOs runs.
-export function awaitingLocation(records: Intervention[], data: Pick<MapData, 'municipalities'>): AwaitingGroup[] {
+// Given the types, a road's issue is its missing line.
+export function awaitingLocation(records: Intervention[], data: Pick<MapData, 'municipalities'> & Partial<Pick<MapData, 'types'>>): AwaitingGroup[] {
   const groups = new Map<number, AwaitingGroup>();
+  const lineTypes = new Set((data.types ?? []).filter(isLineType).map((type) => type.id));
   for (const record of records) {
     if (isOnMap(record)) continue;
     const group = groups.get(record.municipality_id) ?? {
@@ -55,7 +59,7 @@ export function awaitingLocation(records: Intervention[], data: Pick<MapData, 'm
       municipality: byId(data.municipalities, record.municipality_id)?.name ?? 'Unknown',
       records: [],
     };
-    group.records.push({ record, issue: issueOf(record) });
+    group.records.push({ record, issue: issueOf(record, lineTypes.has(record.intervention_type_id)) });
     groups.set(record.municipality_id, group);
   }
   const sortKey = (record: Intervention) => record.source_id ?? record.id;
@@ -101,5 +105,6 @@ export function verificationRows(groups: AwaitingGroup[], data: Pick<MapData, 't
   );
 }
 
-// The Farm-to-Market Road type exists but waits for its data and for line drawing.
+// The Farm-to-Market Road type is off until an Admin switches it on, and then Home and the Dashboard
+// show the roads in place of the "Data to follow" card.
 export const hasRoads = (data: Pick<MapData, 'types'>) => data.types.some((type) => type.code === 'fmr' && type.is_active);

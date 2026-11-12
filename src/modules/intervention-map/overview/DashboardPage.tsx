@@ -16,6 +16,7 @@ import { recordName } from '../lib/display';
 import { downloadFile } from '../lib/download';
 import { recordOnMap } from '../lib/map-paths';
 import { awaitingCount, awaitingLocation, hasRoads, unitsByCategoryGroup, VERIFICATION_COLUMNS, verificationRows } from '../lib/overview';
+import { formatKm, roadNote, roadTotals, roadType } from '../lib/roads';
 import { useMapUi } from '../state/map-ui';
 import { StoreContext, useStore } from '../state/store-context';
 import { useMapData } from '../state/use-map-data';
@@ -62,6 +63,8 @@ function Dashboard({ data }: { data: MapData }) {
   const barangays = useMemo(() => barangaysInScope(data.barangays, view), [data.barangays, viewKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const numbers = useMemo(() => buildDashboard(records, data, barangays), [records, data, barangays]);
   const groups = useMemo(() => unitsByCategoryGroup(records, data), [records, data]);
+  const roads = useMemo(() => roadTotals(records, data), [records, data]);
+  const roadTypeId = roadType(data)?.id;
   const awaiting = useMemo(() => awaitingLocation(records, data), [records, data]);
   const waiting = awaitingCount(awaiting);
   const units = records.reduce((sum, record) => sum + record.quantity, 0);
@@ -103,9 +106,13 @@ function Dashboard({ data }: { data: MapData }) {
 
       <dl className="overview-tiles" aria-label="Totals">
         <Tile id="records" hero label="Total interventions" value={count(numbers.records)} note={plural(units, 'unit')} />
-        {numbers.types.map((type) => (
-          <Tile key={type.typeId} id={`type-${type.typeId}`} label={data.types.find((t) => t.id === type.typeId)?.name ?? type.label} value={count(type.units)} note="Units" />
-        ))}
+        {numbers.types.map((type) =>
+          type.typeId === roadTypeId ? (
+            <Tile key={type.typeId} id="fmr" label="Farm-to-Market Roads" value={formatKm(roads.km)} note={roadNote(roads)} />
+          ) : (
+            <Tile key={type.typeId} id={`type-${type.typeId}`} label={data.types.find((t) => t.id === type.typeId)?.name ?? type.label} value={count(type.units)} note="Units" />
+          ),
+        )}
         {!hasRoads(data) && (
           <div className="overview-tile is-placeholder" data-tile="fmr">
             <dt>Farm-to-Market Roads</dt>

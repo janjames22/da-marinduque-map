@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 interface SeedRecord {
   id: string;
   source_id: string;
+  intervention_type_id: number;
   barangay_id: number | null;
   qa_flags: string[];
 }
@@ -12,12 +13,20 @@ const seed = JSON.parse(readFileSync('data/local/local-seed.json', 'utf8')) as {
   barangays: { id: number; name: string; municipality_id: number }[];
   interventions: SeedRecord[];
   intervention_barangays: { barangay_id: number; intervention_id: string }[];
+  lookups: { intervention_types: { id: number; code: string }[] };
 };
 
 const linked = new Map<number, number>();
 for (const { barangay_id } of seed.intervention_barangays) linked.set(barangay_id, (linked.get(barangay_id) ?? 0) + 1);
 
 const emptyBarangay = seed.barangays.find((b) => !linked.has(b.id))!;
+// Barangays with a record, counting every barangay a road runs through (the sample roads since Phase 16),
+// and those left with Farm Machinery switched off.
+const reached = linked.size;
+const empty = seed.barangays.length - reached;
+const machineryId = seed.lookups.intervention_types.find((type) => type.code === 'farm-machinery')!.id;
+const typeOfRecord = new Map(seed.interventions.map((record) => [record.id, record.intervention_type_id]));
+const reachedWithoutMachinery = new Set(seed.intervention_barangays.filter((link) => typeOfRecord.get(link.intervention_id) !== machineryId).map((link) => link.barangay_id)).size;
 const barangayNamed = (name: string) => seed.barangays.find((b) => b.name === name)!;
 const recordById = (n: string) => seed.interventions.find((r) => r.source_id === `RAED-2026-10-21-${n}`)!;
 
@@ -57,7 +66,7 @@ test.describe('barangay base layer', () => {
 
   test('shows the coverage and the unassigned count in the legend', async ({ page }) => {
     await page.goto('/map');
-    await expect(legend(page)).toContainText('93 of 218 barangays have records');
+    await expect(legend(page)).toContainText(`${reached} of 218 barangays have records`);
     await expect(legend(page)).toContainText('Unassigned: 9 records');
   });
 
@@ -199,13 +208,13 @@ test.describe('choropleth modes', () => {
     let total = 0;
     for (const label of ['0', '1', '2', '3–4', '5–9', '10+']) total += await legendCount(page, label);
     expect(total).toBe(218);
-    expect(await legendCount(page, '0')).toBe(125);
+    expect(await legendCount(page, '0')).toBe(empty);
   });
 
   test('the gap view shows the barangays with no records, and shades them', async ({ page }) => {
     await page.getByRole('radio', { name: 'No intervention yet' }).check();
-    expect(await legendCount(page, 'None encoded yet')).toBe(125);
-    expect(await legendCount(page, 'At least one')).toBe(93);
+    expect(await legendCount(page, 'None encoded yet')).toBe(empty);
+    expect(await legendCount(page, 'At least one')).toBe(reached);
     await expect(legend(page)).toContainText('Shows what has been encoded, not what exists on the ground.');
 
     const someBarangay = seed.barangays.find((b) => linked.has(b.id))!;
@@ -216,19 +225,19 @@ test.describe('choropleth modes', () => {
   test('the gap view respects filters', async ({ page }) => {
     await page.getByRole('radio', { name: 'No intervention yet' }).check();
     await programSelect(page).selectOption({ label: 'National Livestock Program' });
-    expect(await legendCount(page, 'At least one')).toBeLessThan(93);
-    expect(await legendCount(page, 'None encoded yet')).toBeGreaterThan(125);
+    expect(await legendCount(page, 'At least one')).toBeLessThan(reached);
+    expect(await legendCount(page, 'None encoded yet')).toBeGreaterThan(empty);
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
 
     await page.getByLabel('Layers and filters').getByRole('button', { name: 'Clear filters' }).click();
-    expect(await legendCount(page, 'None encoded yet')).toBe(125);
+    expect(await legendCount(page, 'None encoded yet')).toBe(empty);
   });
 
   test('by program shades by the picked program', async ({ page }) => {
     await page.getByRole('radio', { name: 'By program' }).check();
     await expect(legend(page)).toContainText('Rice Program');
     const riceZero = await legendCount(page, '0');
-    expect(riceZero).toBeGreaterThan(125);
+    expect(riceZero).toBeGreaterThan(empty);
 
     await programSelect(page).selectOption({ label: 'Corn Program' });
     await expect(legend(page)).toContainText('Corn Program');
@@ -267,17 +276,19 @@ test.describe('layer panel', () => {
     const panel = page.getByLabel('Layers and filters');
     await expect(panel.getByLabel(/Farm Machinery/)).toBeChecked();
     await expect(panel.getByLabel(/SSIP/)).toBeChecked();
+    // Local mode has the roads on, with their sample roads.
+    await expect(panel.getByRole('checkbox', { name: /Farm-to-Market Road/ })).toBeChecked();
     // Only the switches: SSIP's own "Service area (ha)" field is rightly offered in the field filters.
-    for (const hidden of ['Farm-to-Market Road', 'Postharvest Facility', 'Irrigation Canal', 'Service Area']) {
+    for (const hidden of ['Postharvest Facility', 'Irrigation Canal', 'Service Area']) {
       await expect(panel.getByRole('checkbox', { name: hidden })).toHaveCount(0);
     }
   });
 
   test('switching a layer off updates the map and the shading', async ({ page }) => {
-    await expect(legend(page)).toContainText('93 of 218');
+    await expect(legend(page)).toContainText(`${reached} of 218`);
     await page.getByLabel('Layers and filters').getByLabel(/Farm Machinery/).uncheck();
-    await expect(legend(page)).not.toContainText('93 of 218');
-    await expect(legend(page)).toContainText('4 of 218');
+    await expect(legend(page)).not.toContainText(`${reached} of 218`);
+    await expect(legend(page)).toContainText(`${reachedWithoutMachinery} of 218`);
   });
 
   test('keeps barangays always on, and can hide the other boundaries', async ({ page }) => {

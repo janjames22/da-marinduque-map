@@ -74,10 +74,14 @@ export function validateIntervention(
 ): FieldErrors {
   const errors: FieldErrors = {};
 
-  // Mirrors interventions_need_a_shape. A point record can wait for its coordinates, but a line or
-  // polygon record has nothing to show without its shape, and there's no way to draw one yet.
-  if (previous === null && type.geometry_kind !== 'point' && values.point === null) {
+  // Mirrors interventions_need_a_shape. A point record can wait for its coordinates and a road for its
+  // traced line, but a polygon record has nothing to show without its shape, and nothing draws one yet.
+  if (previous === null && type.geometry_kind === 'polygon' && values.point === null) {
     errors.intervention_type_id = `${type.name} needs a shape, and drawing tools aren't built yet.`;
+  }
+  // The database takes only a line for a line type, so a point placed for one is refused here first.
+  if (type.geometry_kind === 'line' && values.point !== null) {
+    errors.intervention_type_id = `${type.name} is a line on the map, not a point. Leave the location empty, and the road waits for its traced line.`;
   }
 
   if (!values.municipality_id) errors.municipality_id = 'Choose a municipality.';

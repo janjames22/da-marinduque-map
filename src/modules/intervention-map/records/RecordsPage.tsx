@@ -10,10 +10,11 @@ import { selectExportRecords } from '../export/records';
 import { liveRecords, pickViewFilters } from '../lib/choropleth';
 import { formatPoint, googleMapsUrl } from '../lib/coordinates';
 import { manilaDate } from '../lib/dates';
-import { dismissedKeys, encodedPlace, fieldValue, FLAG_LABELS, isOnMap, locationWarning, recordName, statusDateLabel } from '../lib/display';
+import { dismissedKeys, encodedPlace, fieldValue, FLAG_LABELS, isOnMap, locationWarning, recordName, statusDateLabel, unplottedLabel } from '../lib/display';
 import { ADD_ON_MAP, AWAITING_LIST, recordOnMap } from '../lib/map-paths';
 import { permissionsFor } from '../lib/permissions';
 import { pointOf } from '../lib/qa';
+import { formatKm, isLineType, lineLength } from '../lib/roads';
 import { ChangeHistory } from '../edit/ChangeHistory';
 import { FilterBar } from '../overview/FilterBar';
 import { ExportDialog } from '../panel/ExportDialog';
@@ -106,6 +107,16 @@ function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: st
   const status = byId(data.statuses, record.status_id);
   const point = pointOf(record);
   const onMap = isOnMap(record);
+  const isLine = isLineType(type);
+  const length = isLine ? lineLength(record) : null;
+  // The barangays a road runs through, besides its own.
+  const crosses = isLine
+    ? data.links
+        .filter((link) => link.intervention_id === record.id && link.link_source === 'spatial')
+        .map((link) => byId(data.barangays, link.barangay_id)?.name)
+        .filter((name): name is string => Boolean(name))
+        .sort((a, b) => a.localeCompare(b))
+    : [];
   const warning = locationWarning(record, data);
   const dismissed = dismissedKeys(data.qaDismissals);
   const flags = record.qa_flags.filter((flag) => flag !== 'duplicate_point' && !dismissed.has(`${record.id}|${flag}`));
@@ -136,7 +147,7 @@ function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: st
                 {status.name}
               </span>
             )}
-            {!onMap && <span className="unplotted-badge">No coordinates yet</span>}
+            {!onMap && <span className="unplotted-badge">{unplottedLabel(record, data)}</span>}
           </div>
           <p>{[record.source_id, encodedPlace(record, data)].filter(Boolean).join(' · ')}</p>
         </div>
@@ -171,11 +182,9 @@ function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: st
               <Fact label="Beneficiary type" value={byId(data.beneficiaryTypes, record.beneficiary_type_id)?.name} />
               <Fact label="Fund source" value={record.fund_source} />
               <Fact label="Unit cost" value={record.unit_cost === null ? null : `₱${record.unit_cost.toLocaleString('en-US')}`} />
+              {/* fieldValue gives the unit too, such as "2.5 km". */}
               {custom.map((field) => (
-                <Fact key={field.key} label={field.label} value={(() => {
-                  const value = fieldValue(field, record.attributes[field.key]);
-                  return value && field.unit ? `${value} ${field.unit}` : value;
-                })()} />
+                <Fact key={field.key} label={field.label} value={fieldValue(field, record.attributes[field.key])} />
               ))}
             </dl>
             {record.remarks && <p className="record-remarks">{record.remarks}</p>}
@@ -186,7 +195,20 @@ function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: st
             <h2 id="location-title" className="card-title">
               Location
             </h2>
-            {onMap && point ? (
+            {onMap && isLine && length ? (
+              <>
+                <dl className="facts">
+                  <Fact label="Length" value={length.km === null ? null : `${formatKm(length.km)}${length.basis === 'traced' ? ', measured from the map' : ''}`} />
+                  <Fact label="Traced line" value={length.tracedKm === null ? null : formatKm(length.tracedKm)} />
+                  <Fact label="Barangay" value={encodedPlace(record, data)} />
+                  <Fact label="Also runs through" value={crosses.join(', ')} />
+                </dl>
+                {warning && <p className="ui-notice ui-notice-info">{warning}</p>}
+                <p className="record-links">
+                  <Link to={recordOnMap(record.id)}>Open on the map</Link>
+                </p>
+              </>
+            ) : onMap && point ? (
               <>
                 <dl className="facts">
                   <Fact label="Coordinates" value={formatPoint(point)} />
@@ -210,7 +232,12 @@ function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: st
                     <Link to={AWAITING_LIST}>list for the region to verify</Link>.
                   </span>
                 </p>
-                {canEdit && record.deleted_at === null && (
+                {length?.km != null && (
+                  <dl className="facts">
+                    <Fact label="Length" value={formatKm(length.km)} />
+                  </dl>
+                )}
+                {canEdit && record.deleted_at === null && !isLine && (
                   <Link to={`${recordOnMap(record.id)}?fix=resolve`} className="ui-button ui-button-secondary">
                     Enter verified coordinates
                   </Link>

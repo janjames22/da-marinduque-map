@@ -1054,6 +1054,12 @@ test.describe('QA and import', () => {
 });
 
 test.describe('reports', () => {
+  // The inventory covers every type that's on, so it takes the local seed's sample roads too.
+  const inventoryCount = (() => {
+    const local = JSON.parse(readFileSync('data/local/local-seed.json', 'utf8')) as { interventions: { intervention_type_id: number; deleted_at: string | null }[]; lookups: { intervention_types: { id: number; is_active: boolean }[] } };
+    const active = new Set(local.lookups.intervention_types.filter((type) => type.is_active).map((type) => type.id));
+    return local.interventions.filter((record) => record.deleted_at === null && active.has(record.intervention_type_id)).length;
+  })();
   const downloadOf = async (page: Page, click: () => Promise<void>) => {
     const [download] = await Promise.all([page.waitForEvent('download'), click()]);
     return download;
@@ -1077,8 +1083,8 @@ test.describe('reports', () => {
     expect(profile.suggestedFilename()).toMatch(/^Profile_Boac_/);
 
     expect(exportCalls(fake)).toEqual([
-      expect.objectContaining({ p_format: 'pdf', p_file_name: pdf.suggestedFilename(), p_record_count: 199, p_filters: expect.objectContaining({ report: 'inventory' }) }),
-      expect.objectContaining({ p_format: 'xlsx', p_file_name: xlsx.suggestedFilename(), p_record_count: 199 }),
+      expect.objectContaining({ p_format: 'pdf', p_file_name: pdf.suggestedFilename(), p_record_count: inventoryCount, p_filters: expect.objectContaining({ report: 'inventory' }) }),
+      expect.objectContaining({ p_format: 'xlsx', p_file_name: xlsx.suggestedFilename(), p_record_count: inventoryCount }),
       expect.objectContaining({ p_format: 'pdf', p_file_name: profile.suggestedFilename(), p_filters: { report: 'municipal profile', municipality: 'Boac' } }),
     ]);
   });

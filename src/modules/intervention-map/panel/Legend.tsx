@@ -10,7 +10,32 @@ interface LegendProps {
   unassigned: number;
   scale: ColorScale;
   markers: Intervention[];
+  // Roads drawn on the map, by whether they're finished.
+  roads: { finished: number; unfinished: number };
   onShowUnassigned(): void;
+}
+
+// A road's line takes its color from Color by, like a marker. What the legend adds is the dashes.
+function RoadLegend({ roads }: { roads: LegendProps['roads'] }) {
+  const rows = [
+    { key: 'finished', label: 'Completed or in use', count: roads.finished },
+    { key: 'unfinished', label: 'Proposed or on-going', count: roads.unfinished },
+  ].filter((row) => row.count > 0);
+  if (rows.length === 0) return null;
+  return (
+    <>
+      <h2 className="legend-title legend-roads-title">Roads</h2>
+      <ul aria-label="Road lines">
+        {rows.map((row) => (
+          <li key={row.key}>
+            <span className={`line-swatch${row.key === 'unfinished' ? ' is-dashed' : ''}`} aria-hidden="true" />
+            <span>{row.label}</span>
+            <span className="count">{row.count}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
 }
 
 // Colors alone can't say what they mean, so each comes with its words and how many are showing.
@@ -41,7 +66,7 @@ function MarkerLegend({ scale, markers }: { scale: ColorScale; markers: Interven
   );
 }
 
-export function Legend({ mode, shading, totalBarangays, unassigned, scale, markers, onShowUnassigned }: LegendProps) {
+export function Legend({ mode, shading, totalBarangays, unassigned, scale, markers, roads, onShowUnassigned }: LegendProps) {
   // Phones only: the legend starts folded into a small button, so the map has the screen.
   const [open, setOpen] = useState(false);
   return (
@@ -82,6 +107,7 @@ export function Legend({ mode, shading, totalBarangays, unassigned, scale, marke
           Unassigned: {unassigned} {unassigned === 1 ? 'record' : 'records'}
         </button>
       )}
+      <RoadLegend roads={roads} />
       <MarkerLegend scale={scale} markers={markers} />
       </div>
     </div>

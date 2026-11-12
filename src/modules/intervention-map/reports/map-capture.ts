@@ -105,6 +105,8 @@ function drawCluster(context: CanvasRenderingContext2D, cluster: HTMLElement, or
 function drawLabel(context: CanvasRenderingContext2D, label: HTMLElement, origin: DOMRect) {
   const box = label.getBoundingClientRect();
   const style = getComputedStyle(label);
+  // A label hidden at this zoom, such as a road's length from further out, isn't printed either.
+  if (style.display === 'none' || box.width === 0) return;
   context.fillStyle = style.backgroundColor;
   context.beginPath();
   context.roundRect(box.left - origin.left, box.top - origin.top, box.width, box.height, 3);

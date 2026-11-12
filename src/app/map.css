@@ -340,3 +340,51 @@
     padding: 0 14px;
   }
 }
+
+/* Roads and other lines (Phase 16). The line, its white casing and dashes are set on the line itself, so
+   the print map copies them. The length shows from zoom 13 in, where RoadLayer marks the map. */
+.road-hit {
+  cursor: pointer;
+}
+
+.road-label {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 1px 2px rgb(31 30 28 / 18%);
+  color: var(--text-primary);
+  display: none;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 16px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.road-label::before {
+  display: none;
+}
+
+.map.show-road-labels .road-label {
+  display: block;
+}
+
+/* The legend's sample of a road: a short line with its white casing, dashed for an unfinished road. */
+.line-swatch {
+  background: var(--text-secondary);
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 3px var(--border-card);
+  display: inline-block;
+  flex: none;
+  height: 4px;
+  margin-right: 6px;
+  width: 22px;
+}
+
+.line-swatch.is-dashed {
+  background: repeating-linear-gradient(90deg, var(--text-secondary) 0 6px, transparent 6px 10px);
+}
+
+.legend-roads-title {
+  margin-top: var(--space-3);
+}

@@ -13,17 +13,23 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 ## Current state
 
-_Last updated: 2026-11-12_
+_Last updated: 2026-11-13_
 
-- **Branch:** `main`, in sync with `origin/main`. Phases 15b and 15c are merged.
+- **Branch:** `phase-16-fmr`, started from `main`. Phases 15b and 15c are merged into `main`.
+- **Phase 16a through Gate 1, draft up for Gate 2:** Farm-to-Market Roads on the map and the dashboard, on made-up sample roads in local mode. The owner approved Gate 1 on 2026-11-13. Draft: https://6af63fc1c7518f81002f6a39--da-marinduque-map.netlify.app. The draft runs on the live database, which has no roads and the road type off, so it shows the live data as before: it's a check that nothing else changed. Phase 16 comes in three parts: 16a roads on the map and the dashboard, 16b drawing and reshaping lines, 16c importing lines.
+- **Database change waiting:** `supabase/migrations/0012_lines.sql` is not applied to the live database yet. It lets a line type be switched on and a road wait for its traced line, and switches nothing on, so the live 15a site is unaffected. It needs the owner's go-ahead before `npm run db:migrate`. The draft doesn't need it. It has to be in before the production deploy, and before anyone switches the road type on, which the database refuses until then.
 - **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. Until the next production deploy the live site is on Phase 15a.
 - **Next production deploy after Phase 17:** the owner decided on 2026-11-12 to hold the live deploy until Phase 17 is done, so 15b, 15c, 16 and 17 go live in one `npm run deploy`, one 15-credit deploy instead of three. Every phase still gets its Gate 2 draft, which costs nothing. Only approved work is merged into `main`, so a deploy from it stays safe if a live bug needs one sooner. Phase 16's database change reaches the live database before then, so it has to keep working with the 15a site.
-- **Next:** Phase 16, Farm-to-Market Roads, on branch `phase-16-fmr`, then Phase 17. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
+- **Next:** Phase 16b and 16c, then Phase 17. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
   - ABE PDCS integration is only a proposal. The options are written up and nothing is merged.
-  - Drawing lines and polygons on the map isn't built yet. Editing works for points only.
+  - Drawing lines and polygons on the map isn't built yet. Roads are drawn on the map since Phase 16a, but a road's line can't be drawn or reshaped yet (16b) or imported (16c).
+  - The inventory report lists roads in its project layout, with no Length column and blank Latitude and Longitude. A road layout with the length could follow once the FMR data shows what the region reports.
+  - Roads count under "No group" in Units by category group, as they have no category.
+  - A flaky phone test: "the orange marker can be dragged to fine-tune" in `e2e/editing.spec.ts` fails about half the time when repeated, with or without the roads. The phone marker tests have stalled in long runs since Phase 15.
+  - A road is dashed while its status is named Proposed or On-going. The status list has no codes, so renaming those two statuses would stop the dashes.
   - 27 records stay off the map until the region verifies their location: 26 with no coordinates, 1 outside Marinduque. See [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §2.
   - UI/UX roadmap questions still open: Q-5 (FMR data format), Q-6 (basemap provider).
   - Laptop screens: since Phase 14 the map opens without the dashboard panel, so it has room at 1280 px. With the panel opened at that width, Wider can still only widen a little. The computer tests run at 1440 px.
@@ -65,6 +71,23 @@ The phases were built in a different order from the spec's §9. Export came befo
 ## Work log
 
 New entries go at the top. Each entry gets the date, what was done, and the commit or branch.
+
+### 2026-11-13
+
+- Phase 16a passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af63fc1c7518f81002f6a39--da-marinduque-map.netlify.app. Checked signed out: the security headers are on (framing blocked by the security policy), Inter loads, the road layer's code is served, and there are no console errors or failed requests. The sample roads aren't in the deployed files.
+- Phase 16a built on branch `phase-16-fmr`, ready for Gate 1. Farm-to-Market Roads on the map and the dashboard, built on made-up sample roads as the owner decided:
+  - **Database (`0012_lines.sql`):** a line type can be switched on, and a road can be saved before its line is traced. It's then counted in every total, flagged `no_coords` and kept off the map, as a point record waits for its coordinates. Polygons still can't be switched on. The migration switches nothing on, and isn't applied to the live database yet.
+  - **Map (M-11):** each traced road as a line in its Color by color with a white casing, dashed while Proposed or On-going, and labelled with its length from zoom 13 in. Roads have their own layer, `map/RoadLayer.tsx`, under the markers. A road's link opens the map on it with its popup, which gives the traced length beside the form's Length. The legend and the printed map's legend explain the solid and dashed lines.
+  - **Length:** the Length on a road's form, as the source reports it, so the totals match the source. Without one, the length of its traced line, measured along the earth's surface. One place, `lib/roads.ts`, for the map, the pages and the figures.
+  - **Home and Dashboard:** the roads' total km in place of "Data to follow", with the number of roads, how many aren't traced yet, how many are measured from the map and how many have no length. The Dashboard's follows its filters.
+  - **Record pages:** a road's Location card gives its length, its traced line and the barangays it runs through. A road without a line says "No traced line yet", in the list and the list for the region too, and offers no coordinates to enter. The form shows a road's line in place of the point picker and keeps it through an edit.
+  - **Local mode:** its copy of the database's rules now handles lines: flags, the plotted barangay (the point on the line PostGIS picks) and a link to every barangay a line crosses. A new test runs 300 generated lines through both and they agree, and another edits a sample road through both.
+  - **Sample roads:** `scripts/sample-roads.ts` adds 8 made-up roads to the local seed only, through the real triggers, with the road type switched on. Six have a traced line, two wait for one, and they're named "Sample FMR".
+  - **Fixed:** in local mode an edit to a road would have dropped its line, as the engine rebuilt the shape from a point. Now an edit that leaves the location alone keeps the shape.
+  - **Fixed, on the live site since Phase 15a:** a record's page showed a custom field's unit twice, such as "2.5 km km", for any field with a unit.
+  - **Tests:** 13 new unit tests and 11 new end-to-end tests in `e2e/roads.spec.ts`. The tests that counted records, barangays or types from the RAED data alone now count from the seed, as it has the sample roads. The live tests' line-type check is about polygons now, so `npm run test:live` needs `0012_lines.sql` applied first.
+  - **Docs:** a Farm-to-Market Roads section in `docs/OPERATIONS.md`, the roadmap's Phase 16 parts and change log, and the spec's rule for line types.
+  - **Checks:** typecheck, 1,133 unit tests, and the production build with its check for private data. The full e2e run had 678 passed, 14 failed and 11 skipped. It took 3.5 hours, as the computer slept partway through. 13 of the 14 pass when run again. The last, dragging the orange marker on a phone (`e2e/editing.spec.ts`, "the orange marker can be dragged to fine-tune"), fails 2 or 3 times in 5 when repeated, with the road layer on or off, so it's an older flaky test and not 16a's.
 
 ### 2026-11-12
 

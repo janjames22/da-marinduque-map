@@ -456,8 +456,13 @@ test.describe('the records table', () => {
     await page.getByRole('combobox', { name: 'Show' }).selectOption('100');
     await expect(rows(page)).toHaveCount(100);
     await expect(count(page)).toHaveText(`1–100 of ${records.length}`);
+    // Past 200 records, as with the sample roads since Phase 16, there's a third page.
     await next.click();
-    await expect(count(page)).toHaveText(`101–${records.length} of ${records.length}`);
+    await expect(count(page)).toHaveText(`101–${Math.min(200, records.length)} of ${records.length}`);
+    if (records.length > 200) {
+      await next.click();
+      await expect(count(page)).toHaveText(`201–${records.length} of ${records.length}`);
+    }
     await expect(next).toBeDisabled();
   });
 
@@ -516,8 +521,9 @@ test.describe('the records table', () => {
     // A new search starts again from the first page, even when it finds plenty.
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(count(page)).toHaveText(`26–50 of ${records.length}`);
+    // Every RAED record, and none of the sample roads, which have no source ID.
     await search.fill('RAED-2026');
-    await expect(count(page)).toHaveText(`1–25 of ${records.length}`);
+    await expect(count(page)).toHaveText(`1–25 of ${records.filter((record) => record.source_id?.startsWith('RAED-2026')).length}`);
   });
 
   test('a filter on the map narrows it too, and a search adds to that', async ({ page, isMobile }) => {
