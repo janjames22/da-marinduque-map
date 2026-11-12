@@ -9,6 +9,7 @@ import '@fontsource/inter/latin-700.css';
 import { App } from './app/App';
 import './app/tokens.css';
 import './app/app.css';
+import './app/controls.css';
 import './app/shell.css';
 import './app/map.css';
 import './app/map-phone.css';

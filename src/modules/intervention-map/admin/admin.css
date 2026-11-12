@@ -1,0 +1,450 @@
+/* The Admin pages in the Phase 11 design, since Phase 15c: a page header, tabs when a page holds several
+   lists, and each list as a card of rows with their buttons on the right. The buttons and fields
+   themselves are in controls.css. */
+
+.admin-page {
+  flex: 1;
+}
+
+/* A card's header: its title and help, with its button on the right. */
+.admin-section-header {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.admin-section-header > div {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.admin-section-header h2 {
+  font-size: var(--font-size-title-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--font-line-height-title-sm);
+  margin: 0;
+}
+
+.admin-section-header p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  margin: var(--space-1) 0 0;
+}
+
+/* The page header's or a card's main button keeps to its words. */
+.admin-add,
+.admin-back {
+  flex: none;
+  margin: 0;
+  width: auto;
+}
+
+.admin-page .page-header-actions .admin-add {
+  align-self: flex-start;
+}
+
+.admin-page .admin-section + .admin-section {
+  margin-top: 0;
+}
+
+.admin-subheading {
+  border-top: 1px solid var(--border-card);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  margin: var(--space-6) 0 0;
+  padding-top: var(--space-4);
+}
+
+.admin-empty {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Rows */
+
+.admin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-row {
+  align-items: center;
+  border-top: 1px solid var(--border-card);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  min-height: 60px;
+  padding: var(--space-3) 0;
+}
+
+.admin-list > .admin-row:first-child {
+  border-top: 0;
+}
+
+.admin-section-header + .admin-list > .admin-row:first-child,
+.admin-notice + .admin-list > .admin-row:first-child {
+  border-top: 1px solid var(--border-card);
+}
+
+.admin-row-archived > :not(.admin-row-actions) {
+  opacity: 0.6;
+}
+
+.admin-row-editing {
+  display: block;
+}
+
+.admin-row-main {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-row-main strong {
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.admin-row-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Compact buttons in a row, several side by side. */
+.admin-row .secondary-button,
+.admin-field-actions .secondary-button,
+.admin-name-form .secondary-button,
+.admin-section > .secondary-button,
+.admin-fields + .secondary-button {
+  margin: 0;
+  padding: 6px var(--space-3);
+  width: auto;
+}
+
+.admin-swatch {
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+  flex: none;
+  height: 20px;
+  width: 20px;
+}
+
+.admin-icon {
+  flex: none;
+  height: 22px;
+  width: 22px;
+}
+
+.admin-icon-empty {
+  display: inline-block;
+}
+
+.admin-icon-large {
+  background: var(--bg-icon-tile);
+  border-radius: var(--radius-sm);
+  display: block;
+  height: 64px;
+  padding: var(--space-2);
+  width: 64px;
+}
+
+.admin-move {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+/* A row's own form, and the add form above a list: a tinted box. */
+.admin-form {
+  background: var(--bg-page);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  margin: var(--space-2) 0 var(--space-4);
+  padding: var(--space-4);
+}
+
+.admin-row-editing .admin-form {
+  margin: 0;
+}
+
+/* The whole-page forms: a type's, and the barangay fields. */
+form.admin-form[aria-label='Type'],
+form.admin-form[aria-label='Barangay fields'] {
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+form.admin-form[aria-label='Type'] > fieldset {
+  border: 0;
+  border-top: 1px solid var(--border-card);
+  border-radius: 0;
+  padding: var(--space-6) 0 0;
+}
+
+form.admin-form[aria-label='Type'] > fieldset > legend {
+  float: left;
+  font-size: var(--font-size-body);
+  margin-bottom: var(--space-1);
+  padding: 0;
+  width: 100%;
+}
+
+form.admin-form[aria-label='Type'] > fieldset > legend + * {
+  clear: both;
+}
+
+.admin-form .section-title {
+  font-size: var(--font-size-body);
+}
+
+/* The standard fields' rules, in columns. */
+.admin-rules {
+  display: grid;
+  gap: var(--space-3) var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+/* The field builder: each field as a card, its settings in columns. */
+.admin-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.admin-form fieldset.admin-field {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  margin: 0;
+  padding: var(--space-4);
+}
+
+.admin-field-archived {
+  opacity: 0.6;
+}
+
+.admin-field-grid {
+  display: grid;
+  gap: var(--space-3) var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.admin-field-grid input,
+.admin-field-grid select,
+.admin-option input,
+.admin-link,
+.admin-name-form input,
+.admin-person-role select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-body);
+  height: var(--size-button-height);
+  min-width: 0;
+  padding: 0 var(--space-3);
+  width: 100%;
+}
+
+.admin-field-grid input[type='checkbox'] {
+  height: 16px;
+  width: 16px;
+}
+
+.field-label {
+  color: var(--text-primary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.admin-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.admin-option {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.admin-options > .link-button {
+  align-self: flex-start;
+}
+
+.admin-field-actions {
+  align-items: center;
+  border-top: 1px solid var(--border-card);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  justify-content: space-between;
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+}
+
+/* Users */
+
+.admin-person-role {
+  flex: 0 0 130px;
+}
+
+.admin-name-form {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.admin-page .conflict-note {
+  margin-bottom: var(--space-4);
+}
+
+/* The audit log: its filters along the top of the card, then the table. */
+.audit-filters {
+  align-items: flex-end;
+  display: grid;
+  gap: var(--space-3) var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: var(--space-4);
+}
+
+.audit-filters .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+}
+
+.audit-filters .field > span:first-child {
+  color: var(--text-primary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+  margin: 0;
+}
+
+.audit-filters input,
+.audit-filters select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-body);
+  height: var(--size-control-height);
+  min-width: 0;
+  padding: 0 var(--space-3);
+  width: 100%;
+}
+
+.audit-filters .link-button {
+  align-self: center;
+  font-weight: var(--font-weight-semibold);
+  justify-self: start;
+}
+
+.audit-scroll[aria-busy='true'] {
+  opacity: 0.6;
+}
+
+.audit-table {
+  font-size: var(--font-size-body-sm);
+}
+
+.audit-table tbody td {
+  height: auto;
+  padding-bottom: 10px;
+  padding-top: 10px;
+  vertical-align: top;
+}
+
+.audit-table ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.audit-table a {
+  color: var(--text-link);
+  font-weight: var(--font-weight-medium);
+}
+
+.audit-when {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* In a narrow window these scroll sideways, rather than squeezing to a word a line. */
+.audit-table td:nth-child(4) {
+  min-width: 200px;
+}
+
+.audit-table td:nth-child(5) {
+  min-width: 240px;
+}
+
+/* On a phone each line of the log is a small card, so the reason can't hide off to the side. */
+@media (max-width: 800px) {
+  .audit-table,
+  .audit-table tbody,
+  .audit-table tr,
+  .audit-table td {
+    display: block;
+  }
+
+  .audit-table thead {
+    display: none;
+  }
+
+  .audit-table tr {
+    border-top: 1px solid var(--border-card);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .audit-table tbody tr:first-child {
+    border-top: 0;
+  }
+
+  .audit-table tbody td,
+  .audit-table td:nth-child(n) {
+    border: 0;
+    height: auto;
+    min-width: 0;
+    padding: 1px 0;
+  }
+
+  .audit-when {
+    font-size: var(--font-size-caption);
+  }
+
+  .audit-table td:nth-child(3) {
+    font-weight: var(--font-weight-semibold);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-row {
+    align-items: flex-start;
+  }
+
+  .admin-row-actions {
+    flex: 1 1 100%;
+  }
+
+  .admin-person-role {
+    flex: 1 1 100%;
+  }
+}

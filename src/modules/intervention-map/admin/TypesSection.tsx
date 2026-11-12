@@ -8,7 +8,7 @@ import { CORE_FIELDS, draftProblems, draftsFromSchema, NEEDS_DRAWING, needsDrawi
 import { coreFieldLabel } from '../lib/validation';
 import { useStore } from '../state/store-context';
 import { FieldBuilder } from './FieldBuilder';
-import { ColorField, Feedback, IconImage, MoveButtons, plural, reordered, Swatch, useSaving } from './parts';
+import { ColorField, Feedback, IconImage, MoveButtons, plural, reordered, SectionFrame, Swatch, useSaving } from './parts';
 
 // What a new type starts with, from the spec's list for the types that aren't in use yet.
 const STARTING_STATUSES = ['Proposed', 'On-going', 'Completed', 'Operational', 'Needs Repair', 'Non-operational', 'Unknown'];
@@ -55,16 +55,15 @@ export function TypesList({ data }: { data: MapData }) {
     });
 
   return (
-    <section className="admin-section" aria-label="Intervention types">
-      <header className="admin-section-header">
-        <div>
-          <h2>Intervention types</h2>
-          <p className="field-hint">Each active type is a layer on the map, with its own form and status list.</p>
-        </div>
+    <SectionFrame
+      title="Intervention types"
+      description="Each active type is a layer on the map, with its own form and status list."
+      action={
         <Link className="primary-button admin-add" to="/admin/types/new">
           + Add type
         </Link>
-      </header>
+      }
+    >
       <Feedback failure={failure} notice={notice} />
       <ul className="admin-list">
         {data.types.map((type, index) => (
@@ -100,7 +99,7 @@ export function TypesList({ data }: { data: MapData }) {
           </li>
         ))}
       </ul>
-    </section>
+    </SectionFrame>
   );
 }
 
@@ -158,10 +157,11 @@ function TypeEditor({ id, data }: { id: string; data: MapData }) {
 
   if (!isNew && !type) {
     return (
-      <section className="admin-section">
-        <h2>That type wasn't found</h2>
-        <Link to="/admin/types">Back to the types</Link>
-      </section>
+      <SectionFrame title="That type wasn't found">
+        <p className="admin-empty">
+          It may have been removed, or the address is mistyped. <Link to="/admin/types">Back to the types</Link>
+        </p>
+      </SectionFrame>
     );
   }
 
@@ -228,16 +228,16 @@ function TypeEditor({ id, data }: { id: string; data: MapData }) {
   const categories = data.categories.filter((category) => category.intervention_type_id === type?.id && category.is_active);
 
   return (
-    <section className="admin-section" aria-label={isNew ? 'Add type' : `Edit ${type?.name}`}>
-      <header className="admin-section-header">
-        <div>
-          <h2>{isNew ? 'Add a type' : `Edit ${type?.name}`}</h2>
-          {type && <p className="field-hint">Code: {type.code}. It stays the same even if the name changes.</p>}
-        </div>
-        <Link className="secondary-button" to="/admin/types">
+    <SectionFrame
+      title={isNew ? 'Add a type' : `Edit ${type?.name}`}
+      label={isNew ? 'Add type' : `Edit ${type?.name}`}
+      description={type ? `Code: ${type.code}. It stays the same even if the name changes.` : undefined}
+      action={
+        <Link className="secondary-button admin-back" to="/admin/types">
           Back to the types
         </Link>
-      </header>
+      }
+    >
 
       {changedElsewhere && (
         <div className="conflict-note" role="alert">
@@ -386,6 +386,6 @@ function TypeEditor({ id, data }: { id: string; data: MapData }) {
           </Link>
         </div>
       </form>
-    </section>
+    </SectionFrame>
   );
 }

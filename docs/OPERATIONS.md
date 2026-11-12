@@ -82,7 +82,7 @@ Accounts are by invitation only.
 | Encoder | Viewer, plus add, edit, move and delete records, add statuses and photos, edit barangay baseline values, and see History. |
 | Admin | Encoder, plus see deleted records and restore them, manage people, and change the types, forms and lists. |
 
-Do all of this on the **Users** page: **Admin** in the header, then **Users**.
+Do all of this on the **Users** page, under **Administration** in the sidebar.
 
 | To | On the Users page |
 |---|---|
@@ -132,17 +132,17 @@ Gmail needs no email domain of the office's own. If the office gets one, Brevo's
 
 ## Customizing the map
 
-An Admin can change these from **Admin** in the header. Changes reach every open map within a couple of seconds, with no code release.
+An Admin changes these on the pages under **Administration** in the sidebar. Changes reach every open map within a couple of seconds, with no code release.
 
-| Page | What it changes |
+| Page, then tab | What it changes |
 |---|---|
-| **Intervention types** | Add a type or activate one, which adds its layer to the map. Set its name, color, icon, geometry, which standard fields are required or hidden, its status list, and its custom fields |
-| **Categories** | What a record is within its type, with its group and icon |
-| **Programs** | Banner programs. A program's color is the color of its markers everywhere, including exports |
-| **Statuses** | All the status names, and whether each **counts as assessed**: says a unit's condition has been checked. Each type picks its own list on its page, and which of them count as operational |
-| **Other lists** | Category groups, beneficiary types, location bases and icons |
-| **Barangay fields** | The baseline values on each barangay's profile |
-| **Report signatures** | The signature blocks at the foot of every report and printed map. See [Signature blocks](#signature-blocks) |
+| **Types and fields**, **Intervention types** | Add a type or activate one, which adds its layer to the map. Set its name, color, icon, geometry, which standard fields are required or hidden, its status list, and its custom fields |
+| **Lists**, **Categories** | What a record is within its type, with its group and icon |
+| **Lists**, **Programs** | Banner programs. A program's color is the color of its markers everywhere, including exports |
+| **Lists**, **Statuses** | All the status names, and whether each **counts as assessed**: says a unit's condition has been checked. Each type picks its own list on its page, and which of them count as operational |
+| **Lists**, **Other lists** | Category groups, beneficiary types, location bases and icons |
+| **Types and fields**, **Barangay fields** | The baseline values on each barangay's profile |
+| **Signature blocks** | The signature blocks at the foot of every report and printed map. See [Signature blocks](#signature-blocks) |
 
 - **Nothing is deleted:** lists and fields are archived, so existing records keep their meaning. An archived item leaves the choices for new records, stays on records that have it, and can be restored.
 - **What can't change:** a code or field key, once made. A saved field's kind. A type's geometry once it has records. A status stays on a type's list while any record is at it.
@@ -190,7 +190,7 @@ The Farm-to-Market Roads card says "Data to follow" until that type is switched 
 
 ## The audit log
 
-**Admin**, then **Audit log**, shows who changed what and when, for Admins only. Filter by person, record, action and date. Times and dates are Philippine time. Each line links to its record, or to the page where that item is managed. A record that's been deleted opens on its history.
+**Audit log**, under **Administration** in the sidebar, shows who changed what and when, for Admins only. Filter by person, record, action and date. Times and dates are Philippine time. Each line links to its record, or to the page where that item is managed. A record that's been deleted opens on its history.
 
 - **"No login (a script or Supabase's dashboard)"** means the change didn't come through the website, such as a seed, a correction by script or an edit in Supabase's table editor.
 - **"An account since removed"** means that person's account no longer exists. The line stays.
@@ -260,7 +260,7 @@ Every signed-in role can export, from the **Export** button on the map or **Expo
 
 ### Signature blocks
 
-Every report and printed map ends with signature blocks, left to right: a label, room to sign, the name, and the position. They start as "Prepared by: Engr. Jan James P. Graza, Agricultural and Biosystems Engineer" and "Noted by: Susana Arellano-Uy, RAgr., MPA, OIC Provincial Agriculturist". An Admin changes them in **Admin**, **Report signatures**: edit a name, position or label, add one such as "Approved by", move one up or down, or archive one to leave it off. Changes show on the next report made, and go in the audit log.
+Every report and printed map ends with signature blocks, left to right: a label, room to sign, the name, and the position. They start as "Prepared by: Engr. Jan James P. Graza, Agricultural and Biosystems Engineer" and "Noted by: Susana Arellano-Uy, RAgr., MPA, OIC Provincial Agriculturist". An Admin changes them on the **Signature blocks** page, under **Administration** in the sidebar: edit a name, position or label, add one such as "Approved by", move one up or down, or archive one to leave it off. Changes show on the next report made, and go in the audit log.
 
 ## Backups
 

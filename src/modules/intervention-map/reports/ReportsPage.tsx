@@ -83,7 +83,7 @@ function Overview({ data, user }: { data: MapData; user: AppUser }) {
           </div>
           {user.role === 'admin' && (
             <Link to="/admin/signatures" className="ui-button ui-button-secondary">
-              Change them in Admin, Report signatures
+              Change them in Signature blocks
             </Link>
           )}
         </header>

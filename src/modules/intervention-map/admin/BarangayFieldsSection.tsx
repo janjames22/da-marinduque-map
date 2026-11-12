@@ -5,7 +5,7 @@ import type { MapData } from '../data/types';
 import { draftProblems, draftsFromSchema, schemaFromDrafts, type FieldDraft } from '../lib/admin-rules';
 import { useStore } from '../state/store-context';
 import { FieldBuilder } from './FieldBuilder';
-import { Feedback, useSaving } from './parts';
+import { Feedback, SectionFrame, useSaving } from './parts';
 
 export function BarangayFieldsSection({ data }: { data: MapData }) {
   const { store } = useStore();
@@ -42,13 +42,7 @@ export function BarangayFieldsSection({ data }: { data: MapData }) {
   };
 
   return (
-    <section className="admin-section" aria-label="Barangay fields">
-      <header className="admin-section-header">
-        <div>
-          <h2>Barangay fields</h2>
-          <p className="field-hint">The baseline values Encoders can fill in on each barangay's profile.</p>
-        </div>
-      </header>
+    <SectionFrame title="Barangay fields" description="The baseline values Encoders can fill in on each barangay's profile.">
       {changedElsewhere && (
         <div className="conflict-note" role="alert">
           <p>
@@ -69,6 +63,6 @@ export function BarangayFieldsSection({ data }: { data: MapData }) {
           </button>
         </div>
       </form>
-    </section>
+    </SectionFrame>
   );
 }

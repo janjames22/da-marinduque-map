@@ -73,7 +73,7 @@ test.describe('who is offered them', () => {
       const overview = reportsPage(page);
       await expect(overview.getByRole('link')).toContainText(['Municipal profile', 'Beneficiary profile', 'Inventory report']);
       await expect(overview.locator('.signature-list li')).toHaveText(['Prepared by: Engr. Jan James P. Graza, Agricultural and Biosystems Engineer', 'Noted by: Susana Arellano-Uy, RAgr., MPA, OIC Provincial Agriculturist']);
-      await expect(overview.getByRole('link', { name: /Change them in Admin/ })).toHaveCount(role === 'admin' ? 1 : 0);
+      await expect(overview.getByRole('link', { name: 'Change them in Signature blocks' })).toHaveCount(role === 'admin' ? 1 : 0);
       const nav = await sidebar(page);
       await expect(nav.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page');
       await nav.getByRole('link', { name: 'Map', exact: true }).click();
@@ -103,8 +103,7 @@ test.describe('the reports', () => {
     expect(pages[0]).toContain(`${inBoac} interventions`);
     expect(pages[0]).toContain('Prepared by: Engr. Jan James P. Graza');
 
-    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
-    await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Audit log' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Audit log' }).click();
     await expect(page.locator('tr[data-audit-entry]').first()).toContainText(`Profile_Boac_${today}.pdf`);
   });
 
@@ -207,7 +206,7 @@ test.describe('the reports', () => {
 test.describe('signature blocks', () => {
   test('an Admin changes, adds, archives and reorders them, and the reports follow', async ({ page }) => {
     await open(page, '/admin/signatures');
-    const list = page.getByRole('region', { name: 'Report signatures' });
+    const list = page.getByRole('region', { name: 'Signature blocks' });
     await expect(list.locator('.admin-row')).toHaveCount(2);
 
     await list.locator('.admin-row').filter({ hasText: 'Susana Arellano-Uy' }).getByRole('button', { name: /^Edit/ }).click();
@@ -216,7 +215,8 @@ test.describe('signature blocks', () => {
     await editing.getByRole('button', { name: 'Save' }).click();
     await expect(list.locator('.admin-row').filter({ hasText: 'Susana Arellano-Uy' })).toContainText('Noted by · Provincial Agriculturist');
 
-    await list.getByRole('button', { name: '+ Add signature' }).click();
+    // The list is the only one on its page, so its Add button is in the page header.
+    await page.getByRole('button', { name: '+ Add signature' }).click();
     const adding = page.getByRole('form', { name: 'Add signature' });
     await adding.getByRole('button', { name: 'Save' }).click();
     await expect(adding).toContainText('Enter a label, such as "Prepared by".');

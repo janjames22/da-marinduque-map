@@ -126,6 +126,29 @@
   margin: 0 0 var(--space-4);
 }
 
+.card-note {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  margin: calc(-1 * var(--space-3)) 0 var(--space-4);
+}
+
+/* The record's changes, each a line with who and when under it. */
+.records-page .audit-list > li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) 0;
+}
+
+.records-page .audit-list > li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.records-page .audit-list .record-meta {
+  font-size: var(--font-size-caption);
+}
+
 .facts {
   display: grid;
   gap: var(--space-4) var(--space-6);

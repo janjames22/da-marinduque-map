@@ -1108,7 +1108,7 @@ test.describe('reports', () => {
   test('an Admin\'s change to a signature block goes to its table, by its id', async ({ page }) => {
     const fake = await signedIn(page, USERS.admin);
     await page.goto('/admin/signatures');
-    const list = page.getByRole('region', { name: 'Report signatures' });
+    const list = page.getByRole('region', { name: 'Signature blocks' });
     await list.locator('.admin-row').filter({ hasText: 'Engr. Jan James P. Graza' }).getByRole('button', { name: /^Edit/ }).click();
     const form = page.getByRole('form', { name: /^Edit Engr/ });
     await form.getByLabel(/^Position/).fill('Engineer II');

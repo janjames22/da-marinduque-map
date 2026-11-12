@@ -14,6 +14,7 @@ import { dismissedKeys, encodedPlace, fieldValue, FLAG_LABELS, isOnMap, location
 import { ADD_ON_MAP, AWAITING_LIST, recordOnMap } from '../lib/map-paths';
 import { permissionsFor } from '../lib/permissions';
 import { pointOf } from '../lib/qa';
+import { ChangeHistory } from '../edit/ChangeHistory';
 import { FilterBar } from '../overview/FilterBar';
 import { ExportDialog } from '../panel/ExportDialog';
 import { useMapUi } from '../state/map-ui';
@@ -79,7 +80,7 @@ function Fact({ label, value }: { label: string; value: string | null | undefine
 }
 
 function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: string }) {
-  const { canEdit } = permissionsFor(user.role);
+  const { canEdit, canSeeHistory } = permissionsFor(user.role);
   const record = data.interventions.find((candidate) => candidate.id === id);
 
   if (!record) {
@@ -242,6 +243,16 @@ function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: st
               </ol>
             )}
           </section>
+
+          {canSeeHistory && (
+            <section className="overview-card" aria-labelledby="changes-title">
+              <h2 id="changes-title" className="card-title">
+                Change history
+              </h2>
+              <p className="card-note">Every change to this record, newest first, with who made it and why. Times are Philippine time.</p>
+              <ChangeHistory data={data} record={record} />
+            </section>
+          )}
         </div>
 
         <div className="record-side">
@@ -277,8 +288,7 @@ function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: st
           {record.updated_at && (
             <p className="record-updated">
               <Info aria-hidden="true" />
-              Last changed {manilaDate(record.updated_at)}
-              {canEdit ? '. The full history is on the map, under History.' : '.'}
+              Last changed {manilaDate(record.updated_at)}.
             </p>
           )}
         </div>
