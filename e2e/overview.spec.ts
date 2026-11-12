@@ -86,6 +86,11 @@ test.describe('the frame', () => {
       if (path === '/map') await expect(page.locator('.barangay-shape')).toHaveCount(218);
       if (path === '/dashboard') await expect(tile(page, 'records')).toBeVisible();
       await expect.poll(() => page.evaluate(() => document.scrollingElement!.scrollHeight - innerHeight), { message: path }).toBeLessThanOrEqual(0);
+      // Nor the frame's own box: anything taller than it lets a focused field scroll the page out of
+      // the frame, as the phone's closed layers sheet once did to the map.
+      await expect
+        .poll(() => page.evaluate(() => { const frame = document.querySelector('.shell-content')!; return frame.scrollHeight - frame.clientHeight; }), { message: `${path}, the frame` })
+        .toBeLessThanOrEqual(0);
     }
   });
 });

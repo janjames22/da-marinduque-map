@@ -28,7 +28,6 @@ _Last updated: 2026-11-13_
   - Drawing lines and polygons on the map isn't built yet. Roads are drawn on the map since Phase 16a, but a road's line can't be drawn or reshaped yet (16b) or imported (16c).
   - The inventory report lists roads in its project layout, with no Length column and blank Latitude and Longitude. A road layout with the length could follow once the FMR data shows what the region reports.
   - Roads count under "No group" in Units by category group, as they have no category.
-  - A flaky phone test: "the orange marker can be dragged to fine-tune" in `e2e/editing.spec.ts` fails about half the time when repeated, with or without the roads. The phone marker tests have stalled in long runs since Phase 15.
   - A road is dashed while its status is named Proposed or On-going. The status list has no codes, so renaming those two statuses would stop the dashes.
   - 27 records stay off the map until the region verifies their location: 26 with no coordinates, 1 outside Marinduque. See [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) §2.
   - UI/UX roadmap questions still open: Q-5 (FMR data format), Q-6 (basemap provider).
@@ -75,6 +74,9 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-13
 
+- Fixed a phone bug behind the flaky test "the orange marker can be dragged to fine-tune", on branch `fix-phone-drag-test`. On a phone, the closed Layers sheet waits below the map, moved down by its own height, and a moved box still counts toward what can be scrolled. So the map page was 619 px taller than its frame, and focusing a field in a form, such as Type or paste coordinates, scrolled the page and took the map and the new marker off the top of the screen. The test then dragged at a spot off screen, so it failed about half the time. The phone map area now clips at its edge (`src/app/map-phone.css`), and the sheet still rises from the bottom as before.
+  - **Tests:** the frame test in `e2e/overview.spec.ts` now checks the frame's own box as well as the window, and a new test in `e2e/editing.spec.ts` types coordinates three times and checks the map and the marker stay on screen. Both failed before the fix and pass after it. The drag test passed 10 times out of 10, where it failed about half the time before, and all 158 phone map tests pass.
+  - **Full e2e run:** 689 passed, 5 failed and 11 skipped. All 5 pass when run again. One of them, the frame test on a phone, also failed twice in 8 repeats, each time before its new check, on the first page: its code didn't load, with `net::ERR_NETWORK_CHANGED`, as this computer's network connection changed mid-run.
 - Phase 16a passed Gate 2, approved by the owner, and is merged into `main`. After the merge `main` matches the tested branch file for file. `0012_lines.sql` is still waiting for the owner's go-ahead before it's applied to the live database.
 - Phase 16a passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af63fc1c7518f81002f6a39--da-marinduque-map.netlify.app. Checked signed out: the security headers are on (framing blocked by the security policy), Inter loads, the road layer's code is served, and there are no console errors or failed requests. The sample roads aren't in the deployed files.
 - Phase 16a built on branch `phase-16-fmr`, ready for Gate 1. Farm-to-Market Roads on the map and the dashboard, built on made-up sample roads as the owner decided:

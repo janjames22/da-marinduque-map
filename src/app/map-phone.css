@@ -137,6 +137,16 @@
     top: auto;
   }
 
+  /* The closed sheet waits below the map, moved down by its own height. A moved box still counts toward
+     what can be scrolled, so without this the page was taller than the frame, and focusing a field in a
+     form, such as Type or paste coordinates, could scroll the map off the top of the screen. Clipped
+     here, the sheet still rises from the bottom edge, and nothing scrolls but the panels. Older Safari
+     gets hidden instead. */
+  .map-page .workspace {
+    overflow: hidden;
+    overflow: clip;
+  }
+
   /* The layers panel is a sheet that slides up over the map, with the map dimmed behind it. */
   .map-page .sheet-backdrop {
     background: rgb(17 24 20 / 40%);
