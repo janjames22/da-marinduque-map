@@ -1,10 +1,56 @@
 // What the admin screens share.
-import { useCallback, useId, useState } from 'react';
+import { useCallback, useId, useState, type ReactNode } from 'react';
 import { ConflictError, ValidationError } from '../data/store';
 import type { Icon } from '../data/types';
 import { ErrorText } from '../edit/FormParts';
 
 export type Errors = Record<string, string>;
+
+// A section of the Admin pages, as a card. On a page that has only this section, its title, help and
+// button head the page instead, so the page doesn't say the same name twice.
+export function SectionFrame({
+  title,
+  label = title,
+  description,
+  action,
+  asPage = false,
+  className = '',
+  children,
+}: {
+  title: string;
+  label?: string;
+  description?: ReactNode;
+  action?: ReactNode;
+  asPage?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const heading = (
+    <div>
+      {asPage ? <h1>{title}</h1> : <h2>{title}</h2>}
+      {description && <p>{description}</p>}
+    </div>
+  );
+  return (
+    <>
+      {asPage && (
+        <header className="page-header page-header-actions">
+          {heading}
+          {action}
+        </header>
+      )}
+      <section className={`overview-card admin-section ${className}`.trim()} aria-label={label}>
+        {!asPage && (
+          <header className="admin-section-header">
+            {heading}
+            {action}
+          </header>
+        )}
+        {children}
+      </section>
+    </>
+  );
+}
 
 // One save at a time, with what happened to it. Rule breaks go to their fields.
 export function useSaving() {

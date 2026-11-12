@@ -15,7 +15,9 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-12_
 
-- **Branch:** `phase-15b-work-pages`, started from `main`. Phase 15a is merged into `main`.
+- **Branch:** `phase-15c-admin-forms`, started from `phase-15b-work-pages`. Phase 15a is merged into `main`.
+- **Phase 15c in progress, not yet through Gate 1:** the Admin pages, the forms and the shared controls in the new design, and the old styles taken out of `app.css`. It's committed as work in progress. The last full e2e run had 666 passed and 8 failed, so it isn't ready for Gate 1 yet.
+- **Phase 16 after 15c:** the owner decided on 2026-11-12 to finish 15c first, then build Phase 16 (Farm-to-Market Roads) without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Phase 15b through Gate 1, draft up for Gate 2:** the QA queue, Condition check, Import and Reports pages and the Export and Print map dialogs in the new design. The owner approved Gate 1 on 2026-11-12. Draft: https://6af5bbfd98ca670dce805e44--da-marinduque-map.netlify.app.
 - **Going live in one deploy:** to save Netlify credits, 15a, 15b and 15c go live together with one `npm run deploy` after 15c, instead of one deploy each. Each production deploy costs 15 credits, and drafts cost none. The owner decided this on 2026-11-12. Until then the live site stays on Phase 14.
 - **Phase 15a approved, live deploy pending:** the Interventions pages, the phone map rework and the faster page changes passed both gates on 2026-11-12 and are merged into `main`. They go live when the owner runs `npm run deploy`.
@@ -66,6 +68,12 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Phase 15c, work in progress committed on branch `phase-15c-admin-forms`, so it isn't lost. Not yet through Gate 1:
+  - **Admin pages:** each has its own sidebar link. Types and fields (Intervention types, Barangay fields) and Lists (Categories, Programs, Statuses, Other lists) are pages with tabs. The old Admin menu down the side is gone. Styles in `admin/admin.css`.
+  - **Shared controls:** buttons, fields, hints, errors and notices in the new design, in `src/app/controls.css`. About 750 lines of old rules are out of `app.css`.
+  - **Record page:** a Change history card shows Encoders and Admins the audit trail, newest first, from the new `edit/ChangeHistory.tsx`, which the map's History panel shares.
+  - **Checks:** typecheck passes. The full e2e run had 666 passed, 8 failed and 11 skipped. The failures: the signature blocks test (computer and phone), a beneficiary profile test, the phone Admin menu test, one computer barangay editing test, and three phone marker-moving tests that have stalled in long runs before.
+- Decided with the owner: finish Phase 15c first, then build Phase 16 without the FMR data.
 - Phase 15b passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af5bbfd98ca670dce805e44--da-marinduque-map.netlify.app. Checked signed out: the security headers are on, Inter loads, and there are no console errors or blocked requests.
 - Decided with the owner: Phase 15 goes live in one production deploy after 15c, to save Netlify credits.
 - Phase 15b finished on branch `phase-15b-work-pages`, ready for Gate 1:

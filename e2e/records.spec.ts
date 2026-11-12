@@ -97,6 +97,8 @@ test.describe("one intervention's page", () => {
     await expect(location.getByRole('link', { name: 'Open in Google Maps' })).toHaveAttribute('href', /google\.com\/maps/);
     await expect(page.getByRole('region', { name: 'Status history' }).locator('li')).not.toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Open on the map to edit' })).toHaveCount(0);
+    // The database keeps the audit trail from Viewers, so the page doesn't offer it.
+    await expect(page.getByRole('region', { name: 'Change history' })).toHaveCount(0);
 
     await page.getByRole('link', { name: 'Open on the map', exact: true }).first().click();
     await expect(page.locator('.leaflet-popup-content').filter({ hasText: onMapRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
@@ -117,6 +119,16 @@ test.describe("one intervention's page", () => {
     await open(page, `/records/${offMapRecord.id}`, 'viewer');
     await expect(page.getByRole('region', { name: 'Location' })).toContainText('not on the map');
     await expect(page.getByRole('link', { name: 'Enter verified coordinates' })).toHaveCount(0);
+  });
+
+  test('shows an Encoder the audit trail, newest first', async ({ page }) => {
+    await open(page, `/records/${onMapRecord.id}`, 'encoder');
+    const changes = page.getByRole('region', { name: 'Change history' });
+    const lines = changes.locator('.audit-list > li');
+    await expect(lines).not.toHaveCount(0);
+    // The record was made before anything else happened to it, so it's the last line.
+    await expect(lines.last()).toContainText('Record created');
+    await expect(changes).toContainText('Times are Philippine time');
   });
 
   test("says so when there's no such record", async ({ page }) => {

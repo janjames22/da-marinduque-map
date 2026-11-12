@@ -7,6 +7,7 @@ import { ACTION_LABELS, auditDetails, auditTarget } from '../lib/audit-display';
 import { recordName } from '../lib/display';
 import { foldText } from '../lib/view-fields';
 import { useStore } from '../state/store-context';
+import { SectionFrame } from './parts';
 
 const PAGE_SIZE = 50;
 const SEARCH_DELAY_MS = 250;
@@ -95,14 +96,7 @@ export function AuditSection({ data }: { data: MapData }) {
   const hasFilters = JSON.stringify(filters) !== JSON.stringify(NO_FILTERS);
 
   return (
-    <section className="admin-section audit-section" aria-label="Audit log">
-      <header className="admin-section-header">
-        <div>
-          <h2>Audit log</h2>
-          <p className="field-hint">Who changed what and when. Nothing here can be edited. Times are Philippine time.</p>
-        </div>
-      </header>
-
+    <SectionFrame asPage title="Audit log" description="Who changed what and when. Nothing here can be edited. Times are Philippine time." className="audit-section">
       <form className="audit-filters" aria-label="Filter the audit log" onSubmit={(event) => event.preventDefault()}>
         <label className="field">
           <span>Person</span>
@@ -152,11 +146,11 @@ export function AuditSection({ data }: { data: MapData }) {
         </p>
       )}
 
-      {result && result.entries.length === 0 && !failure && <p className="empty-note">{hasFilters ? 'Nothing in the log matches these filters.' : 'Nothing has been logged yet.'}</p>}
+      {result && result.entries.length === 0 && !failure && <p className="admin-empty">{hasFilters ? 'Nothing in the log matches these filters.' : 'Nothing has been logged yet.'}</p>}
 
       {result && result.entries.length > 0 && (
-        <div className="audit-scroll" aria-busy={busy}>
-          <table className="audit-table">
+        <div className="table-scroll audit-scroll" aria-busy={busy}>
+          <table className="data-table audit-table">
             <thead>
               <tr>
                 <th scope="col">When</th>
@@ -195,17 +189,19 @@ export function AuditSection({ data }: { data: MapData }) {
         </div>
       )}
 
-      <div className="records-pages">
+      <div className="card-pager">
         <span className="records-count" role="status">
           {first}–{last} of {total.toLocaleString('en-US')}
         </span>
-        <button type="button" className="secondary-button" disabled={page === 0} onClick={() => setPage(page - 1)}>
-          Newer
-        </button>
-        <button type="button" className="secondary-button" disabled={last >= total} onClick={() => setPage(page + 1)}>
-          Older
-        </button>
+        <div>
+          <button type="button" className="ui-button ui-button-secondary ui-button-small" disabled={page === 0} onClick={() => setPage(page - 1)}>
+            Newer
+          </button>
+          <button type="button" className="ui-button ui-button-secondary ui-button-small" disabled={last >= total} onClick={() => setPage(page + 1)}>
+            Older
+          </button>
+        </div>
       </div>
-    </section>
+    </SectionFrame>
   );
 }

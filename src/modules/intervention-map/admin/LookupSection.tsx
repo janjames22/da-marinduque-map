@@ -6,7 +6,7 @@ import type { Icon, MapData } from '../data/types';
 import { SelectField, TextField } from '../edit/FormParts';
 import { iconProblem, newCode } from '../lib/admin-rules';
 import { useStore } from '../state/store-context';
-import { ColorField, Feedback, iconPreview, IconImage, MoveButtons, plural, reordered, Swatch, useSaving } from './parts';
+import { ColorField, Feedback, iconPreview, IconImage, MoveButtons, plural, reordered, SectionFrame, Swatch, useSaving } from './parts';
 
 export interface LookupRow {
   id: number;
@@ -41,6 +41,8 @@ interface LookupSectionProps {
   canArchive?: boolean;
   canReorder?: boolean;
   defaultColor?: string;
+  // The only list on its page, so its title heads the page.
+  asPage?: boolean;
 }
 
 interface FormValues {
@@ -193,6 +195,7 @@ export function LookupSection({
   canArchive = true,
   canReorder = true,
   defaultColor = '#2e7d32',
+  asPage = false,
 }: LookupSectionProps) {
   const { store } = useStore();
   const [editing, setEditing] = useState<number | 'new' | null>(null);
@@ -306,16 +309,16 @@ export function LookupSection({
   };
 
   return (
-    <section className="admin-section" aria-label={title}>
-      <header className="admin-section-header">
-        <div>
-          <h2>{title}</h2>
-          <p className="field-hint">{description}</p>
-        </div>
+    <SectionFrame
+      title={title}
+      description={description}
+      asPage={asPage}
+      action={
         <button type="button" className="primary-button admin-add" onClick={() => open('new')}>
           + Add {singular}
         </button>
-      </header>
+      }
+    >
       <Feedback failure={failure} notice={notice} />
       {editing === 'new' && (
         <LookupForm
@@ -330,13 +333,17 @@ export function LookupSection({
           onCancel={() => open(null)}
         />
       )}
-      <ul className="admin-list">{active.map(rowView)}</ul>
+      {active.length === 0 && editing !== 'new' ? (
+        <p className="admin-empty">Nothing here yet. Use + Add {singular} to make the first one.</p>
+      ) : (
+        <ul className="admin-list">{active.map(rowView)}</ul>
+      )}
       {archived.length > 0 && (
         <>
-          <h3 className="section-title">Archived</h3>
+          <h3 className="admin-subheading">Archived</h3>
           <ul className="admin-list">{archived.map(rowView)}</ul>
         </>
       )}
-    </section>
+    </SectionFrame>
   );
 }

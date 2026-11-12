@@ -103,8 +103,7 @@ test.describe('the reports', () => {
     expect(pages[0]).toContain(`${inBoac} interventions`);
     expect(pages[0]).toContain('Prepared by: Engr. Jan James P. Graza');
 
-    await (await sidebar(page)).getByRole('link', { name: 'Users' }).click();
-    await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Audit log' }).click();
+    await (await sidebar(page)).getByRole('link', { name: 'Audit log' }).click();
     await expect(page.locator('tr[data-audit-entry]').first()).toContainText(`Profile_Boac_${today}.pdf`);
   });
 
@@ -207,7 +206,7 @@ test.describe('the reports', () => {
 test.describe('signature blocks', () => {
   test('an Admin changes, adds, archives and reorders them, and the reports follow', async ({ page }) => {
     await open(page, '/admin/signatures');
-    const list = page.getByRole('region', { name: 'Report signatures' });
+    const list = page.getByRole('region', { name: 'Signature blocks' });
     await expect(list.locator('.admin-row')).toHaveCount(2);
 
     await list.locator('.admin-row').filter({ hasText: 'Susana Arellano-Uy' }).getByRole('button', { name: /^Edit/ }).click();

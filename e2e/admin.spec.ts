@@ -17,10 +17,12 @@ async function tilesOff(page: Page) {
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.fulfill({ status: 204 }));
 }
 
+const adminPage = (page: Page) => page.locator('main.admin-page');
+
 async function openAdmin(page: Page, path = '/admin/types') {
   await tilesOff(page);
   await page.goto(path);
-  await expect(page.getByRole('navigation', { name: 'Admin' })).toBeVisible();
+  await expect(adminPage(page)).toBeVisible();
 }
 
 async function goToMap(page: Page) {
@@ -28,8 +30,21 @@ async function goToMap(page: Page) {
   await expect(page.locator('.barangay-shape')).toHaveCount(218);
 }
 
+// Since Phase 15c each Admin page has its own link in the sidebar, and the pages that hold several
+// lists have tabs.
+const SIDEBAR_PAGE: Record<string, string> = {
+  'Intervention types': 'Types and fields',
+  'Barangay fields': 'Types and fields',
+  Categories: 'Lists',
+  Programs: 'Lists',
+  Statuses: 'Lists',
+  'Other lists': 'Lists',
+};
+
 async function goToSection(page: Page, name: string) {
-  await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name, exact: true }).click();
+  const sidebarPage = SIDEBAR_PAGE[name] ?? name;
+  await (await sidebar(page)).getByRole('link', { name: sidebarPage, exact: true }).click();
+  if (sidebarPage !== name) await page.getByRole('navigation', { name: sidebarPage }).getByRole('link', { name, exact: true }).click();
 }
 
 // On a phone, the filters are in a drawer.
@@ -77,7 +92,7 @@ test.describe('who is offered it', () => {
 
       await page.goto('/admin/types');
       await expect(page.getByRole('alert')).toContainText('This page is for Admins');
-      await expect(page.getByRole('navigation', { name: 'Admin' })).toHaveCount(0);
+      await expect(adminPage(page)).toHaveCount(0);
       // The sidebar has a way back on every page, and so does the message.
       await expect((await sidebar(page)).getByRole('link', { name: 'Map', exact: true })).toBeVisible();
       await page.keyboard.press('Escape');

@@ -599,26 +599,14 @@
   }
 }
 
-/* Forms, notices and tables on the pages in the new design (Phase 15). The map's own forms keep
-   app.css until they're restyled. */
+/* The filter bars' fields and the selects in tables. The form fields themselves are in controls.css. */
 
-.overview-page .form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.overview-page .form-field label,
 .overview-page .filter-field label {
   color: var(--text-primary);
   font-size: var(--font-size-body-sm);
   font-weight: var(--font-weight-medium);
 }
 
-.overview-page .form-field input:not([type='file'], [type='checkbox'], [type='radio']),
-.overview-page .form-field select,
-.overview-page .form-field textarea,
 .overview-page .filter-field input,
 .overview-page .filter-field select,
 .overview-page .data-table select {
@@ -633,63 +621,6 @@
   min-width: 0;
   padding: 0 var(--space-3);
   width: 100%;
-}
-
-.overview-page .form-field textarea {
-  height: auto;
-  line-height: var(--font-line-height-body);
-  min-height: 88px;
-  padding: 10px var(--space-3);
-  resize: vertical;
-}
-
-.overview-page .form-field [aria-invalid='true'] {
-  border: 2px solid var(--status-danger-text);
-  box-shadow: none;
-}
-
-.overview-page .form-field :disabled {
-  background: var(--bg-surface-muted);
-  cursor: not-allowed;
-}
-
-.overview-page .required-mark,
-.overview-page span.field-error {
-  color: var(--status-danger-text);
-}
-
-.overview-page .field-hint {
-  color: var(--text-secondary);
-  font-size: var(--font-size-caption);
-  line-height: var(--font-line-height-caption);
-}
-
-.overview-page span.field-error {
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--font-line-height-caption);
-}
-
-/* A save that failed, or one that worked, as a notice. */
-.overview-page p.field-error,
-.overview-page .admin-notice {
-  border: 1px solid;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-body-sm);
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-}
-
-.overview-page p.field-error {
-  background: var(--status-danger-bg);
-  border-color: #f4c3bd;
-  color: var(--status-danger-text);
-}
-
-.overview-page .admin-notice {
-  background: var(--status-success-bg);
-  border-color: var(--color-green-200);
-  color: var(--status-success-text);
 }
 
 .overview-page .link-button {

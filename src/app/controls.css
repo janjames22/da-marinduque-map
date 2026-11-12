@@ -1,0 +1,395 @@
+/* The controls every page shares, in the Phase 11 design since Phase 15c: buttons, form fields, hints,
+   errors and notices. The map's panels, the forms and the Admin pages all use these. ui-button and
+   ui-notice in shell.css are the same look for the screens written since Phase 12. */
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Buttons. Primary and secondary fill their column unless a layout says otherwise, as they always have. */
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-block;
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 20px;
+  padding: 9px var(--space-4);
+  text-align: center;
+  text-decoration: none;
+}
+
+.primary-button {
+  background: var(--action-primary);
+  color: var(--text-on-primary);
+  width: 100%;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: var(--action-primary-hover);
+}
+
+.secondary-button {
+  background: var(--action-secondary-bg);
+  border-color: var(--border-input);
+  color: var(--text-primary);
+  margin-top: 6px;
+  width: 100%;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: var(--bg-surface-muted);
+}
+
+.danger-button {
+  background: var(--action-danger);
+  color: var(--text-on-primary);
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #8f1c13;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* A button whose name is partly hidden text shows the ring when that text has the focus. */
+.secondary-button:has(.visually-hidden:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* A round button with a × for closing a panel or a card. */
+.close-button {
+  align-items: center;
+  background: var(--bg-surface-muted);
+  border: 0;
+  border-radius: 50%;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font-size: 20px;
+  height: 32px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+}
+
+.close-button:hover {
+  background: var(--color-neutral-200);
+}
+
+/* A small square button with an arrow or a sign, such as the move up and down buttons. */
+.icon-button {
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font: inherit;
+  height: 32px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--bg-surface-muted);
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.link-button {
+  background: none;
+  border: 0;
+  color: var(--text-link);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-button:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* A heading over a group of controls. */
+.section-title {
+  color: var(--text-primary);
+  display: block;
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--space-2);
+}
+
+/* A tick box or round choice with its words. */
+.choice {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-2);
+  padding: 4px 0;
+}
+
+.choice input {
+  accent-color: var(--action-primary);
+  flex: none;
+  height: 16px;
+  margin: 0;
+  width: 16px;
+}
+
+.choice:has(input:disabled) {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+/* Forms */
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.edit-form p {
+  margin: 0;
+}
+
+.edit-form fieldset {
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.edit-form legend {
+  color: var(--text-primary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: 0 var(--space-1);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.form-field label {
+  color: var(--text-primary);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.form-field label.choice {
+  font-weight: var(--font-weight-regular);
+}
+
+/* 16px text also stops phones zooming the page when a field is tapped. */
+.form-field input:not([type='file'], [type='checkbox'], [type='radio'], [type='color']),
+.form-field select,
+.form-field textarea {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-body);
+  height: var(--size-control-height);
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 var(--space-3);
+  width: 100%;
+}
+
+.form-field textarea {
+  height: auto;
+  line-height: var(--font-line-height-body);
+  min-height: 88px;
+  padding: 10px var(--space-3);
+  resize: vertical;
+}
+
+.form-field input:focus-visible,
+.form-field select:focus-visible,
+.form-field textarea:focus-visible {
+  border-color: var(--action-primary);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.form-field [aria-invalid='true'] {
+  border: 2px solid var(--status-danger-text);
+  box-shadow: none;
+}
+
+.form-field :disabled {
+  background: var(--bg-surface-muted);
+  cursor: not-allowed;
+}
+
+.form-field input[type='file'] {
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  max-width: 100%;
+}
+
+/* The file picker's own button, as a secondary button. */
+input[type='file']::file-selector-button {
+  background: var(--action-secondary-bg);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  margin-right: var(--space-3);
+  padding: 7px var(--space-3);
+}
+
+input[type='file']::file-selector-button:hover {
+  background: var(--bg-surface-muted);
+}
+
+/* A color as a tall swatch that opens the browser's picker. */
+.color-input {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  height: var(--size-control-height);
+  padding: 4px;
+  width: 72px;
+}
+
+.required-mark,
+.field-error {
+  color: var(--status-danger-text);
+}
+
+.field-hint {
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: var(--font-line-height-caption);
+}
+
+span.field-error {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--font-line-height-caption);
+}
+
+.form-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.edit-form .form-actions .primary-button {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.form-actions .secondary-button {
+  margin-top: 0;
+  width: auto;
+}
+
+/* Notices: a save that failed or worked, a warning, someone else's change. */
+
+p.field-error,
+.admin-notice,
+.record-warning,
+.edit-warnings ul,
+.conflict-note {
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-body-sm);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+p.field-error {
+  background: var(--status-danger-bg);
+  border-color: #f4c3bd;
+}
+
+.admin-notice {
+  background: var(--status-success-bg);
+  border-color: var(--color-green-200);
+  color: var(--status-success-text);
+}
+
+.record-warning,
+.edit-warnings ul,
+.conflict-note {
+  background: var(--status-warning-bg);
+  border-color: #f5d3b3;
+  color: var(--status-warning-text);
+}
+
+.record-warning {
+  margin: 4px 0;
+  padding: 6px 10px;
+}
+
+.edit-warnings ul {
+  padding-left: 28px;
+}
+
+.edit-warnings-compact {
+  color: var(--status-warning-text);
+  font-size: var(--font-size-body-sm);
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.conflict-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.conflict-note p,
+.conflict-note ul {
+  margin: 0;
+}
+
+.conflict-note ul {
+  padding-left: 18px;
+}
+
+.conflict-note .secondary-button {
+  align-self: flex-start;
+  margin-top: 0;
+  width: auto;
+}

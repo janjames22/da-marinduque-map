@@ -8,7 +8,9 @@ import { copyText } from '../lib/copy-text';
 import { manilaDate } from '../lib/dates';
 import { ROLE_LABELS } from '../lib/permissions';
 import { useStore } from '../state/store-context';
-import { Feedback, useSaving } from './parts';
+import { UsersRound } from 'lucide-react';
+import { EmptyState } from '../overview/EmptyState';
+import { Feedback, SectionFrame, useSaving } from './parts';
 
 const STATUS_LABELS: Record<PersonStatus, string> = {
   active: 'Active',
@@ -16,6 +18,8 @@ const STATUS_LABELS: Record<PersonStatus, string> = {
   deactivated: 'Deactivated',
   no_access: 'No role yet',
 };
+
+const DESCRIPTION = 'Accounts are by invitation only. A role change applies the next time the person loads the map.';
 
 const ROLE_OPTIONS = (Object.keys(ROLE_LABELS) as UserRole[]).map((role) => ({ value: role, label: ROLE_LABELS[role] }));
 
@@ -233,10 +237,11 @@ export function UsersSection() {
 
   if (!people) {
     return (
-      <section className="admin-section" aria-label="Users">
-        <h2>Users</h2>
-        <p>Local mode has no accounts, so there's nobody to manage here. This page works on the real site.</p>
-      </section>
+      <SectionFrame asPage title="Users" description={DESCRIPTION}>
+        <EmptyState icon={UsersRound} title="No accounts in local mode">
+          Local mode has no accounts, so there's nobody to manage here. This page works on the real site.
+        </EmptyState>
+      </SectionFrame>
     );
   }
 
@@ -246,14 +251,7 @@ export function UsersSection() {
   };
 
   return (
-    <section className="admin-section" aria-label="Users">
-      <header className="admin-section-header">
-        <div>
-          <h2>Users</h2>
-          <p className="field-hint">Accounts are by invitation only. A role change applies the next time the person loads the map.</p>
-        </div>
-      </header>
-
+    <SectionFrame asPage title="Users" description={DESCRIPTION}>
       <Feedback failure={null} notice={notice} />
       {link && <LinkBox link={link} onDismiss={() => setLink(null)} />}
 
@@ -265,7 +263,7 @@ export function UsersSection() {
         }}
       />
 
-      <h3 className="section-title">Everyone</h3>
+      <h2 className="admin-subheading">Everyone</h2>
       {loadFailure && (
         <div role="alert">
           <p className="field-error">{loadFailure}</p>
@@ -284,6 +282,6 @@ export function UsersSection() {
             ))}
         </ul>
       )}
-    </section>
+    </SectionFrame>
   );
 }
