@@ -16,8 +16,9 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 _Last updated: 2026-11-12_
 
 - **Branch:** `main`, in sync with `origin/main`. Phases 15b and 15c are merged.
-- **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. They go live together when the owner runs `npm run deploy`, one production deploy for both, to save Netlify credits (15 credits a deploy, drafts free). Until then the live site is on Phase 15a.
-- **Next:** Phase 16, Farm-to-Market Roads, on branch `phase-16-fmr`. The owner decided on 2026-11-12 to build it without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
+- **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. Until the next production deploy the live site is on Phase 15a.
+- **Next production deploy after Phase 17:** the owner decided on 2026-11-12 to hold the live deploy until Phase 17 is done, so 15b, 15c, 16 and 17 go live in one `npm run deploy`, one 15-credit deploy instead of three. Every phase still gets its Gate 2 draft, which costs nothing. Only approved work is merged into `main`, so a deploy from it stays safe if a live bug needs one sooner. Phase 16's database change reaches the live database before then, so it has to keep working with the 15a site.
+- **Next:** Phase 16, Farm-to-Market Roads, on branch `phase-16-fmr`, then Phase 17. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -67,6 +68,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-12
 
+- Decided with the owner: the next production deploy waits until Phase 17 is done, and covers 15b, 15c, 16 and 17. Phase 16 comes before 17.
 - Phases 15b and 15c passed Gate 2, approved by the owner, and are merged into `main`: `phase-15b-work-pages` first, then `phase-15c-admin-forms`. After the merges `main` matches the tested 15c branch file for file. Going live waits for the owner to run `npm run deploy`.
 - Corrected this file: Phase 15a went live this morning, recorded on `main` only, so the 15b and 15c branches still said the live site was on Phase 14. The one deploy after 15c therefore covers 15b and 15c, not 15a.
 - Phase 15c passed Gate 1, approved by the owner. The Gate 2 draft, which covers 15b too, is up: https://6af5cd2cd58be030f21e6c44--da-marinduque-map.netlify.app. Checked signed out: the security headers are on (framing blocked by the security policy, as on the live site), Inter loads, and there are no console errors or failed requests.
