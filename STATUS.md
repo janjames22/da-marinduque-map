@@ -16,13 +16,12 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 _Last updated: 2026-11-14_
 
 - **Branch:** `main`, in sync with `origin/main`, with `fix-live-tests` merged on 2026-11-14 after both gates.
-- **Live:** Phases 15b to 17c are on https://marinduque-intervention-system.netlify.app since 2026-11-14 (deploy `6af73bc015bb5e20ce2aff3f`), the one deploy the owner chose to hold until Phase 17 was done. `0014_line_import.sql` was applied first, after a backup. Every migration file on `main` is now on the live database.
-- **Live deploy pending:** the popup fix (a record opened from a link, beside another's marker) is on `main` but not live. The live site is on deploy `6af73bc015bb5e20ce2aff3f`, where an audit log link to such a record shows no popup. It goes live with the next `npm run deploy` (15 credits), when the owner chooses.
+- **Live:** Phases 15b to 17c and the popup fix are on https://marinduque-intervention-system.netlify.app, deploy `6af754d1810a1c8cad2a74c6` since 2026-11-14. All 18 live tests pass on it.
 - **The UI/UX roadmap is done:** Phases 10 to 17, with the user guide in [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) and the spec's §10 checklist ticked (30 met, 3 open: drawing polygons, and the KML and Shapefile in QGIS).
 - **Live database:** every migration file on `main` is applied, `0014_line_import.sql` the last, on 2026-11-14 after a backup. An applied file must not be edited, so a later change to the database goes in a new file.
 - **The live site's address is now https://marinduque-intervention-system.netlify.app:** the owner renamed the Netlify site from `da-marinduque-map` on 2026-11-13. It's the same site (the same site id since 2026-11-11). **https://da-marinduque-map.netlify.app returns 404**, as Netlify doesn't redirect an old name, so old links and bookmarks need the new address. Drafts are now at `<deploy id>--marinduque-intervention-system.netlify.app`. The earlier entries keep the old address, as it was then. `APP_URL` in `.env.local` has the new address. The owner is setting it in Supabase too (Authentication > URL Configuration: the Site URL, and a Redirect URL), which invites and password resets from the Users page need.
 - **The live tests** (`npm run test:e2e:live`, in `e2e-live/`) are up to date since 2026-11-14, and all 18 pass on the popup fix's draft. They make temporary accounts and records on the live database and remove them at the end.
-- **Next:** the owner's call on deploying the popup fix. Then the open items below, such as the FMR data (Q-5) when it comes.
+- **Next:** the open items below, such as the FMR data (Q-5) when it comes.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The import test "a workbook is read under the site's security rules" fails if a run crosses midnight, as it takes the date once at its start.
@@ -87,6 +86,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-14
 
+- **The popup fix is live**, at the owner's go-ahead: `npm run deploy` from `main` (`6a9b5e3`), deploy `6af754d1810a1c8cad2a74c6`, 15 credits. The build's checks passed: nothing private, and 199.5 kB of script and 20.0 kB of styles in the first load. Checked signed out: the security headers are on, `/assets` is cached for a year and a missing file gets a 404, a barangay's address opens the app, and the local dataset and sample roads aren't in the deployed files. **`npm run test:e2e:live` on the live site: all 18 passed**, in 3 minutes, the audit log link's popup included. Changes reached the other device in 1.4 to 1.9 s. The run left nothing behind.
 - `fix-live-tests` passed Gate 2, approved by the owner, and is merged into `main` (`ac53f11`). After the merge `main` matches the tested branch file for file. Going live waits for the owner's call on the next production deploy.
 - `fix-live-tests` passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af7523bfd680516ffe7db0a--marinduque-intervention-system.netlify.app, built from `fa51dc4`. Checked signed out: the security headers are on, `/assets` is cached for a year and a missing file gets a 404, and the local dataset and sample roads aren't in the deployed files. **The live tests against the draft: all 18 passed**, in 3 minutes, the popup from an audit log link included. Changes reached the other device in 1.4 to 1.5 s. They left nothing behind.
 - Live tests brought up to date, and a popup bug found and fixed, on branch `fix-live-tests`.
