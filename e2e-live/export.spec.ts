@@ -36,7 +36,10 @@ test('Export sits beside "+ Add intervention", and stands out', async ({ browser
   expect(Math.abs(add!.y - button!.y)).toBeLessThan(1);
   expect(button!.x - (add!.x + add!.width)).toBeLessThanOrEqual(8);
   expect(button!.height).toBeCloseTo(add!.height, 0);
-  await expect(toolbarExport(page)).toHaveCSS('color', 'rgb(20, 83, 45)');
+  // A white card button beside the green one, as in the Phase 11 design and e2e/export.spec.ts.
+  await expect(toolbarExport(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(toolbarExport(page)).toHaveCSS('color', 'rgb(31, 30, 28)');
+  await expect(toolbarExport(page)).toHaveCSS('border-top-color', 'rgb(138, 136, 131)');
   await page.screenshot({ path: testInfo.outputPath('toolbar.png') });
 });
 

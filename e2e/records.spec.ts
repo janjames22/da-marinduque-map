@@ -104,6 +104,28 @@ test.describe("one intervention's page", () => {
     await expect(page.locator('.leaflet-popup-content').filter({ hasText: onMapRecord.beneficiary! })).toBeVisible({ timeout: 15_000 });
   });
 
+  // A marker within a few metres of another's stays in their cluster after the map zooms to it, and
+  // has to be spread out. Before the fix the spread was asked for while the zoom still settled, which
+  // the cluster library ignores, so the popup never opened. It showed on the live site, from an audit
+  // log link.
+  test('opens on the map from its page, even right beside another record', async ({ page }) => {
+    test.setTimeout(90_000); // six records, each opened from its own page
+    const points = live.flatMap((record) => {
+      const geometry = record.geojson as { type: string; coordinates: [number, number] } | null;
+      return geometry?.type === 'Point' && !record.qa_flags.includes('out_of_province') ? [{ record, at: geometry.coordinates }] : [];
+    });
+    const metres = (a: [number, number], b: [number, number]) => Math.hypot((a[0] - b[0]) * 108_000, (a[1] - b[1]) * 111_000);
+    const close = points.filter((one) => points.some((other) => other !== one && metres(one.at, other.at) > 0.5 && metres(one.at, other.at) < 15)).slice(0, 6);
+    expect(close.length).toBeGreaterThan(2);
+
+    for (const { record } of close) {
+      await open(page, `/records/${record.id}`, 'viewer');
+      await page.getByRole('link', { name: 'Open on the map', exact: true }).first().click();
+      // Each record on its own, so a failure names every one whose popup didn't open.
+      await expect.soft(page.locator('.leaflet-popup-content').filter({ hasText: record.beneficiary! }), record.source_id ?? record.id).toBeVisible({ timeout: 10_000 });
+    }
+  });
+
   test("says a record without coordinates isn't on the map, and offers an editor the fix", async ({ page }) => {
     await open(page, `/records/${offMapRecord.id}`, 'encoder');
     await expect(page.locator('.record-title-row .unplotted-badge')).toHaveText('No coordinates yet');

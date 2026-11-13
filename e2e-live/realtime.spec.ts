@@ -2,6 +2,7 @@
 import { devices, expect, test, type Browser, type Page } from '@playwright/test';
 import { readAccounts } from './accounts';
 import type { TestAccount } from '../scripts/lib/test-accounts';
+import { openLayers } from './map';
 
 const LIVE_LIMIT_MS = 2500; // "about 2 s" in the spec
 const BARANGAY = 'Bantad';
@@ -22,9 +23,7 @@ async function open(browser: Browser, account: TestAccount, options: Parameters<
 }
 
 async function openBarangay(page: Page) {
-  if (await page.getByRole('button', { name: 'Layers and filters' }).isVisible()) {
-    await page.getByRole('button', { name: 'Layers and filters' }).click();
-  }
+  await openLayers(page);
   const select = page.getByRole('combobox', { name: 'Go to barangay' });
   const value = await select.locator('option', { hasText: BARANGAY }).first().getAttribute('value');
   await select.selectOption(value!);
@@ -87,6 +86,8 @@ test('a change on one device shows on another without a reload', async ({ browse
   });
 
   await test.step('a restore by an Admin brings it back', async () => {
+    // Deleted records are at the foot of the layers card, put away when the map opens since Phase 16c.
+    await openLayers(admin);
     await admin.getByRole('button', { name: /Deleted records/ }).click();
     await admin.locator('.record-row').filter({ hasText: name }).getByRole('button', { name: 'Restore' }).click();
     const elapsed = await timeUntil(() => expect(row(watcher, name)).toBeVisible({ timeout: 10_000 }));
@@ -106,6 +107,8 @@ test('each role is offered only what it can do, signed in for real', async ({ br
 
   const encoder = await open(browser, accounts.encoder);
   await expect(encoder.locator('.add-record-button')).toBeVisible();
+  // In the layers card, so it's opened first: put away, the button would be missing for anyone.
+  await openLayers(encoder);
   await expect(encoder.getByRole('button', { name: /Deleted records/ })).toHaveCount(0);
 
   const stranger = await browser.newPage();
