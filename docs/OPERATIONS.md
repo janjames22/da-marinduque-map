@@ -430,6 +430,12 @@ The colors, type and spacing come from `design/tokens.json`, the signed-off desi
 
 `npm test` and `npm run test:e2e` never touch the real project. The browser tests answer every Supabase call themselves.
 
+### The user guide
+
+[`USER-GUIDE.md`](USER-GUIDE.md) is the short guide for PAO and MAO staff, with screenshots in `docs/guide/`. After a change to a screen it shows, start `npm run dev:local` and run `npm run guide:screenshots` to retake them all, or name the ones to retake, such as `npm run guide:screenshots -- map.png`.
+
+The repository is public, so the script swaps every beneficiary and signatory name in the local dataset for a made-up one, and blanks remarks, before the app sees the data. It refuses to save a screenshot that still shows a real beneficiary name. `tests/guide.test.ts` checks the swap.
+
 ### Loading speed
 
 The first load holds the app's frame, Home and the map with Leaflet, as most people open the map. The Dashboard's charts, the Interventions, Admin, work and report pages, and the PDF, Excel and file readers each load when they're opened. The data starts loading as soon as someone signs in, and once the first page has its data the browser fetches the other pages' code while it's idle, so a page is usually ready by the time it's asked for. Phase 17b tried loading the map apart too, which halved the first load, but the map then took 0.2 to 0.4 s longer to appear after signing in, so it was left in.

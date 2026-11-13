@@ -490,44 +490,52 @@ These were built in a different order: Export went first, then Admin customizati
 
 ## 10. Acceptance Criteria
 
+Checked for the release on 2026-11-14 (Phase 17c). A ticked item is shown by the tests named after it, which run with `npm test` and `npm run test:e2e`, or by the check named. Items left open say what's missing.
+
 **Data**
-- [ ] All RAED records are in the database, tagged `RAED 2026-10-21`. Counts per municipality, program and status match the source.
-- [ ] Records with missing or invalid coordinates are flagged and left off the map, not plotted at 0,0.
-- [ ] No imported row is dropped. Unmatched barangays are kept, flagged and listed.
+- [x] All RAED records are in the database, tagged `RAED 2026-10-21`. Counts per municipality, program and status match the source. *`tests/seed.test.ts`, "record counts match the source report"*
+- [x] Records with missing or invalid coordinates are flagged and left off the map, not plotted at 0,0. *`tests/seed.test.ts`, "stores empty coordinates as null and never as 0"; `e2e/overview.spec.ts`, the Dashboard's list of records awaiting coordinate verification; `e2e/dashboard.spec.ts`, "a record with no coordinates says so, and goes to its barangay"*
+- [x] No imported row is dropped. Unmatched barangays are kept, flagged and listed. *`tests/seed.test.ts`, "accounts for every record: matched, blank or unmatched"; `tests/import.test.ts`; the QA queue in `e2e/work.spec.ts`*
 
 **Barangays**
-- [ ] All 218 barangays are always on the map and clickable, including those with no interventions.
-- [ ] A barangay profile shows all its interventions, counts by type and program, baseline values and an "Add intervention here" button.
-- [ ] All four choropleth modes work, and the gap view respects active filters.
-- [ ] Records with no linked barangay are visible as "Unassigned".
+- [x] All 218 barangays are always on the map and clickable, including those with no interventions. *`e2e/barangay-layer.spec.ts`, "draws all 218 barangays", "off keeps the outlines clickable"*
+- [x] A barangay profile shows all its interventions, counts by type and program, baseline values and an "Add intervention here" button. *`e2e/barangay-layer.spec.ts`, "barangay profile"; `e2e/editing.spec.ts`, "from a barangay profile"*
+- [x] All four choropleth modes work, and the gap view respects active filters. *`e2e/barangay-layer.spec.ts`, "choropleth modes"*
+- [x] Records with no linked barangay are visible as "Unassigned". *`e2e/barangay-layer.spec.ts`, "unassigned records"*
 
 **Customization**
-- [ ] An Admin can create a new type with its geometry, icon, color, statuses and custom fields, then encode records of it, with no code change. Line and polygon types can be encoded once drawing is built.
-- [ ] Programs, categories, statuses, beneficiary types, icons and colors can be edited in `/admin`.
-- [ ] Custom field values are validated against the type's schema in the form and in the database.
-- [ ] Users can color by and filter by any field, including custom fields.
-- [ ] A saved view restores layers, filters, style and extent, and can be shared.
+- [x] An Admin can create a new type with its geometry, icon, color, statuses and custom fields, then encode records of it, with no code change. Line and polygon types can be encoded once drawing is built. *`e2e/admin.spec.ts`; `tests/live/access.live.ts`, "a type made by an Admin takes records straight away". Line types can be encoded since Phase 16. A polygon type still saves as inactive, as polygon drawing isn't built*
+- [x] Programs, categories, statuses, beneficiary types, icons and colors can be edited in `/admin`. *`e2e/admin.spec.ts`, "the lists"*
+- [x] Custom field values are validated against the type's schema in the form and in the database. *`tests/form-values.test.ts`; `tests/migrations.test.ts`; `tests/live/access.live.ts`, "applies the database rules on the hosted service"*
+- [x] Users can color by and filter by any field, including custom fields. *`e2e/dashboard.spec.ts`, "filtering by any field", "coloring markers by any field"*
+- [x] A saved view restores layers, filters, style and extent, and can be shared. *`e2e/dashboard.spec.ts`, "keeps layers, filters, style, basemap and map position", "can be updated, shared"*
 
 **Editing**
-- [ ] Points can be added and dragged, and records can be soft-deleted and restored.
-- [ ] When a line or polygon type is activated, its shapes can be drawn and reshaped on the map.
-- [ ] A change appears on every open map and in the dashboard without a reload, within about 2 s on another device.
-- [ ] Simultaneous edits to one record don't silently overwrite each other.
-- [ ] A status change adds a history entry, and the popup shows the timeline.
-- [ ] Only logged-in Encoders/Admins can edit; every create, edit and delete is in the audit log.
-- [ ] An Admin, and nobody else, can open an audit log page showing who changed what and when, filtered by user, record and date.
-- [ ] Changing a record's barangay needs a reason everywhere it can be done: Resolve flag, the move dialog and the Edit form.
-- [ ] A coordinate outside Marinduque, or outside the selected municipality or barangay, triggers a warning.
-- [ ] A point outside its encoded barangay counts under the encoded barangay, and its popup says "Plotted in [X], encoded as [Y]".
-- [ ] Only confirmed corrections are applied; each keeps the raw value and appears in the audit log.
+- [x] Points can be added and dragged, and records can be soft-deleted and restored. *`e2e/editing.spec.ts`, "adding", "moving a marker", "a deleted record leaves the map and counts, and can be restored"*
+- [ ] When a line or polygon type is activated, its shapes can be drawn and reshaped on the map. *Lines: yes, since Phase 16b (`e2e/roads.spec.ts`, "drawing a road"). Polygons: not built yet, so a polygon type can't be switched on*
+- [x] A change appears on every open map and in the dashboard without a reload, within about 2 s on another device. *`e2e/editing.spec.ts`, "more than one tab"; `e2e/auth.spec.ts`, "live updates"; `tests/access-control.test.ts`, the private signal*
+- [x] Simultaneous edits to one record don't silently overwrite each other. *`e2e/editing.spec.ts`, "saving straight over a newer version is refused"; `e2e/auth.spec.ts`, "a version conflict tells the person, and keeps what they typed"*
+- [x] A status change adds a history entry, and the popup shows the timeline. *`e2e/editing.spec.ts`, "adds an entry with date, remarks and photo", "a backdated entry joins the timeline"*
+- [x] Only logged-in Encoders/Admins can edit; every create, edit and delete is in the audit log. *`tests/access-control.test.ts`; `tests/live/access.live.ts`, "refuses a Viewer", "runs a record's whole life, naming the person at every step"; `e2e/roles.spec.ts`*
+- [x] An Admin, and nobody else, can open an audit log page showing who changed what and when, filtered by user, record and date. *`e2e/admin.spec.ts`, "filters by record", "by action and by person", "by date"; `e2e/auth.spec.ts`, "a viewer is refused, and their browser never asks"*
+- [x] Changing a record's barangay needs a reason everywhere it can be done: Resolve flag, the move dialog and the Edit form. *`e2e/editing.spec.ts`, "correcting the barangay needs a reason", "setting the barangay from a move needs a reason", "changing the barangay needs a reason"*
+- [x] A coordinate outside Marinduque, or outside the selected municipality or barangay, triggers a warning. *`e2e/editing.spec.ts`, "live warnings while editing"*
+- [x] A point outside its encoded barangay counts under the encoded barangay, and its popup says "Plotted in [X], encoded as [Y]". *`tests/seed.test.ts`, "counts a mismatched point under its encoded barangay"; `e2e/barangay-layer.spec.ts`, "shows where a mismatched point is plotted"*
+- [x] Only confirmed corrections are applied; each keeps the raw value and appears in the audit log. *`tests/seed.test.ts`, "corrections file"*
 
 **Export and access**
-- [ ] Filters update the map, charts, table and exports together.
-- [ ] The exported **KMZ** opens in Google Earth with folders (Municipality → Barangay → Type), styles and an attribute balloon, for points, lines and polygons.
-- [ ] The exported KML opens in QGIS with all attributes as fields.
+- [x] Filters update the map, charts, table and exports together. *`e2e/records.spec.ts`, "keeps to the filters the map and the Dashboard use"; `e2e/overview.spec.ts`, "shares its filters with the map"; `e2e/export.spec.ts`*
+- [x] The exported **KMZ** opens in Google Earth with folders (Municipality → Barangay → Type), styles and an attribute balloon, for points, lines and polygons. *`tests/export.test.ts`, "KML"; `e2e/export.spec.ts`, "a KMZ made in the browser has its folders, icons, layers"; `e2e/roads.spec.ts`, "a KMZ carries the traced roads as lines". Polygons are written the same way, and will have records once polygon drawing is built*
+- [ ] **Pending manual check:** the exported KML opens in QGIS with all attributes as fields. *Automated tests check that every field is in the file's ExtendedData (`tests/export.test.ts`, "carries every field through ExtendedData"). No QGIS is available yet to open it*
 - [ ] **Pending manual check:** the exported Shapefile opens in QGIS and shows correctly. There is no QGIS available yet, so for now it's checked only by automated tests, which read the file back with an independent parser.
-- [ ] Markers with the same coordinates can all be reached.
-- [ ] The site works on desktop and mobile Chrome.
+- [x] Markers with the same coordinates can all be reached. *`e2e/barangay-layer.spec.ts`, "records sharing exact coordinates can each be reached"*
+- [x] The site works on desktop and mobile Chrome. *Every end-to-end test runs on desktop Chrome at 1440 px and on a Pixel 7; `e2e/accessibility.spec.ts` checks every page on both, and tablets were checked in Phase 17a*
+
+**Since the spec: the UI/UX roadmap (Phases 10 to 17)**
+- [x] Every page passes an axe-core accessibility check, works by keyboard, and has 44 px touch targets on phones. *`e2e/accessibility.spec.ts`*
+- [x] Every page has one design for loading, could not load and no access, and a list with nothing to show says why. *`e2e/states.spec.ts`*
+- [x] Nothing private reaches the website, and the first load stays within its budget. *`scripts/check-bundle.ts`, run by every `npm run build`*
+- [x] A short user guide with screenshots. *[`docs/USER-GUIDE.md`](../USER-GUIDE.md)*
 
 ---
 
