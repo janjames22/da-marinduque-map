@@ -15,7 +15,6 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-14_
 
-- **Branch:** `main`, in sync with `origin/main`, with Phases 15b, 15c, 16a, 16b, 16c, 17a, 17b and 17c and the hidden marker fix merged. The UI/UX roadmap's phases are all built.
 - **Phase 17b approved, live deploy pending:** empty, loading and error states, and loading speed, passed both gates on 2026-11-14 and are merged into `main`. They go live with 15b to 17a in the one deploy after Phase 17. See the work log.
 - **Phase 17a approved, live deploy pending:** accessibility checks, touch targets and tablet layouts passed both gates on 2026-11-13 and are merged into `main`.
 - **Phase 17 in three parts**, the owner's choice on 2026-11-13: 17a accessibility and devices, 17b empty, loading and error states and loading speed, 17c the user guide, the spec checklist and the release, each with its own gates.
@@ -28,7 +27,8 @@ _Last updated: 2026-11-14_
 - **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. Until the next production deploy the live site is on Phase 15a.
 - **Next production deploy after Phase 17:** the owner decided on 2026-11-12 to hold the live deploy until Phase 17 is done, so 15b, 15c, 16 and 17 go live in one `npm run deploy`, one 15-credit deploy instead of three. Every phase still gets its Gate 2 draft, which costs nothing. Only approved work is merged into `main`, so a deploy from it stays safe if a live bug needs one sooner. Phase 16's database changes are already on the live database, so they have to keep working with the 15a site.
 - **Live:** Phases 15b to 17c are on https://marinduque-intervention-system.netlify.app since 2026-11-14 (deploy `6af73bc015bb5e20ce2aff3f`), the one deploy the owner chose to hold until Phase 17 was done. `0014_line_import.sql` was applied first, after a backup. Every migration file on `main` is now on the live database.
-- **Branch:** `fix-live-tests`, passed Gate 1, its Gate 2 draft up (https://6af7523bfd680516ffe7db0a--marinduque-intervention-system.netlify.app): the live tests brought up to date, and a fix for a record's popup not opening from a link when its marker sits beside another's. The bug is on the live site. The fix reaches it only with a production deploy, which needs the owner's go-ahead.
+- **Branch:** `main`, in sync with `origin/main`, with `fix-live-tests` merged on 2026-11-14 after both gates.
+- **Live deploy pending:** the popup fix (a record opened from a link, beside another's marker) is on `main` but not live. The live site is on deploy `6af73bc015bb5e20ce2aff3f`, where an audit log link to such a record shows no popup. It goes live with the next `npm run deploy` (15 credits), when the owner chooses.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The import test "a workbook is read under the site's security rules" fails if a run crosses midnight, as it takes the date once at its start.
@@ -72,6 +72,7 @@ The phases were built in a different order from the spec's §9. Export came befo
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
 | 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
 | 11. Design | `design-figma-kit`, `design-canvas-signoff` | 2026-11-11 | Tokens, kit preview and Figma guide, then 12 screens on a claude.ai design canvas, signed off by the owner. Source in `design/canvas/` |
+| Fix: popup beside another, live tests | `fix-live-tests` | 2026-11-14 | A record opened from a link opens its popup even beside another's marker (`map/InterventionLayer.tsx`), and `e2e-live/` brought up to date for the map-first layout. All 18 live tests pass on its draft |
 | 17c. User guide and checklist | `phase-17c-release` | 2026-11-14 | The user guide (`docs/USER-GUIDE.md`) with 14 screenshots from local mode, made-up names in place of the real ones (`npm run guide:screenshots`), and the spec's §10 checklist ticked with the tests that show each item: 30 met, 3 open |
 | 17b. States and loading speed | `phase-17b-states` | 2026-11-14 | One design for loading, could not load (with Try again) and no access on every page (`overview/PageState.tsx`), an error boundary so a broken page no longer blanks the screen, a reload once for a page whose code is gone after a deploy, empty states that say why and offer a way back, on the Dashboard, the lists and the map, the data loading from sign-in, a first-load budget in `scripts/check-bundle.ts`, and a year's caching for `/assets`. Loading the map apart was tried and left out, as it slowed the map |
 | 17a. Accessibility and devices | `phase-17a-accessibility` | 2026-11-13 | An axe-core check of every page and the map's open states (`e2e/accessibility.spec.ts`), with its two findings fixed, 44 px touch targets on phones and touch screens (`src/app/touch.css`), keyboard focus checked, and tablets checked both ways |
@@ -92,6 +93,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-14
 
+- `fix-live-tests` passed Gate 2, approved by the owner, and is merged into `main` (`ac53f11`). After the merge `main` matches the tested branch file for file. Going live waits for the owner's call on the next production deploy.
 - `fix-live-tests` passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af7523bfd680516ffe7db0a--marinduque-intervention-system.netlify.app, built from `fa51dc4`. Checked signed out: the security headers are on, `/assets` is cached for a year and a missing file gets a 404, and the local dataset and sample roads aren't in the deployed files. **The live tests against the draft: all 18 passed**, in 3 minutes, the popup from an audit log link included. Changes reached the other device in 1.4 to 1.5 s. They left nothing behind.
 - Live tests brought up to date, and a popup bug found and fixed, on branch `fix-live-tests`.
   - **The live tests** (`e2e-live/`) were last updated in Phase 14. They now bring out the layers card and the dashboard when they need them, as the Map opens with both put away since Phase 16c (`e2e-live/map.ts`), and check the Export button's Phase 14 look. The roles test opens the layers card before checking that an Encoder has no Deleted records, as a check against a hidden card would pass anyway.
