@@ -148,7 +148,7 @@ An Admin changes these on the pages under **Administration** in the sidebar. Cha
 - **What can't change:** a code or field key, once made. A saved field's kind. A type's geometry once it has records. A status stays on a type's list while any record is at it.
 - **Custom field kinds:** text, number, date, dropdown, yes or no, and photo. Barangay fields can't be photos, as photos belong to a record.
 - **Icons:** upload a simple one-color SVG with a `viewBox`, up to 20 KB. Files holding scripts or links are refused.
-- **Line types**, such as Farm-to-Market Road, can be switched on since Phase 16 (`0012_lines.sql`). The map draws their lines, and a road can be saved before its line is traced. See [Farm-to-Market Roads](#farm-to-market-roads).
+- **Line types**, such as Farm-to-Market Road, can be switched on since Phase 16 (`0012_lines.sql`). The map draws their lines, and a road can be saved before its line is traced. Since Phase 16b (`0013_line_drawing.sql`) the line is drawn and reshaped on the map. See [Farm-to-Market Roads](#farm-to-market-roads).
 - **Polygon types:** these can be set up but **not activated until drawing them on the map is built**. Their Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses it too, so no polygon record is saved without a shape.
 - **Two Admins at once:** if someone else saves a type or the barangay fields while you're editing them, you're told, and your save is held until you load their version.
 
@@ -165,7 +165,26 @@ The Farm-to-Market Road type is a line type. It stays off until an Admin switche
 - **A road's length** is the Length entered on its form, as the source reports it, so the totals match the source. A road without one counts the length of its traced line, measured along the earth's surface.
 - **A road without a traced line** is counted in every total and kept off the map, as a record without coordinates is. It says "No traced line yet", and it's on the Dashboard's list for the region to verify.
 - **A road links to every barangay its line crosses**, so a barangay's filter and profile count it, as the database's `intervention_barangays` does.
-- **Not built yet:** drawing and reshaping a road's line on the map (Phase 16b), and importing roads from a file (Phase 16c). Until then, a road added from the form waits for its line, and an edit keeps the line it has.
+- **Not built yet:** importing roads from a file (Phase 16c).
+
+### Drawing and reshaping a road's line
+
+Since Phase 16b, Encoders and Admins draw a road's line on the map, in its Edit form or its Resolve flag form. Nothing is saved until the form is.
+
+| To | Do this |
+|---|---|
+| **Draw a new line** | In the form, choose **Draw the line**, then tap the map along the road, in order. **Undo last point** takes the last one back. Tap **Done** when the line is finished. The form shows the length and the number of points as you go |
+| **Move a point** | Drag it |
+| **Add a bend** | Drag or tap the small dot between two points |
+| **Remove a point** | Tap it to pick it, then choose **Remove point N** |
+| **Carry on the line** | **Add points at the end** |
+| **Take the line away** | **Clear the line**. Once saved, the road waits for its line again |
+
+- **From a road's own page:** **Draw its line on the map** on a road waiting for one opens its form near its barangay, ready to add points. **Reshape on the map** on a traced road opens it with the line ready to reshape. Viewers get neither.
+- **From the QA queue:** **Fix on the map** on a road flagged No coordinates opens the Resolve flag form ready to add points. The flag clears once the line has two points and is saved, with a reason, as any fix needs.
+- **A line needs two points or more.** A road placed as a single point is refused, by the form and by the database.
+- **A line in several parts**, as an import can bring in, can't be reshaped in a form yet. Its form says so, and an edit keeps the line as it is.
+- A point placed before the type is set to Farm-to-Market Road becomes the road's first point.
 
 ## The dashboard and records table
 
@@ -334,7 +353,7 @@ A backup made before `0011_reports.sql` has no signature blocks. Restoring it ke
 
 ## Changing the database
 
-Run the migration before deploying the site that needs it. Otherwise, people can't use the new features until it's applied. For example, exports are refused until `0006_export.sql` is in. `0012_lines.sql` (Phase 16) only relaxes two rules and switches nothing on, so it's safe to apply while the live site still runs older screens. `npm run test:live` passes before and after it, as its type test is about polygons, which stay refused.
+Run the migration before deploying the site that needs it. Otherwise, people can't use the new features until it's applied. For example, exports are refused until `0006_export.sql` is in. `0012_lines.sql` (Phase 16) only relaxes two rules and switches nothing on, so it's safe to apply while the live site still runs older screens. `npm run test:live` passes before and after it, as its type test is about polygons, which stay refused. `0013_line_drawing.sql` (Phase 16b) lets the save functions take a road's line, and saves points as before, so it's safe to apply early too. It has to be in before the screens that draw lines go live: the older save functions ignore a line, so a drawn line would be dropped without an error.
 
 Add a new numbered file to `supabase/migrations`, take a backup, then run `npm run db:migrate`. Each file runs once, in its own transaction, and a failed file is rolled back. Never edit a file that has already been applied, because the change won't run.
 

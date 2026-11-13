@@ -40,9 +40,9 @@ export function RoadLayer({ data, records, colorOf }: RoadLayerProps) {
   const groupRef = useRef<L.LayerGroup | null>(null);
   const shown = useRef(new Map<string, ShownRoad>());
   const focusRecord = useMapUi((state) => state.focusRecord);
-  // The road an Edit form is open on: its draft takes its place on the map until the form closes, even
-  // with the draft cleared, as that's what saving would do.
-  const editingId = useEditUi((state) => (state.panel?.kind === 'edit' ? state.panel.id : null));
+  // The road an Edit or Resolve flag form is open on: its draft takes its place on the map until the
+  // form closes, even with the draft cleared, as that's what saving would do.
+  const editingId = useEditUi((state) => (state.panel?.kind === 'edit' || state.panel?.kind === 'resolve' ? state.panel.id : null));
   const permissions = usePermissions();
   const navigate = useNavigate();
 

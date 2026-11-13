@@ -288,6 +288,45 @@ test.describe('drawing a road', () => {
     await expect(edit.getByText('A line needs at least two points.')).toBeVisible();
     await expect(edit).toBeVisible();
   });
+
+  // The QA queue's "Fix on the map", for a road flagged No coordinates.
+  test('a road waiting for its line gets one in the Resolve flag form, and its flag clears', async ({ page }) => {
+    await open(page, `/map/records/${waiting.id}?fix=resolve`);
+    const resolve = form(page, 'Resolve flag');
+    await expect(resolve.getByRole('region', { name: 'Current flags' })).toContainText('No coordinates');
+    // Straight into adding points, as from the road's own page.
+    await expect(resolve.getByRole('button', { name: 'Done' })).toBeVisible();
+    await tapMap(page, -20, 0);
+    await expect(resolve.getByTestId('flags-after-saving')).toContainText('No coordinates');
+    await tapMap(page, 20, 10);
+    await expect(readout(page)).toHaveText(/, 2 points$/);
+    await expect(resolve.getByTestId('flags-after-saving')).not.toContainText('No coordinates');
+    await resolve.getByRole('button', { name: 'Done' }).click();
+    await resolve.getByLabel(/^Reason for this change/).fill('Traced from the field sketch');
+    await resolve.getByRole('button', { name: 'Save and log' }).click();
+    await expect(resolve).toHaveCount(0);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length + 1);
+
+    await page.goto(`/records/${waiting.id}`);
+    await expect(page.locator('.unplotted-badge')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Location' })).toContainText('Traced line');
+  });
+
+  test("a traced road's Resolve flag form opens with its line ready to reshape", async ({ page }) => {
+    await open(page, `/map/records/${reported.id}?fix=resolve`);
+    const resolve = form(page, 'Resolve flag');
+    const points = (reported.geojson as GeoJSON.LineString).coordinates.length;
+    await expect(resolve.getByTestId('location-readout')).toHaveText(new RegExp(`, ${points} points$`));
+    await expect(handles(page)).toHaveCount(points);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length - 1);
+    // Nothing changed yet, so there's nothing to save.
+    await resolve.getByLabel(/^Reason for this change/).fill('Checked');
+    await resolve.getByRole('button', { name: 'Save and log' }).click();
+    await expect(resolve.getByText('Nothing has changed yet.')).toBeVisible();
+    await resolve.getByRole('button', { name: 'Cancel' }).click();
+    await expect(handles(page)).toHaveCount(0);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length);
+  });
 });
 
 test('a KMZ carries the traced roads as lines', async ({ page }) => {

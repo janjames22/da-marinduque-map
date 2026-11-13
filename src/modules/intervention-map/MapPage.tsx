@@ -108,6 +108,8 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
       state.showEverything();
       if (record.barangay_id !== null) state.zoomToBarangay(record.barangay_id);
       openRecordPanel('resolve', record);
+      // A road waiting for its line starts drawing it, as from its own page.
+      if (isLine && !record.geojson) edit.setLineMode('add');
     } else if (canSeeHistory) {
       openRecordPanel('history', record);
       edit.setNotice(record.deleted_at ? 'This record was deleted, so it isn\'t on the map. Here\'s its history.' : 'This record isn\'t on the map. Here\'s its history.');
