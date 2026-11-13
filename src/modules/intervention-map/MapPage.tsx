@@ -90,8 +90,16 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
     }
     const isActive = data.types.some((type) => type.id === record.intervention_type_id && type.is_active);
     // From the QA queue, to fix a location on the map. A record with no coordinates yet gets them here too.
-    const fixing = new URLSearchParams(location.search).get('fix') === 'resolve' && canEdit && record.deleted_at === null && isActive;
-    if (record.deleted_at === null && isActive && isOnMap(record)) {
+    const fix = new URLSearchParams(location.search).get('fix');
+    const fixing = fix === 'resolve' && canEdit && record.deleted_at === null && isActive;
+    // From a road's own page: its Edit form, ready to draw its line, near its barangay (Phase 16b).
+    const isLine = data.types.find((type) => type.id === record.intervention_type_id)?.geometry_kind === 'line';
+    if (fix === 'draw' && isLine && canEdit && record.deleted_at === null && isActive) {
+      state.showEverything();
+      if (record.barangay_id !== null) state.zoomToBarangay(record.barangay_id);
+      openRecordPanel('edit', record);
+      if (!record.geojson) edit.setLineMode('add');
+    } else if (record.deleted_at === null && isActive && isOnMap(record)) {
       state.showEverything();
       if (globalThis.matchMedia?.('(max-width: 800px)').matches) state.setInsights(null);
       state.zoomToRecord(id);

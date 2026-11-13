@@ -206,6 +206,7 @@ function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: st
                 {warning && <p className="ui-notice ui-notice-info">{warning}</p>}
                 <p className="record-links">
                   <Link to={recordOnMap(record.id)}>Open on the map</Link>
+                  {canEdit && record.deleted_at === null && record.geojson?.type === 'LineString' && <Link to={`${recordOnMap(record.id)}?fix=draw`}>Reshape on the map</Link>}
                 </p>
               </>
             ) : onMap && point ? (
@@ -240,6 +241,11 @@ function RecordDetail({ data, user, id }: { data: MapData; user: AppUser; id: st
                 {canEdit && record.deleted_at === null && !isLine && (
                   <Link to={`${recordOnMap(record.id)}?fix=resolve`} className="ui-button ui-button-secondary">
                     Enter verified coordinates
+                  </Link>
+                )}
+                {canEdit && record.deleted_at === null && isLine && record.geojson === null && (
+                  <Link to={`${recordOnMap(record.id)}?fix=draw`} className="ui-button ui-button-secondary">
+                    Draw its line on the map
                   </Link>
                 )}
               </>

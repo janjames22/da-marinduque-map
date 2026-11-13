@@ -1,9 +1,9 @@
 // Forms hold everything as text while it's being typed. These turn that into stored values and back.
-import type { InterventionPatch, InterventionValues } from '../data/store';
+import type { InterventionPatch, InterventionValues, LinePositions } from '../data/store';
 import type { FieldDefinition, FieldSchema, Intervention, MapData } from '../data/types';
 import type { LatLng } from './coordinates';
 import { manilaToday } from './dates';
-import { pointOf, samePoint } from './qa';
+import { linePositionsOf, pointOf, sameLine, samePoint } from './qa';
 
 export interface FormState {
   intervention_type_id: string;
@@ -141,6 +141,8 @@ export function valuesFromRecord(record: Intervention): InterventionValues {
     barangay_id: record.barangay_id,
     location_basis_id: record.location_basis_id,
     point: pointOf(record),
+    // Only a one-part line: a line in several parts stays as it is, as the editor can't reshape it.
+    ...(linePositionsOf(record) ? { line: linePositionsOf(record) } : {}),
     attributes: record.attributes,
     remarks: record.remarks,
   };
@@ -150,7 +152,14 @@ const optionalId = (value: string) => (value === '' ? null : Number(value));
 const optionalText = (value: string) => (value.trim() === '' ? null : value.trim());
 const optionalNumber = (value: string) => (value.trim() === '' ? null : Number(value));
 
-export function valuesFromForm(form: FormState, point: LatLng | null, schema: FieldSchema, existing?: Record<string, unknown>): InterventionValues {
+// A road's form passes its line too: the positions, or null for none. A point type's form leaves it out.
+export function valuesFromForm(
+  form: FormState,
+  point: LatLng | null,
+  schema: FieldSchema,
+  existing?: Record<string, unknown>,
+  line?: LinePositions | null,
+): InterventionValues {
   return {
     intervention_type_id: Number(form.intervention_type_id),
     category_id: optionalId(form.category_id),
@@ -166,6 +175,7 @@ export function valuesFromForm(form: FormState, point: LatLng | null, schema: Fi
     barangay_id: optionalId(form.barangay_id),
     location_basis_id: optionalId(form.location_basis_id),
     point,
+    ...(line !== undefined ? { line } : {}),
     attributes: attributesFromText(schema, form.attributes, existing),
     remarks: optionalText(form.remarks),
   };
@@ -197,6 +207,8 @@ export function buildPatch(base: Intervention, values: InterventionValues, lates
   const basePoint = pointOf(base);
   const movedOrCleared = values.point === null ? basePoint !== null : !samePoint(basePoint, values.point);
   if (movedOrCleared) patch.point = values.point;
+  // A road's line goes in only when it changed. Left out, the line stays as it is.
+  if (values.line !== undefined && !sameLine(linePositionsOf(base), values.line)) patch.line = values.line;
 
   const attributes: Record<string, unknown> = { ...latest.attributes };
   let attributesChanged = false;

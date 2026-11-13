@@ -7,7 +7,7 @@ import { valuesFromRecord } from '../lib/form-values';
 import { barangaysCrossed, computeFlags, linePartsOf, locateShape, pointOf, samePoint, type LineParts, type PlaceIndex } from '../lib/qa';
 import type { LatLng } from '../lib/coordinates';
 import { validateAttributes, validateIntervention, validateStatus } from '../lib/validation';
-import { ConflictError, ValidationError, type AuditPage, type AuditQuery, type ChangeNote, type ExportLogEntry, type InterventionPatch, type InterventionValues, type PhotoMeta } from './store';
+import { ConflictError, ValidationError, type AuditPage, type AuditQuery, type ChangeNote, type ExportLogEntry, type InterventionPatch, type InterventionValues, type LinePositions, type PhotoMeta } from './store';
 import type {
   AuditAction,
   AuditEntry,
@@ -73,6 +73,10 @@ function normalizePoint(point: LatLng | null): LatLng | null {
 
 const geojsonOf = (point: LatLng | null): GeoJSON.Point | null =>
   point ? { type: 'Point', coordinates: [point.lng, point.lat] } : null;
+
+// A road's line, as line_from_json makes it.
+const lineGeojsonOf = (line: LinePositions | null | undefined): GeoJSON.LineString | null =>
+  line ? { type: 'LineString', coordinates: line.map(([lng, lat]) => [lng, lat]) } : null;
 
 // The view's plotted columns aren't part of the table, so they stay out of the log.
 function rowImage(record: Intervention): Record<string, unknown> {
@@ -185,7 +189,7 @@ export function createIntervention(rows: LocalRows, context: EngineContext, inpu
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);
 
   const now = context.now();
-  const { point, field_photos: _files, ...columns } = values;
+  const { point, line, field_photos: _files, ...columns } = values;
   const record: Intervention = {
     ...columns,
     id: context.newId(),
@@ -194,7 +198,7 @@ export function createIntervention(rows: LocalRows, context: EngineContext, inpu
     data_source: MANUAL_DATA_SOURCE,
     ...origin,
     qa_flags: [],
-    geojson: geojsonOf(point),
+    geojson: geojsonOf(point) ?? lineGeojsonOf(line),
     plotted_barangay_id: null,
     plotted_barangay: null,
     plotted_municipality: null,
@@ -231,12 +235,13 @@ export function updateIntervention(
   const record = findCurrent(rows, id, expectedVersion);
   if (record.deleted_at !== null) throw new ConflictError(record);
 
-  const { clear_name_check: clearNameCheck, point: patchedPoint, field_photos: _files, ...columns } = patch;
+  const { clear_name_check: clearNameCheck, point: patchedPoint, line: patchedLine, field_photos: _files, ...columns } = patch;
   const previous = valuesFromRecord(record);
   const values: InterventionValues = {
     ...previous,
     ...columns,
     point: patchedPoint === undefined ? previous.point : normalizePoint(patchedPoint),
+    ...(patchedLine !== undefined ? { line: patchedLine } : {}),
   };
 
   const type = typeOf(context, record.intervention_type_id);
@@ -244,10 +249,10 @@ export function updateIntervention(
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);
 
   const before = rowImage(record);
-  const { point, ...newColumns } = values;
+  const { point, line: _line, ...newColumns } = values;
   Object.assign(record, newColumns, {
     // An edit that leaves the location alone keeps the shape as it is, so a road keeps its line.
-    geojson: patchedPoint === undefined ? record.geojson : geojsonOf(point),
+    geojson: patchedPoint !== undefined ? geojsonOf(point) : patchedLine !== undefined ? lineGeojsonOf(patchedLine) : record.geojson,
     version: record.version + 1,
     updated_at: context.now(),
     qa_flags: clearNameCheck ? record.qa_flags.filter((flag) => flag !== 'beneficiary_name_check') : record.qa_flags,
