@@ -15,7 +15,8 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-13_
 
-- **Branch:** `phase-17a-accessibility`, with Phase 17a at Gate 2. Draft: https://6af6db9f6a0fe4c026952c9c--marinduque-intervention-system.netlify.app. `main` is in sync with `origin/main`, with Phases 15b, 15c, 16a, 16b and 16c and the hidden marker fix merged.
+- **Branch:** `main`, in sync with `origin/main`, with Phases 15b, 15c, 16a, 16b, 16c and 17a and the hidden marker fix merged.
+- **Phase 17a approved, live deploy pending:** accessibility checks, touch targets and tablet layouts passed both gates on 2026-11-13 and are merged into `main`.
 - **Phase 17 in three parts**, the owner's choice on 2026-11-13: 17a accessibility and devices, 17b empty, loading and error states and loading speed, 17c the user guide, the spec checklist and the release, each with its own gates.
 - **Phase 16c approved, live deploy pending:** passed both gates on 2026-11-13 and is merged into `main`. It goes live with 15b, 15c, 16a, 16b and 17 in the one deploy after Phase 17. Phase 16 is done.
 - **Phase 16c, what it holds:** roads imported from KML, KMZ and GeoJSON files with their lines, in one part or several. At Gate 1 the owner asked for more room for the map before the next phase, so the branch also has full screen for the map, and the menu, the layers card and the panel on the right each put away and back. After trying it, the owner asked for the Map to open map first every time, with the menu, the layers card and the dashboard put away and a button for each, and for the legend to stop running under the map's buttons, with smooth movement. See the work log.
@@ -27,7 +28,7 @@ _Last updated: 2026-11-13_
 - **Every migration file on `main` is applied live but `0014_line_import.sql`**, which waits for the owner's go-ahead. An applied file must not be edited, so a later change to the save functions goes in a new file.
 - **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. Until the next production deploy the live site is on Phase 15a.
 - **Next production deploy after Phase 17:** the owner decided on 2026-11-12 to hold the live deploy until Phase 17 is done, so 15b, 15c, 16 and 17 go live in one `npm run deploy`, one 15-credit deploy instead of three. Every phase still gets its Gate 2 draft, which costs nothing. Only approved work is merged into `main`, so a deploy from it stays safe if a live bug needs one sooner. Phase 16's database changes are already on the live database, so they have to keep working with the 15a site.
-- **Next:** Gate 2 for Phase 17a, then 17b and 17c. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
+- **Next:** Phase 17b, empty, loading and error states and loading speed, then 17c. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -70,6 +71,7 @@ The phases were built in a different order from the spec's §9. Export came befo
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
 | 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
 | 11. Design | `design-figma-kit`, `design-canvas-signoff` | 2026-11-11 | Tokens, kit preview and Figma guide, then 12 screens on a claude.ai design canvas, signed off by the owner. Source in `design/canvas/` |
+| 17a. Accessibility and devices | `phase-17a-accessibility` | 2026-11-13 | An axe-core check of every page and the map's open states (`e2e/accessibility.spec.ts`), with its two findings fixed, 44 px touch targets on phones and touch screens (`src/app/touch.css`), keyboard focus checked, and tablets checked both ways |
 | 16c. Importing road lines | `phase-16c-line-import` | 2026-11-13 | Roads imported from KML, KMZ and GeoJSON with their lines, in one part or several (`0014_line_import.sql`, not yet applied live), a row's place from its line or point, and a sample roads file. At the owner's Gate 1 request: the Map opens map first, full screen, the menu, layers card and side panel put away and back, a legend that folds and keeps clear of the map's buttons, gentle panel movement, and a fix for a popup that could blank the page |
 | 16b. Drawing road lines | `phase-16b-line-drawing` | 2026-11-13 | A road's line drawn point by point and reshaped on the map (drag a point, add a bend, remove a point, clear it) in its Edit and Resolve flag forms, Draw its line and Reshape on the map from a road's page, the QA queue's Fix on the map for a road with no line, and the save functions taking a line (`0013_line_drawing.sql`, applied live 2026-11-13) |
 | Fix: hidden marker | `fix-legend-over-marker` | 2026-11-13 | The legend makes way while a marker is moved, and a marker that settles under it is panned clear. Fixed the flaky "a plain move needs no reason" test |
@@ -87,6 +89,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-13
 
+- Phase 17a passed Gate 2, approved by the owner, and is merged into `main`. After the merge `main` matches the tested branch file for file, which passed the full e2e run (725 passed, 0 failed). Going live waits for the one deploy after Phase 17.
 - Phase 17a passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af6db9f6a0fe4c026952c9c--marinduque-intervention-system.netlify.app, built from `3b543e2`. Checked signed out: the security headers are on, the Inter fonts load, the touch-target styles are served, the sample roads aren't in the deployed files, and there are no console errors or failed requests.
 - Phase 17a ready for Gate 1, on branch `phase-17a-accessibility`: accessibility and devices.
   - **Audit:** axe-core (`@axe-core/playwright`, a new dev dependency) on 13 pages and the map's open states, on a computer and a phone. It found two problems, now fixed: Home's figure tiles held their icon beside the term in a definition list, which screen readers misread (the icon is inside the term now), and archived types and fields were faded to 4.4:1, under AA (greyed in an AA color now).
