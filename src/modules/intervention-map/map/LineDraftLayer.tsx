@@ -19,8 +19,8 @@ const SHEET_RISE_MS = 350;
 
 // Bigger to touch than they look, so a finger can find them on a phone.
 const handleIcon = (selected: boolean) =>
-  L.divIcon({ className: `line-handle${selected ? ' is-selected' : ''}`, html: '<span></span>', iconSize: [32, 32] });
-const MIDPOINT_ICON = L.divIcon({ className: 'line-midpoint', html: '<span></span>', iconSize: [28, 28] });
+  L.divIcon({ className: `line-handle${selected ? ' is-selected' : ''}`, html: '<span></span>', iconSize: [44, 44] });
+const MIDPOINT_ICON = L.divIcon({ className: 'line-midpoint', html: '<span></span>', iconSize: [36, 36] });
 
 const toLatLngs = (line: LatLng[]) => line.map((point) => L.latLng(point.lat, point.lng));
 const middle = (a: LatLng, b: LatLng): LatLng => ({ lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 });

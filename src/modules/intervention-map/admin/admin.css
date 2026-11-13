@@ -90,8 +90,10 @@
   border-top: 1px solid var(--border-card);
 }
 
-.admin-row-archived > :not(.admin-row-actions) {
-  opacity: 0.6;
+/* Greyed in a color that still reads at AA, as fading it out did not (Phase 17a). */
+.admin-row-archived > :not(.admin-row-actions),
+.admin-row-archived .admin-row-main strong {
+  color: var(--text-secondary);
 }
 
 .admin-row-editing {
@@ -229,8 +231,9 @@ form.admin-form[aria-label='Type'] > fieldset > legend + * {
   padding: var(--space-4);
 }
 
-.admin-field-archived {
-  opacity: 0.6;
+.admin-field-archived,
+.admin-field-archived strong {
+  color: var(--text-secondary);
 }
 
 .admin-field-grid {

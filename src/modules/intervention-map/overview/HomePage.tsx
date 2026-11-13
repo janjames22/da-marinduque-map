@@ -21,8 +21,12 @@ const LEGEND_SIZE = 4;
 export function Tile({ label, value, note, hero, icon, id }: { label: string; value: string; note?: ReactNode; hero?: boolean; icon?: ReactNode; id: string }) {
   return (
     <div className={`overview-tile${hero ? ' is-hero' : ''}`} data-tile={id}>
-      {icon && <span className="overview-icon-tile">{icon}</span>}
-      <dt>{label}</dt>
+      {/* Inside the term, as a list of figures may hold only terms and their values. It's placed in
+          the tile's corner all the same. */}
+      <dt>
+        {icon && <span className="overview-icon-tile">{icon}</span>}
+        {label}
+      </dt>
       <dd className="overview-tile-value">{value}</dd>
       {note && <dd className="overview-tile-note">{note}</dd>}
     </div>
