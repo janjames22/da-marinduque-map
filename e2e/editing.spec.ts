@@ -79,9 +79,9 @@ async function openPopup(page: Page, record: SeedRecord) {
 
 const popupAction = (page: Page, name: string) => page.locator('.leaflet-popup-content').getByRole('button', { name, exact: true });
 
-async function dragMarker(page: Page, marker: Locator, dx: number, dy: number) {
+// Where a marker is once the map has stopped moving.
+async function settledBox(marker: Locator) {
   await expect(marker).toBeVisible();
-  // A popup pans the map as it opens. A person waits for that before reaching for the marker.
   let last = '';
   await expect
     .poll(async () => {
@@ -91,7 +91,15 @@ async function dragMarker(page: Page, marker: Locator, dx: number, dy: number) {
       return settled;
     }, { intervals: [200] })
     .toBe(true);
-  const box = (await marker.boundingBox())!;
+  return (await marker.boundingBox())!;
+}
+
+const overlaps = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+async function dragMarker(page: Page, marker: Locator, dx: number, dy: number) {
+  // A popup pans the map as it opens. A person waits for that before reaching for the marker.
+  const box = await settledBox(marker);
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
   await page.mouse.move(x, y);
@@ -530,6 +538,34 @@ test.describe('moving a marker', () => {
     const history = page.getByLabel('Change history');
     await expect(history).toContainText('Reason: Nearer the shed');
     await expect(history).not.toContainText(/Barangay: .* → /);
+  });
+
+  // A popup can pan its marker to where the legend sits, hidden while the popup is open. The legend
+  // stays away while the marker is moved, and once the move ends it's brought clear of the legend.
+  test('a marker dropped where the legend sits is brought clear of it once the move is confirmed', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'on a phone the legend is folded into a small button, and the profile covers the map');
+    await openProfile(page, cleanRecord.barangay_id!);
+    const legend = page.getByLabel('Map legend');
+    const area = (await legend.boundingBox())!;
+    await profile(page).locator('.record-row').filter({ hasText: cleanRecord.beneficiary }).locator('.record-name').click();
+    await expect(popup(page).filter({ hasText: cleanRecord.beneficiary })).toBeVisible();
+    const marker = page.locator(`.intervention-marker[title="${cleanRecord.beneficiary}"]`);
+
+    const box = await settledBox(marker);
+    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+    await dragMarker(page, marker, area.x + area.width / 2 - x, area.y + area.height / 2 - y);
+    const confirm = page.getByRole('dialog', { name: 'Confirm move' });
+    await expect(confirm).toBeVisible();
+    // The dropped marker is in sight while the move waits to be confirmed.
+    await expect(legend).toBeHidden();
+    await expect(marker).toBeVisible();
+
+    await confirm.getByRole('button', { name: 'Confirm move' }).click();
+    await expect(page.getByText('Marker moved.')).toBeVisible();
+    await expect(legend).toBeVisible();
+    await expect.poll(async () => overlaps((await marker.boundingBox())!, (await legend.boundingBox())!)).toBe(false);
+    await marker.click();
+    await expect(popup(page)).toContainText(cleanRecord.beneficiary);
   });
 
   test('cancelling drops a note, and a move within the barangay offers no barangay change', async ({ page }) => {
