@@ -14,6 +14,7 @@ import { UsersSection } from './UsersSection';
 import '../overview/overview.css';
 import '../records/records.css';
 import './admin.css';
+import { PageError, PageLoading, PageNoAccess } from '../overview/PageState';
 
 // The sidebar has one link for each of these pages, and the pages that hold several lists have tabs.
 interface Tab {
@@ -218,12 +219,9 @@ function AdminWorkspace({ data }: { data: MapData }) {
 export function AdminPage({ user }: { user: AppUser }) {
   if (user.role !== 'admin') {
     return (
-      <div className="page-message" role="alert">
-        <h2>This page is for Admins</h2>
-        <p>
-          Your account can't change these settings. <Link to={MAP_PATH}>Back to the map</Link>
-        </p>
-      </div>
+      <PageNoAccess title="This page is for Admins">
+        Your account can't change these settings. <Link to={MAP_PATH}>Back to the map</Link>
+      </PageNoAccess>
     );
   }
   return <AdminLoader user={user} />;
@@ -231,15 +229,8 @@ export function AdminPage({ user }: { user: AppUser }) {
 
 function AdminLoader({ user }: { user: AppUser }) {
   const state = useMapData(user);
-  if (state.status === 'loading') return <p className="page-message is-loading">Loading…</p>;
-  if (state.status === 'error') {
-    return (
-      <div className="page-message" role="alert">
-        <h2>This page could not load</h2>
-        <p>{state.error.message}</p>
-      </div>
-    );
-  }
+  if (state.status === 'loading') return <PageLoading />;
+  if (state.status === 'error') return <PageError error={state.error} onRetry={state.retry} />;
   return (
     <StoreContext.Provider value={{ store: state.store, places: state.places }}>
       <AdminWorkspace data={state.data} />

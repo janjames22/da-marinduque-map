@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, Rectangle, ResponsiveContainer, Text, Tooltip, XAxis, YAxis } from 'recharts';
 import type { BarRow, DashboardNumbers, OperationalShare, StatusRow, StatusSeries } from '../lib/dashboard';
+import { NoRecords } from '../overview/EmptyState';
 
 // One measure, so one color: the same blue as the map's count shading.
 const MEASURE_COLOR = '#2a78d6';
@@ -252,6 +253,8 @@ export function operationalNotes(operational: OperationalShare): string[] {
 
 export function DashboardView({ numbers }: { numbers: DashboardNumbers }) {
   const { operational } = numbers;
+  // Nothing to count shows why, not a panel of zeroes.
+  if (numbers.records === 0) return <NoRecords mapView />;
   return (
     <>
       <dl className="kpi-grid" aria-label="Key figures">
@@ -270,35 +273,29 @@ export function DashboardView({ numbers }: { numbers: DashboardNumbers }) {
         <Tile id="needing-qa" label="Records needing QA" value={numbers.needingQa.toLocaleString('en-US')} />
       </dl>
 
-      {numbers.records === 0 ? (
-        <p className="empty-note">No records match these filters, so there's nothing to chart.</p>
-      ) : (
-        <>
-          <ChartCard title="Units by municipality" table={<RowsTable rows={numbers.byMunicipality} heading="Municipality" />}>
-            <HorizontalBars rows={numbers.byMunicipality} labelWidth={88} />
-          </ChartCard>
-          <ChartCard title="Units by program" table={<RowsTable rows={numbers.byProgram} heading="Program" />}>
-            <HorizontalBars rows={numbers.byProgram} labelWidth={150} />
-          </ChartCard>
-          <ChartCard
-            title="Units by year funded"
-            note={numbers.noYearUnits > 0 ? `Not shown: ${plural(numbers.noYearUnits, 'unit')} with no year.` : undefined}
-            table={<RowsTable rows={numbers.byYear} heading="Year" />}
-          >
-            <YearColumns rows={numbers.byYear} />
-          </ChartCard>
-          <ChartCard
-            title={numbers.categoriesLeftOut > 0 ? 'Units by category (top 15)' : 'Units by category'}
-            note={numbers.categoriesLeftOut > 0 ? `Not shown: ${numbers.categoriesLeftOut} smaller ${numbers.categoriesLeftOut === 1 ? 'category' : 'categories'}, with ${plural(numbers.unitsLeftOut, 'unit')}.` : undefined}
-            table={<RowsTable rows={numbers.byCategory} heading="Category" />}
-          >
-            <HorizontalBars rows={numbers.byCategory} labelWidth={150} />
-          </ChartCard>
-          <ChartCard title="Status by municipality" table={<StatusTable rows={numbers.byStatus} series={numbers.statusSeries} />}>
-            <StatusStacks rows={numbers.byStatus} series={numbers.statusSeries} />
-          </ChartCard>
-        </>
-      )}
+      <ChartCard title="Units by municipality" table={<RowsTable rows={numbers.byMunicipality} heading="Municipality" />}>
+        <HorizontalBars rows={numbers.byMunicipality} labelWidth={88} />
+      </ChartCard>
+      <ChartCard title="Units by program" table={<RowsTable rows={numbers.byProgram} heading="Program" />}>
+        <HorizontalBars rows={numbers.byProgram} labelWidth={150} />
+      </ChartCard>
+      <ChartCard
+        title="Units by year funded"
+        note={numbers.noYearUnits > 0 ? `Not shown: ${plural(numbers.noYearUnits, 'unit')} with no year.` : undefined}
+        table={<RowsTable rows={numbers.byYear} heading="Year" />}
+      >
+        <YearColumns rows={numbers.byYear} />
+      </ChartCard>
+      <ChartCard
+        title={numbers.categoriesLeftOut > 0 ? 'Units by category (top 15)' : 'Units by category'}
+        note={numbers.categoriesLeftOut > 0 ? `Not shown: ${numbers.categoriesLeftOut} smaller ${numbers.categoriesLeftOut === 1 ? 'category' : 'categories'}, with ${plural(numbers.unitsLeftOut, 'unit')}.` : undefined}
+        table={<RowsTable rows={numbers.byCategory} heading="Category" />}
+      >
+        <HorizontalBars rows={numbers.byCategory} labelWidth={150} />
+      </ChartCard>
+      <ChartCard title="Status by municipality" table={<StatusTable rows={numbers.byStatus} series={numbers.statusSeries} />}>
+        <StatusStacks rows={numbers.byStatus} series={numbers.statusSeries} />
+      </ChartCard>
     </>
   );
 }

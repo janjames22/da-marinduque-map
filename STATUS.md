@@ -15,7 +15,8 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-13_
 
-- **Branch:** `main`, in sync with `origin/main`, with Phases 15b, 15c, 16a, 16b, 16c and 17a and the hidden marker fix merged.
+- **Branch:** `phase-17b-states`, for Phase 17b, waiting for Gate 1. `main` is in sync with `origin/main`, with Phases 15b, 15c, 16a, 16b, 16c and 17a and the hidden marker fix merged.
+- **Phase 17b built, waiting for Gate 1:** empty, loading and error states, and loading speed. See the work log. Its `netlify.toml` changes (caching for `/assets`, and a 404 for a missing asset) only take effect on a deploy, so they're checked on the Gate 2 draft.
 - **Phase 17a approved, live deploy pending:** accessibility checks, touch targets and tablet layouts passed both gates on 2026-11-13 and are merged into `main`.
 - **Phase 17 in three parts**, the owner's choice on 2026-11-13: 17a accessibility and devices, 17b empty, loading and error states and loading speed, 17c the user guide, the spec checklist and the release, each with its own gates.
 - **Phase 16c approved, live deploy pending:** passed both gates on 2026-11-13 and is merged into `main`. It goes live with 15b, 15c, 16a, 16b and 17 in the one deploy after Phase 17. Phase 16 is done.
@@ -28,7 +29,7 @@ _Last updated: 2026-11-13_
 - **Every migration file on `main` is applied live but `0014_line_import.sql`**, which waits for the owner's go-ahead. An applied file must not be edited, so a later change to the save functions goes in a new file.
 - **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. Until the next production deploy the live site is on Phase 15a.
 - **Next production deploy after Phase 17:** the owner decided on 2026-11-12 to hold the live deploy until Phase 17 is done, so 15b, 15c, 16 and 17 go live in one `npm run deploy`, one 15-credit deploy instead of three. Every phase still gets its Gate 2 draft, which costs nothing. Only approved work is merged into `main`, so a deploy from it stays safe if a live bug needs one sooner. Phase 16's database changes are already on the live database, so they have to keep working with the 15a site.
-- **Next:** Phase 17b, empty, loading and error states and loading speed, then 17c. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
+- **Next:** Gate 1 for Phase 17b, then 17c. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -88,6 +89,17 @@ The phases were built in a different order from the spec's §9. Export came befo
 New entries go at the top. Each entry gets the date, what was done, and the commit or branch.
 
 ### 2026-11-13
+
+- Phase 17b built on branch `phase-17b-states`, waiting for Gate 1: empty, loading and error states, and loading speed.
+  - **Loading** (`overview/PageState.tsx`): every page, and the sign-in check, shows one design: a spinner and "Loading…" as a status for screen readers, still shown only once the wait is long enough to notice.
+  - **Could not load:** a plain sentence in place of the raw message, with **Try again**, which starts a fresh load (`retry` from `useMapData`). The original message is under **Details**. A dropped connection says "No connection", in Chrome's, Firefox's and Safari's words alike, and a sign-in that ran out asks for a reload (`lib/error-message.ts`). The pages for Admins, and for Encoders and Admins, use the same design with a lock.
+  - **A page that breaks** (`app/ErrorBoundary.tsx`): an error while drawing a page used to blank the whole screen. It now shows "Something went wrong on this page" in place of the page, with the menu, **Try again** and **Back to Home**, and moving to another page clears it. A last guard around the whole app catches the rest.
+  - **After a deploy:** a tab open over a deploy asks for page code that's gone. The app now reloads once by itself to get the new version, at most once a minute, and otherwise says "A newer version of the map is out" with **Reload the page**. `netlify.toml` answers a missing file under `/assets` with a 404, rather than the app's page under the file's name.
+  - **Nothing to show** (`overview/EmptyState.tsx`): the Dashboard page and the map's dashboard panel say "No records match these filters" with **Show all records**, rather than a page of zeroes, as the design brief asks. The Interventions list and the map's list tell filters from a search that finds nothing (**Clear the search**), the map's panel says when "Limit to map view" leaves nothing (**Count the whole province**), and the map says when its filters leave no marker on it. Filters, a type layer switched off, and shading by one program or type all count (`isNarrowed` in `state/map-ui.ts`).
+  - **Loading speed:** the map and Leaflet load apart from the first screen, and are fetched as soon as the browser is idle. The first load went from about 200 kB of script, gzipped, to 109 kB, and the data now starts loading at sign-in, alongside a page's code rather than after it. `scripts/check-bundle.ts` fails the build if the first load is over 130 kB of script or 20 kB of styles. Files under `/assets` are cached for a year, as their names change with their content. The dev server prepares the main pages as it starts (`server.warmup` in `vite.config.ts`), so the first visit to the map doesn't wait.
+  - **Docs:** "Loading speed" and "Loading, errors and empty pages" in `docs/OPERATIONS.md`, three rows in its troubleshooting table, and the roadmap's change log.
+  - **Tests:** `e2e/states.spec.ts` with 7 tests on a computer and a phone: loading, could not load and trying again, no connection, a page whose code is gone, and the empty Dashboard, list and map. A new test in `e2e/auth.spec.ts` checks the reload after a deploy on the production build too, and the "data can't load" test now tries again. Two dashboard tests changed for the new empty states. `tests/page-states.test.ts` has 10 unit tests on the wording, the filters and the budget.
+  - **Checks:** typecheck, 1,163 unit tests (one failed once in the first run and passed in the next, as noted before under load), and the production build with its checks.
 
 - Phase 17a passed Gate 2, approved by the owner, and is merged into `main`. After the merge `main` matches the tested branch file for file, which passed the full e2e run (725 passed, 0 failed). Going live waits for the one deploy after Phase 17.
 - Phase 17a passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af6db9f6a0fe4c026952c9c--marinduque-intervention-system.netlify.app, built from `3b543e2`. Checked signed out: the security headers are on, the Inter fonts load, the touch-target styles are served, the sample roads aren't in the deployed files, and there are no console errors or failed requests.

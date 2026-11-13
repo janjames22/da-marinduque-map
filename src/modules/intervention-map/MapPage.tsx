@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Download, Info, Layers, Maximize2, Minimize2, PanelLeftOpen, PanelRightClose, PanelRightOpen, Printer } from 'lucide-react';
+import { Database, Download, Info, Layers, Maximize2, Minimize2, PanelLeftOpen, PanelRightClose, PanelRightOpen, Printer } from 'lucide-react';
 import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { LocalSeedMissingError } from './data/store';
 import type { AppUser, MapData } from './data/types';
@@ -27,6 +27,7 @@ import { ConnectionNotice, Notice, PhotoDialog } from './edit/RecordPanels';
 import { ControlSlot } from './map/ControlSlot';
 import { useFullscreen } from './map/fullscreen';
 import { MapView } from './map/MapView';
+import { PageError, PageLoading, PageMessage } from './overview/PageState';
 import { BarangayProfile } from './panel/BarangayProfile';
 import { ExportDialog } from './panel/ExportDialog';
 import { LayerPanel } from './panel/LayerPanel';
@@ -35,7 +36,7 @@ import { UnassignedPanel } from './panel/UnassignedPanel';
 import { PrintMapDialog } from './reports/PrintMapDialog';
 import { isFormOpen, useEditUi } from './state/edit-ui';
 import { useExportUi } from './state/export-ui';
-import { useMapUi } from './state/map-ui';
+import { isNarrowed, useMapUi } from './state/map-ui';
 import { StoreContext, usePermissions } from './state/store-context';
 import { useMapData, type Boundaries } from './state/use-map-data';
 
@@ -391,6 +392,19 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
           <MoveConfirm data={data} />
           <Notice />
           <ConnectionNotice />
+          {onMap === 0 && !isFormOpen(panel) && (isNarrowed(ui) || markers.length === 0) && (
+            // An empty map says why. Records all waiting for coordinates are explained above the map instead.
+            <div className="map-empty" role="status">
+              <strong>{isNarrowed(ui) ? 'No records on the map match these filters' : 'No records yet'}</strong>
+              {isNarrowed(ui) ? (
+                <button type="button" className="ui-button ui-button-secondary ui-button-small" onClick={ui.showEverything}>
+                  Show all records
+                </button>
+              ) : (
+                <span>Records appear here once they're encoded or imported.</span>
+              )}
+            </div>
+          )}
           <Legend
             mode={mode}
             shading={shading}
@@ -438,28 +452,19 @@ export function MapPage({ user, onDataSources }: { user: AppUser; onDataSources(
     if (state.status === 'ready') onDataSources(state.data.dataSources);
   }, [state, onDataSources]);
 
-  if (state.status === 'loading') {
-    return <p className="page-message is-loading">Loading the map…</p>;
-  }
+  if (state.status === 'loading') return <PageLoading label="Loading the map…" />;
 
   if (state.status === 'error') {
-    return (
-      <div className="page-message" role="alert">
-        {state.error instanceof LocalSeedMissingError ? (
-          <>
-            <h2>Local data not found</h2>
-            <p>
-              Run <code>npm run build:local-seed</code>, then reload this page.
-            </p>
-          </>
-        ) : (
-          <>
-            <h2>The map could not load</h2>
-            <p>{state.error.message}</p>
-          </>
-        )}
-      </div>
-    );
+    if (state.error instanceof LocalSeedMissingError) {
+      return (
+        <PageMessage icon={Database} title="Local data not found" tone="error" alert>
+          <p>
+            Run <code>npm run build:local-seed</code>, then reload this page.
+          </p>
+        </PageMessage>
+      );
+    }
+    return <PageError title="The map could not load" error={state.error} onRetry={state.retry} />;
   }
 
   return (

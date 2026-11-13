@@ -10,6 +10,7 @@ import {
   type PaginationState,
   type SortingState,
 } from '@tanstack/react-table';
+import { SearchX } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import type { Intervention, MapData } from '../data/types';
 import { dismissedKeys, encodedPlace, FLAG_LABELS, isOnMap, needsReview, recordName, unplottedLabel } from '../lib/display';
@@ -17,6 +18,7 @@ import { foldText } from '../lib/view-fields';
 import { useEditUi } from '../state/edit-ui';
 import { useExportUi } from '../state/export-ui';
 import { useMapUi } from '../state/map-ui';
+import { EmptyState, NoRecords } from '../overview/EmptyState';
 
 const PAGE_SIZES = [25, 50, 100];
 
@@ -163,8 +165,21 @@ export function RecordsTable({ records, data, state, onChange, onOpen, markUnplo
         </button>
       </div>
 
-      {matching.length === 0 ? (
-        <p className="empty-note">No records match.</p>
+      {records.length === 0 ? (
+        // On the map, "Limit to map view" can be what leaves it empty.
+        <NoRecords mapView={!onOpen} />
+      ) : matching.length === 0 ? (
+        <EmptyState
+          icon={SearchX}
+          title={`Nothing here matches "${state.search.trim()}"`}
+          action={
+            <button type="button" className="ui-button ui-button-secondary" onClick={() => onChange({ search: '', pagination: { pageIndex: 0, pageSize } })}>
+              Clear the search
+            </button>
+          }
+        >
+          Search looks in each record's name, ID, beneficiary, type, program, year, status, place and remarks. Check the spelling, or try fewer letters.
+        </EmptyState>
       ) : (
         <div className="records-scroll">
           <table className="records-table">

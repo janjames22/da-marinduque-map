@@ -65,11 +65,94 @@ body {
   width: 100%;
 }
 
-.page-message {
+/* A whole page loading, could not load, or not open to this account (overview/PageState.tsx): an icon,
+   a title, a line or two, and a way on. The same on every page. */
+.page-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin: 48px auto;
   max-width: 480px;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   text-align: center;
+}
+
+.page-state h2 {
+  font-size: var(--font-size-title-sm);
+  margin: 0;
+}
+
+.page-state p {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.page-state-icon {
+  align-items: center;
+  background: var(--bg-icon-tile);
+  border-radius: var(--radius-md);
+  color: var(--text-link);
+  display: flex;
+  height: 64px;
+  justify-content: center;
+  margin-bottom: var(--space-2);
+  width: 64px;
+}
+
+.page-state-icon svg {
+  height: 32px;
+  width: 32px;
+}
+
+.page-state.is-error .page-state-icon {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+
+.page-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+
+.page-state-details {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  margin-top: var(--space-2);
+  max-width: 100%;
+}
+
+.page-state-details summary {
+  cursor: pointer;
+}
+
+.page-state-details p {
+  margin-top: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.page-spinner {
+  animation: page-spin 0.9s linear infinite;
+  border: 3px solid var(--bg-icon-tile);
+  border-radius: 50%;
+  border-top-color: var(--text-link);
+  height: 32px;
+  width: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+@keyframes page-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Panels */
@@ -455,6 +538,32 @@ body {
   transform: translateX(-50%);
   white-space: nowrap;
   z-index: 850;
+}
+
+/* An empty map says why, in the middle where it can't be missed, and offers a way back. */
+.map-empty {
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  left: 50%;
+  max-width: calc(100% - 32px);
+  padding: var(--space-4);
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  z-index: 840;
+}
+
+.map-empty span {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
 }
 
 .map-hint .link-button {

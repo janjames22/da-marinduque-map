@@ -98,7 +98,8 @@ async function showDashboard(page: Page, isMobile: boolean) {
     await openPanel(page);
     await panel(page).getByRole('button', { name: 'Dashboard', exact: true }).click();
   }
-  await expect(kpi(page, 'records')).toBeVisible({ timeout: 30_000 });
+  // The figures, or since Phase 17b the empty state in their place.
+  await expect(kpi(page, 'records').or(panel(page).locator('.empty-state'))).toBeVisible({ timeout: 30_000 });
 }
 
 async function showRecords(page: Page, isMobile: boolean) {
@@ -179,7 +180,8 @@ test.describe('where it sits', () => {
     expect((await page.locator('.leaflet-container').boundingBox())!.width).toBeGreaterThanOrEqual(320);
 
     await panel(page).getByRole('button', { name: 'Narrower' }).click();
-    await expect.poll(async () => (await panel(page).boundingBox())!.width).toBe(narrow);
+    // Measured as it slid in, the first width can be a fraction of a pixel short.
+    await expect.poll(async () => Math.round((await panel(page).boundingBox())!.width)).toBe(Math.round(narrow));
   });
 
   test('a profile or form takes its place for a while, and it comes back as it was', async ({ page, isMobile }) => {
@@ -366,17 +368,19 @@ test.describe('everything follows the map\'s filters', () => {
     await expect(kpi(page, 'records')).toHaveText(String(all));
   });
 
-  test('nothing matching leaves a plain message, not broken charts', async ({ page, isMobile }) => {
+  test('nothing matching says so and offers every record again, not zeroes or broken charts', async ({ page, isMobile }) => {
     await ready(page);
     await withLayers(page, isMobile, async () => {
       await layers(page).getByLabel('Filter by another field').selectOption({ label: 'Beneficiary' });
       await layers(page).getByLabel('Beneficiary contains').fill('zz no such name zz');
     });
     await showDashboard(page, isMobile);
-    await expect(kpi(page, 'records')).toHaveText('0');
     await expect(panel(page)).toContainText('No records match these filters');
-    await expect(kpi(page, 'operational')).toHaveText('–');
+    // Since Phase 17b the figures make way for the message, as zeroes read like an empty province.
+    await expect(kpi(page, 'records')).toHaveCount(0);
     await expect(page.getByRole('figure')).toHaveCount(0);
+    await panel(page).getByRole('button', { name: 'Show all records' }).click();
+    await expect(kpi(page, 'records')).not.toHaveText('0');
   });
 });
 
@@ -526,7 +530,7 @@ test.describe('the records table', () => {
     await expect(page.locator(`tr[data-record="${markedRecord.id}"]`)).toBeVisible();
 
     await search.fill('zz no such thing zz');
-    await expect(page.getByRole('region', { name: 'Records table' })).toContainText('No records match.');
+    await expect(page.getByRole('region', { name: 'Records table' })).toContainText('Nothing here matches "zz no such thing zz"');
     await expect(page.getByRole('button', { name: 'Export this table' })).toBeDisabled();
     await expect(count(page)).toHaveText('0–0 of 0');
 

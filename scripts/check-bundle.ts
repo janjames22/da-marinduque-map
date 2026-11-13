@@ -1,8 +1,10 @@
 // Runs after every production build. Fails it if the website would give away anything private:
-// a secret key, the database password, the local dataset's address, or a beneficiary name.
+// a secret key, the database password, the local dataset's address, or a beneficiary name. Also
+// fails it if the first screen would need more to download than its budget.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
 import { loadSeedFiles } from './seed-interventions';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -70,6 +72,28 @@ function secretsToFind() {
   return secrets;
 }
 
+// What the browser downloads before the first screen, sign-in or Home, can show: the files index.html
+// names. Everything else loads when a page needs it. Sizes are gzipped, as Netlify sends them.
+// Phase 17b took the map and Leaflet out of this, from about 200 kB of script to about 110 kB.
+export const FIRST_LOAD_BUDGET = { js: 130_000, css: 20_000 };
+
+export function firstLoadFiles(html: string): string[] {
+  return [...new Set([...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)="\/([^"]+\.(?:js|css))"/g)].map(([, path]) => path))];
+}
+
+export function firstLoadSizes(files: { name: string; bytes: Buffer }[]) {
+  const sizes = { js: 0, css: 0 };
+  for (const { name, bytes } of files) sizes[name.endsWith('.css') ? 'css' : 'js'] += gzipSync(bytes, { level: 9 }).length;
+  return sizes;
+}
+
+export function overBudget(sizes: { js: number; css: number }, budget = FIRST_LOAD_BUDGET): string[] {
+  const kB = (bytes: number) => `${(bytes / 1000).toFixed(1)} kB`;
+  return (['js', 'css'] as const)
+    .filter((kind) => sizes[kind] > budget[kind])
+    .map((kind) => `The first load has ${kB(sizes[kind])} of ${kind === 'js' ? 'script' : 'styles'}, over its budget of ${kB(budget[kind])}. Load the new code with the page that needs it (see docs/OPERATIONS.md, "Loading speed").`);
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const files = filesUnder(DIST)
     .filter((path) => /\.(js|css|html|json|map|txt)$/.test(path))
@@ -83,4 +107,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   console.log(`Checked ${files.length} files in dist: nothing private found.`);
+
+  const sizes = firstLoadSizes(firstLoadFiles(readFileSync(join(DIST, 'index.html'), 'utf8')).map((name) => ({ name, bytes: readFileSync(join(DIST, name)) })));
+  const heavy = overBudget(sizes);
+  if (heavy.length > 0) {
+    for (const problem of heavy) console.error(problem);
+    process.exit(1);
+  }
+  console.log(`First load: ${(sizes.js / 1000).toFixed(1)} kB of script and ${(sizes.css / 1000).toFixed(1)} kB of styles, gzipped, within budget.`);
 }

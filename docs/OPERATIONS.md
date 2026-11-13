@@ -430,6 +430,18 @@ The colors, type and spacing come from `design/tokens.json`, the signed-off desi
 
 `npm test` and `npm run test:e2e` never touch the real project. The browser tests answer every Supabase call themselves.
 
+### Loading speed
+
+The first screen, sign-in or Home, loads only what it needs. The map and Leaflet, the Dashboard's charts, the Admin, work and report pages, and the PDF, Excel and file readers each load when they're opened. Once the first page is up, the browser fetches the other pages' code while it's idle, and the data starts loading as soon as someone signs in, so a page is usually ready by the time it's asked for.
+
+`npm run build` measures the first load, gzipped as Netlify sends it, and fails if it's over budget: 130 kB of script and 20 kB of styles (`FIRST_LOAD_BUDGET` in `scripts/check-bundle.ts`). Since Phase 17b it's about 109 kB and 14 kB. Before, with the map in the first load, it was about 200 kB of script. If a change goes over, load the new code with the page that needs it, with `lazy()` or `import()`, rather than raising the budget.
+
+Files under `/assets` have a hash of their content in their name, so `netlify.toml` lets browsers keep them for a year. `index.html` and the boundaries are checked on every visit, so a deploy shows at once.
+
+### Loading, errors and empty pages
+
+Every page shows the same three states (`overview/PageState.tsx`): **Loading…** with a spinner, shown only once the wait is noticeable; **could not load**, in plain words with **Try again**, and the original message under **Details**; and a page an account can't open. An error while drawing a page shows in place of that page, with the menu still there (`app/ErrorBoundary.tsx`). A list with nothing to show says why: no records yet, filters that match nothing (with **Show all records**), a search that finds nothing (with **Clear the search**), or, in the map's panel, nothing in the map's view.
+
 ## When something goes wrong
 
 | What you see | What to do |
@@ -438,6 +450,9 @@ The colors, type and spacing come from `design/tokens.json`, the signed-off desi
 | "That link has expired or was already used" | Send a new one with `npm run users -- link`. |
 | An invite link opens the wrong site | Set `APP_URL`, and the Supabase URL settings, as described in [Deploying](#deploying). Then make a new link. |
 | Someone is told their account has no role | If they were deactivated, use `reactivate`. Otherwise they have a login but no profile, which can happen if an invite was interrupted. Give them one with `npm run users -- role someone@example.com encoder`, then add their name in Supabase's Table Editor, in `profiles`. |
+| "A newer version of the map is out" | A deploy went out while that tab was open, so the page's old files are gone. The app reloads once by itself; if the message stays, **Reload the page**. |
+| "No connection. Check your internet, then try again." | The browser couldn't reach the site or Supabase. Once back online, **Try again**. |
+| "Something went wrong on this page" | The page broke while drawing. **Try again**, or open another page from the menu. If it keeps happening, the message under **Details** and the browser's console say what broke. |
 | The site can't load data, and scripts can't connect | The project may be paused. Supabase pauses inactive free projects, and you can resume one from its dashboard. |
 | A script can't connect, but the site works | Check `SUPABASE_DB_URL`. Use the Session pooler address, and percent-encode special characters in the password. |
 | "VITE_... holds a secret" | A secret key is in a setting that gets built into the website. Remove it from `.env.local` and rotate the key. |

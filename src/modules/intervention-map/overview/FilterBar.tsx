@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { MapData } from '../data/types';
 import { FieldFilters } from '../panel/FieldFilters';
-import { useMapUi } from '../state/map-ui';
+import { hasFilters, useMapUi } from '../state/map-ui';
 
 const numberOrNull = (text: string) => (text === '' || !Number.isFinite(Number(text)) ? null : Number(text));
 
@@ -14,7 +14,7 @@ export function FilterBar({ data }: { data: MapData }) {
   const years = [...new Set(data.interventions.map((record) => record.year_funded).filter((year): year is number => year !== null))].sort((a, b) => a - b);
   const municipalities = [...data.municipalities].sort((a, b) => a.name.localeCompare(b.name));
   const byProgramShading = ui.mode === 'program';
-  const hasFilters = ui.programId !== null || ui.yearFrom !== null || ui.yearTo !== null || ui.municipalityId !== null || ui.barangayId !== null || ui.fieldFilters.length > 0;
+  const filtered = hasFilters(ui);
 
   return (
     <form className="overview-card filter-bar" aria-label="Filters" onSubmit={(event) => event.preventDefault()}>
@@ -68,7 +68,7 @@ export function FilterBar({ data }: { data: MapData }) {
           <button type="button" className="link-button" aria-expanded={more} onClick={() => setMore(!more)}>
             {more ? 'Fewer filters' : 'More filters'}
           </button>
-          {hasFilters && (
+          {filtered && (
             <button type="button" className="link-button" onClick={ui.clearFilters}>
               Clear filters
             </button>

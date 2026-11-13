@@ -13,6 +13,7 @@ import { permissionsFor } from '../lib/permissions';
 import { formatKm, ROAD_TYPE_CODE, roadNote, roadTotals } from '../lib/roads';
 import { useMapData } from '../state/use-map-data';
 import './overview.css';
+import { PageError, PageLoading } from './PageState';
 
 const count = (value: number) => value.toLocaleString('en-US');
 const plural = (value: number, word: string, words = `${word}s`) => `${count(value)} ${value === 1 ? word : words}`;
@@ -210,14 +211,7 @@ export function HomePage({ user, onDataSources }: { user: AppUser; onDataSources
   useEffect(() => {
     if (sources) onDataSources(sources);
   }, [sources, onDataSources]);
-  if (state.status === 'loading') return <p className="page-message is-loading">Loading…</p>;
-  if (state.status === 'error') {
-    return (
-      <div className="page-message" role="alert">
-        <h2>This page could not load</h2>
-        <p>{state.error.message}</p>
-      </div>
-    );
-  }
+  if (state.status === 'loading') return <PageLoading />;
+  if (state.status === 'error') return <PageError error={state.error} onRetry={state.retry} />;
   return <Home data={state.data} user={user} />;
 }

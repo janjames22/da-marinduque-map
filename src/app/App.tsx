@@ -1,18 +1,24 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { dataMode } from '../modules/intervention-map/data/app-config';
 import { localUser } from '../modules/intervention-map/data/create-store';
 import type { AppUser } from '../modules/intervention-map/data/types';
 import { permissionsFor } from '../modules/intervention-map/lib/permissions';
-import { closeMapDataSession } from '../modules/intervention-map/state/use-map-data';
-import { MapPage } from '../modules/intervention-map/MapPage';
+import { closeMapDataSession, startMapData } from '../modules/intervention-map/state/use-map-data';
 import { HomePage } from '../modules/intervention-map/overview/HomePage';
+import { isUpdateError } from '../modules/intervention-map/lib/error-message';
+import { PageError, PageLoading } from '../modules/intervention-map/overview/PageState';
 import { AuthLayout } from './auth/AuthLayout';
+import { ErrorBoundary } from './ErrorBoundary';
 import { movedAddress, pageFor } from './routes';
 import { AppShell, type Account } from './shell/AppShell';
 
 // Only loaded when there are logins, so local mode never starts a Supabase client.
 const AuthGate = lazy(() => import('./auth/AuthGate').then((module) => ({ default: module.AuthGate })));
+// The map and Leaflet load apart from the rest, so the sign-in screen and Home show without waiting
+// for them. They're fetched as soon as the browser is idle, so the map is usually there when asked for.
+const loadMap = () => import('../modules/intervention-map/MapPage');
+const MapPage = lazy(() => loadMap().then((module) => ({ default: module.MapPage })));
 // Only loaded when opened, so the map doesn't carry the admin screens.
 const loadAdmin = () => import('../modules/intervention-map/admin/AdminPage');
 const AdminPage = lazy(() => loadAdmin().then((module) => ({ default: module.AdminPage })));
@@ -31,7 +37,7 @@ const RecordsPage = lazy(() => loadRecords().then((module) => ({ default: module
 // can open, so moving to one doesn't wait for it.
 function prefetchPages(user: AppUser): () => void {
   const { canEdit } = permissionsFor(user.role);
-  const loads = [loadDashboard, loadRecords, loadReports, ...(canEdit ? [loadWork] : []), ...(user.role === 'admin' ? [loadAdmin] : [])];
+  const loads = [loadMap, loadDashboard, loadRecords, loadReports, ...(canEdit ? [loadWork] : []), ...(user.role === 'admin' ? [loadAdmin] : [])];
   const run = () => loads.forEach((load) => void load().catch(() => {}));
   if (typeof requestIdleCallback === 'function') {
     const id = requestIdleCallback(run, { timeout: 4000 });
@@ -48,11 +54,10 @@ function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources:
   if (moved) return <Navigate to={{ pathname: moved, search: location.search, hash: location.hash }} replace />;
 
   const page = pageFor(location.pathname);
-  if (page === 'map') return <MapPage key={user.id} user={user} onDataSources={onDataSources} />;
   if (page === 'home') return <HomePage key={user.id} user={user} onDataSources={onDataSources} />;
   return (
-    <Suspense fallback={<p className="page-message is-loading">Loading…</p>}>
-      {page === 'dashboard' ? <DashboardPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'records' ? <RecordsPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'admin' ? <AdminPage key={user.id} user={user} /> : page === 'reports' ? <ReportsPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
+    <Suspense fallback={<PageLoading label={page === 'map' ? 'Loading the map…' : undefined} />}>
+      {page === 'map' ? <MapPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'dashboard' ? <DashboardPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'records' ? <RecordsPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'admin' ? <AdminPage key={user.id} user={user} /> : page === 'reports' ? <ReportsPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
     </Suspense>
   );
 }
@@ -73,15 +78,39 @@ function Sources({ dataSources }: { dataSources: string[] }) {
   );
 }
 
+// An error drawing a page shows in place of the page, with the menu still there to go elsewhere.
+// Moving to another page clears it.
+function PageCrashed({ error, reset }: { error: unknown; reset(): void }) {
+  return (
+    // A page's code that didn't come stays failed until a reload, even once back online.
+    <PageError title="Something went wrong on this page" error={error} onRetry={isUpdateError(error) ? undefined : reset}>
+      <p>
+        <Link to="/">Back to Home</Link>
+      </p>
+    </PageError>
+  );
+}
+
+function GuardedScreen(props: { user: AppUser; onDataSources(sources: string[]): void }) {
+  const { pathname } = useLocation();
+  return (
+    <ErrorBoundary resetKey={pathname} fallback={(error, reset) => <PageCrashed error={error} reset={reset} />}>
+      <Screen {...props} />
+    </ErrorBoundary>
+  );
+}
+
 function SignedIn({ user, account }: { user: AppUser; account?: Account }) {
   const [dataSources, setDataSources] = useState<string[]>([]);
+  // The data starts loading while a page's code is still on its way, rather than after it.
+  useEffect(() => startMapData(user), [user]);
   useEffect(() => prefetchPages(user), [user]);
   // Signing out, or someone else signing in, drops the shared data and its live updates.
   useEffect(() => () => closeMapDataSession(user), [user]);
   return (
     <AppShell user={user} account={account} footer={<Sources dataSources={dataSources} />}>
       {/* A new person gets a new store and fresh data. */}
-      <Screen user={user} onDataSources={setDataSources} />
+      <GuardedScreen user={user} onDataSources={setDataSources} />
     </AppShell>
   );
 }
@@ -103,7 +132,7 @@ export function App() {
   if (local) return <SignedIn user={local} />;
 
   return (
-    <Suspense fallback={<p className="page-message is-loading">Loading…</p>}>
+    <Suspense fallback={<PageLoading />}>
       <AuthGate>{({ user, changePassword, signOut }) => <SignedIn user={user} account={{ changePassword, signOut }} />}</AuthGate>
     </Suspense>
   );

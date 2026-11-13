@@ -180,3 +180,14 @@ export const useMapUi = create<MapUiState>((set) => ({
   zoomToRecord: (id) => set({ focusRecord: { id, nonce: ++nonce }, panelOpen: false }),
   zoomToBarangay: (id) => set({ focusBarangay: { id, nonce: ++nonce }, panelOpen: false }),
 }));
+
+// Whether any filter is narrowing the records, as the filter bar and the layers card show it.
+export function hasFilters(state: Pick<ViewFilters, 'programId' | 'yearFrom' | 'yearTo' | 'municipalityId' | 'barangayId' | 'fieldFilters'>): boolean {
+  return state.programId !== null || state.yearFrom !== null || state.yearTo !== null || state.municipalityId !== null || state.barangayId !== null || (state.fieldFilters?.length ?? 0) > 0;
+}
+
+// Whether the records shown are fewer than all of them: a filter, a type layer switched off, or shading
+// by one program or type. showEverything undoes all of it.
+export function isNarrowed(state: ViewFilters): boolean {
+  return hasFilters(state) || state.hiddenTypeIds.length > 0 || state.mode === 'type' || state.mode === 'program';
+}
