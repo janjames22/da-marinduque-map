@@ -430,7 +430,7 @@ test.describe('importing', () => {
     await open(page, '/import');
     const step = form(page, 'Choose a file');
     await step.getByLabel(/^File/).setInputFiles({ name: 'notes.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') });
-    await expect(step.getByRole('alert')).toContainText('Choose a CSV, Excel (XLSX), KML or KMZ file.');
+    await expect(step.getByRole('alert')).toContainText('Choose a CSV, Excel (XLSX), KML, KMZ or GeoJSON file.');
     await step.getByRole('button', { name: 'Next: columns' }).click();
     await expect(form(page, 'Match the columns')).toHaveCount(0);
     await expect(step).toContainText('Say where the file came from');

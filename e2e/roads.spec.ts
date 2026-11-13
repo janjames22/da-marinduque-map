@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import type { Intervention } from '../src/modules/intervention-map/data/types';
-import { formatKm, isUnfinished, lineLength, roadTotals } from '../src/modules/intervention-map/lib/roads';
+import { formatKm, isUnfinished, lineLength, lineLengthKm, roadTotals } from '../src/modules/intervention-map/lib/roads';
 
 const seed = JSON.parse(readFileSync('data/local/local-seed.json', 'utf8')) as {
   interventions: Intervention[];
@@ -340,4 +340,74 @@ test('a KMZ carries the traced roads as lines', async ({ page }) => {
   const kml = await zip.files['doc.kml'].async('string');
   expect(kml.match(/<LineString>/g)?.length).toBe(traced.length);
   for (const road of traced) expect(kml).toContain(road.title!);
+});
+
+// Phase 16c: roads from a map file, through the import wizard.
+test('a GeoJSON file of roads comes in with their lines, in one part or two, and they show on the map', async ({ page }) => {
+  await open(page, '/import');
+  // Two made-up roads along sample roads' lines: one as it is, and one split in two.
+  const first = (reported.geojson as GeoJSON.LineString).coordinates as [number, number][];
+  const other = traced.find((record) => record.id !== reported.id && record.geojson?.type === 'LineString')!;
+  const second = (other.geojson as GeoJSON.LineString).coordinates as [number, number][];
+  const parts = [second.slice(0, 2), second.slice(2)];
+  const geojson = {
+    type: 'FeatureCollection',
+    features: [
+      { type: 'Feature', properties: { Title: 'Imported FMR one', 'Length (km)': '1.4' }, geometry: { type: 'LineString', coordinates: first } },
+      { type: 'Feature', properties: { Title: 'Imported FMR two' }, geometry: { type: 'MultiLineString', coordinates: parts } },
+    ],
+  };
+
+  const step = page.getByRole('form', { name: 'Choose a file' });
+  await step.getByLabel(/^What the file lists/).selectOption({ label: roadType.name });
+  await step.getByLabel(/^Where it came from/).fill('E2E roads');
+  await step.getByLabel(/^File/).setInputFiles({ name: 'roads.geojson', mimeType: 'application/geo+json', buffer: Buffer.from(JSON.stringify(geojson)) });
+  await expect(step.getByRole('status')).toContainText('2 rows and 2 columns read.');
+  await expect(step).toContainText('2 features are lines.');
+  await step.getByRole('button', { name: 'Next: columns' }).click();
+
+  // A road has no point columns to match, and its fields are found by name.
+  const title = page.getByRole('combobox', { name: 'Field for Title' });
+  await expect(title).toHaveValue('title');
+  await expect(title.locator('option[value="latitude"]')).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Field for Length (km)' })).toHaveValue('attr:length_km');
+  await page.getByRole('button', { name: 'Next: check' }).click();
+
+  // With no municipality in the file, each takes its place from where its line is, and says so.
+  await expect(page.locator('.import-summary')).toHaveText('2 rows: 2 ready, 0 to fix, 2 with warnings.');
+  await expect(page.getByRole('columnheader', { name: 'Traced line' })).toBeVisible();
+  await expect(page.locator('tr[data-row="1"]')).toContainText('Imported FMR one');
+  await expect(page.locator('tr[data-row="1"]')).toContainText(formatKm(lineLengthKm([first])));
+  await expect(page.locator('tr[data-row="2"]')).toContainText(`${formatKm(lineLengthKm(parts))}, in 2 parts`);
+  await expect(page.locator('tr[data-row="2"]')).toContainText("No municipality in the file, so it's taken from where the line is");
+  await page.getByRole('button', { name: 'Import 2 records' }).click();
+  await expect(page.getByRole('heading', { name: 'Imported 2 records' })).toBeVisible();
+
+  await page.goto('/map');
+  await expect(page.locator('.barangay-shape')).toHaveCount(218);
+  await expect(page.locator('path.road-hit')).toHaveCount(traced.length + 2);
+  await page.goto('/records');
+  await page.getByLabel('Search these records').fill('Imported FMR two');
+  await page.locator('.records-table tbody tr').first().click();
+  await expect(page.getByRole('region', { name: 'Location' })).toContainText(`Traced line${formatKm(lineLengthKm(parts))}`);
+});
+
+// The sample in docs/samples, for trying the import, has to keep coming in cleanly.
+test('the sample roads file in docs/samples imports cleanly, with its programs, years and statuses', async ({ page }) => {
+  const sample = JSON.parse(readFileSync('docs/samples/sample-fmr-roads.geojson', 'utf8')) as GeoJSON.FeatureCollection;
+  await open(page, '/import');
+  const step = page.getByRole('form', { name: 'Choose a file' });
+  await step.getByLabel(/^What the file lists/).selectOption({ label: roadType.name });
+  await step.getByLabel(/^Where it came from/).fill('Sample roads file');
+  await step.getByLabel(/^File/).setInputFiles('docs/samples/sample-fmr-roads.geojson');
+  await expect(step.getByRole('status')).toContainText(`${sample.features.length} rows`);
+  await step.getByRole('button', { name: 'Next: columns' }).click();
+  for (const [column, target] of [['Title', 'title'], ['Municipality', 'municipality'], ['Barangay', 'barangay'], ['Length (km)', 'attr:length_km'], ['Program', 'banner_program'], ['Year', 'year_funded'], ['Status', 'status']]) {
+    await expect(page.getByRole('combobox', { name: `Field for ${column}` })).toHaveValue(target);
+  }
+  await page.getByRole('button', { name: 'Next: check' }).click();
+  await expect(page.locator('.import-summary')).toHaveText(`${sample.features.length} rows: ${sample.features.length} ready, 0 to fix, 1 with warnings.`);
+  await expect(page.locator('table.import-preview tbody tr td:nth-child(6)')).toHaveText(Array(sample.features.length).fill('—'));
+  await page.getByRole('button', { name: `Import ${sample.features.length} records` }).click();
+  await expect(page.locator('.import-done')).toContainText('None of them were flagged.');
 });

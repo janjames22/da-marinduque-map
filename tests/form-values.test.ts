@@ -134,6 +134,18 @@ describe('validateIntervention', () => {
     expect(Object.keys(validateIntervention({ ...values, point: { lat: 13.45, lng: 121.85 } }, null, road))).toEqual(['intervention_type_id']);
   });
 
+  // Phase 16c: a line in parts, as an imported file brings one.
+  it('takes a line in parts by the same rules for each part, and one location at most', () => {
+    const road = { ...context, type: { ...context.type, geometry_kind: 'line' as const } };
+    const part = (step: number): [number, number][] => [[121.85 + step, 13.45], [121.86 + step, 13.46]];
+    expect(validateIntervention({ ...values, point: null, line_parts: [part(0), part(0.01)] }, null, road)).toEqual({});
+    expect(validateIntervention({ ...values, point: null, line_parts: [part(0), [[121.87, 13.47]]] }, null, road)).toEqual({ line: 'Each part of a line needs at least two points.' });
+    expect(validateIntervention({ ...values, point: null, line_parts: [] }, null, road)).toEqual({ line: 'A line in parts needs at least one part.' });
+    expect(validateIntervention({ ...values, point: null, line_parts: [[[121.85, Number.NaN], [121.86, 13.46]]] }, null, road)).toEqual({ line: 'Each point of the line needs a longitude and a latitude.' });
+    expect(validateIntervention({ ...values, point: null, line: part(0), line_parts: [part(0.01)] }, null, road)).toEqual({ line: 'A record has one location: a point or a line, not both.' });
+    expect(Object.keys(validateIntervention({ ...values, line_parts: [part(0)] }, null, context))).toEqual(['intervention_type_id']);
+  });
+
   it('requires what the type requires on a new record', () => {
     const errors = validateIntervention({ ...values, category_id: null, year_funded: null, beneficiary: null, title: 'A title' }, null, context);
     expect(Object.keys(errors).sort()).toEqual(['beneficiary', 'category_id', 'year_funded']);

@@ -84,13 +84,22 @@ export function validateIntervention(
   if (type.geometry_kind === 'line' && values.point !== null) {
     errors.intervention_type_id = `${type.name} is a line on the map, not a point. Draw its line, or leave it empty and the road waits for one.`;
   }
-  if (type.geometry_kind !== 'line' && values.line) {
+  if (type.geometry_kind !== 'line' && (values.line || values.line_parts)) {
     errors.intervention_type_id = `${type.name} is a point on the map, not a line.`;
   }
-  if (values.line && values.line.length < 2) {
-    errors.line = 'A line needs at least two points. Add another, or clear the line.';
-  } else if (values.line?.some((position) => position.length !== 2 || !position.every(Number.isFinite))) {
+  // A line in parts, as an import brings one, by the same rules for each part. Mirrors lines_from_json.
+  const parts = values.line_parts ? values.line_parts : values.line ? [values.line] : [];
+  const badPosition = (position: number[]) => position.length !== 2 || !position.every(Number.isFinite);
+  if (values.line_parts && values.line_parts.length === 0) {
+    errors.line = 'A line in parts needs at least one part.';
+  } else if (parts.some((line) => line.length < 2)) {
+    errors.line = values.line_parts ? 'Each part of a line needs at least two points.' : 'A line needs at least two points. Add another, or clear the line.';
+  } else if (parts.some((line) => line.some(badPosition))) {
     errors.line = 'Each point of the line needs a longitude and a latitude.';
+  }
+  // Mirrors shape_from_json. Said only when the type's own rule hasn't already said it.
+  if (!errors.intervention_type_id && [values.point, values.line, values.line_parts].filter((shape) => shape !== null && shape !== undefined).length > 1) {
+    errors.line = 'A record has one location: a point or a line, not both.';
   }
 
   if (!values.municipality_id) errors.municipality_id = 'Choose a municipality.';

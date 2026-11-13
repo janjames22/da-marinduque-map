@@ -116,6 +116,22 @@ function row(over: Partial<ImportRowInput['values']> = {}, extra: Partial<Import
   };
 }
 
+// Phase 16c: roads from a map file, in Bantad as the rows are. A line, and a line in two parts.
+const ONE: [number, number][] = [[121.85, 13.45], [121.8503, 13.4502]];
+const PARTS: [number, number][][] = [
+  [[121.85, 13.45], [121.8502, 13.4501]],
+  [[121.8503, 13.4502], [121.8505, 13.4503]],
+];
+const roadIds = () => ({
+  road: data.types.find((type) => type.code === 'fmr')!.id,
+  proposed: data.statuses.find((status) => status.name === 'Proposed')!.id,
+});
+// A road needs a title and no category, and its status comes from its own list.
+function roadRow(title: string, over: Partial<ImportRowInput['values']> = {}): ImportRowInput {
+  const { proposed } = roadIds();
+  return row({ category_id: null, title, beneficiary: null, point: null, ...over }, { status: { status_id: proposed, status_date: '2026-10-01', date_basis: 'as_of', remarks: null } });
+}
+
 const batch = (over: Partial<ImportBatchInput> = {}): ImportBatchInput => ({
   file_name: 'abemis-2026.xlsx',
   data_source: 'ABEMIS export',
@@ -373,6 +389,25 @@ describe('local mode does the same', () => {
     expect(() => localImport.undoImport(state.rows, context, { id: 'me', role: 'admin' }, raed.id, 'Trying')).toThrow(/script/);
   });
 
+  it('imports roads with a line, a line in parts, or none, as the database does', () => {
+    const { road } = roadIds();
+    // The road type is off in the RAED seed, so it's switched on for this case, as an Admin would.
+    const roads = { ...context, types: context.types.map((type) => (type.id === road ? { ...type, is_active: true } : type)) };
+    const result = localImport.importRecords(state.rows, roads, 'me', batch({ intervention_type_id: road, file_name: 'roads.geojson' }), [
+      roadRow('Local road one', { line: ONE }),
+      roadRow('Local road two', { line_parts: PARTS }),
+      roadRow('Local road three'),
+    ]);
+    const records = state.rows.interventions.filter((record) => record.import_batch_id === result.id);
+    expect(records.map((record) => record.geojson)).toEqual([{ type: 'LineString', coordinates: ONE }, { type: 'MultiLineString', coordinates: PARTS }, null]);
+    expect(records.map((record) => record.qa_flags.includes('no_coords'))).toEqual([false, false, true]);
+    // Linked to the barangays the line crosses, as intervention_barangays is.
+    expect(state.rows.links.some((link) => link.intervention_id === records[1].id && link.link_source === 'spatial')).toBe(true);
+
+    expect(() => localImport.importRecords(state.rows, roads, 'me', batch({ intervention_type_id: road }), [roadRow('Short', { line_parts: [[[121.85, 13.45]]] })])).toThrow(/Row \d+: .*two points/);
+    expect(() => localImport.importRecords(state.rows, context, 'me', batch(), [row({ point: null, line: ONE })])).toThrow(/Row \d+: .*not a line/);
+  });
+
   it('dismisses and clears flags the same way, and a dismissal ends with its flag', () => {
     const { id } = localImport.importRecords(state.rows, context, 'me', batch({ file_name: 'local.csv' }), [row({ barangay_id: null, barangay_raw: 'Somewhere else' })]);
     const record = state.rows.interventions.find((candidate) => candidate.import_batch_id === id)!;
@@ -388,5 +423,47 @@ describe('local mode does the same', () => {
     const named = state.rows.interventions.find((candidate) => candidate.qa_flags.includes('beneficiary_name_check') && candidate.deleted_at === null)!;
     localImport.dismissFlag(state.rows, context, 'me', named.id, 'beneficiary_name_check', 'Confirmed');
     expect(named.qa_flags).not.toContain('beneficiary_name_check');
+  });
+});
+
+// Phase 16c: a road from a file comes in with its line, through import_records, as a road drawn on the
+// map is saved through create_intervention.
+describe('roads from a map file', () => {
+  beforeAll(async () => {
+    // The road type is off in the RAED seed. An Admin switches it on before importing roads.
+    await db.query(`update intervention_types set is_active = true where code = 'fmr'`);
+  });
+
+  it('saves a line as a LineString, a line in parts as a MultiLineString, and a road with none to wait', async () => {
+    const { road } = roadIds();
+    const result = await encoder.importRecords(batch({ intervention_type_id: road, file_name: 'roads.geojson' }), [
+      roadRow('Road one', { line: ONE }),
+      roadRow('Road two', { line_parts: PARTS }),
+      roadRow('Road three'),
+    ]);
+    const saved = await rows<{ title: string; geojson: GeoJSON.Geometry | null; qa_flags: string[] }>(
+      'select title, geojson, qa_flags from interventions_v where import_batch_id = $1 order by title',
+      [result.id],
+    );
+    expect(saved.map((record) => [record.title, record.geojson])).toEqual([
+      ['Road one', { type: 'LineString', coordinates: ONE }],
+      ['Road three', null],
+      ['Road two', { type: 'MultiLineString', coordinates: PARTS }],
+    ]);
+    expect(saved.map((record) => record.qa_flags.includes('no_coords'))).toEqual([false, true, false]);
+    // A road in parts is linked to the barangays it runs through, as one drawn on the map is.
+    const links = await rows('select 1 from intervention_barangays b join interventions i on i.id = b.intervention_id where i.title = $1 and b.link_source = $2', ['Road two', 'spatial']);
+    expect(links.length).toBeGreaterThan(0);
+  });
+
+  it('refuses a part of fewer than two points, two shapes at once, and a line for a point type', async () => {
+    const { road } = roadIds();
+    const importing = (type: number, item: ImportRowInput) =>
+      attempt(ENCODER, 'select public.import_records($1::jsonb, $2::jsonb)', [JSON.stringify(batch({ intervention_type_id: type })), JSON.stringify([item])]);
+    expect((await importing(road, roadRow('Short', { line_parts: [[[121.85, 13.45]]] }))).message).toMatch(/^Row \d+: a line needs at least two points/);
+    expect((await importing(road, roadRow('Empty', { line_parts: [] }))).message).toMatch(/at least one part/);
+    expect((await importing(road, roadRow('Both', { line: ONE, line_parts: PARTS }))).message).toMatch(/not both/);
+    expect((await importing(ids().machinery, row({ point: null, line: ONE }))).message).toMatch(/needs a point geometry/);
+    expect((await importing(road, roadRow('Fine', { line: ONE }))).ok).toBe(true);
   });
 });

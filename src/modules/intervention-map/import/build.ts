@@ -5,10 +5,11 @@ import type { InterventionType, MapData } from '../data/types';
 import { parseCoordinates, type LatLng } from '../lib/coordinates';
 import { isValidDate, manilaToday } from '../lib/dates';
 import { BarangayIndex, closestBarangays, looseKey } from '../lib/matching';
-import { computeFlags, possibleDuplicates, samePoint, type PlaceIndex } from '../lib/qa';
+import { computeFlags, locateShape, possibleDuplicates, samePoint, type PlaceIndex } from '../lib/qa';
+import { lineLengthKm } from '../lib/roads';
 import { validateIntervention, validateStatus } from '../lib/validation';
 import { columnFor, targetsFor, type ColumnMapping, type Target } from './fields';
-import type { ParsedFile } from './parse';
+import { isMapFile, type ParsedFile } from './parse';
 
 type Data = Pick<MapData, 'categories' | 'programs' | 'beneficiaryTypes' | 'locationBases' | 'municipalities' | 'statuses' | 'typeStatuses' | 'barangays' | 'interventions'>;
 
@@ -150,6 +151,7 @@ export interface PreviewRow {
   // What the database will flag once it's in.
   flags: string[];
   beneficiary: string | null;
+  title: string | null;
   municipality: string;
   barangay: string;
   barangayMatched: boolean;
@@ -157,10 +159,13 @@ export interface PreviewRow {
   candidates: string[];
   // Its ID is already on the map from the same source, so it is most likely a second copy.
   alreadyImported: boolean;
+  // A road's line from the file: its length along the earth, and how many parts it has.
+  line: { km: number; parts: number } | null;
 }
 
 export function buildPreview(file: ParsedFile, settings: ImportSettings, data: Data, places: PlaceIndex, today = manilaToday()): PreviewRow[] {
   const { type } = settings;
+  const isLine = type.geometry_kind === 'line';
   const targets = targetsFor(type);
   const byId = new Map(targets.map((target) => [target.id, target]));
   const options = new Map(targets.filter((target) => target.list).map((target) => [target.id, listOptions(target, type, data)]));
@@ -202,16 +207,6 @@ export function buildPreview(file: ParsedFile, settings: ImportSettings, data: D
       return value;
     };
 
-    // A name chosen as blank is no municipality either.
-    const before = errors.length;
-    const municipalityId = idOf('municipality');
-    const municipality = municipalityId === null ? '' : (municipalityName.get(municipalityId) ?? '');
-    if (municipalityId === null && errors.length === before) errors.push('No municipality. Every record needs one.');
-
-    const barangayRaw = cell('barangay');
-    const barangay = barangayRaw && municipality ? barangays.find(municipality, barangayRaw) : undefined;
-    const candidates = barangayRaw && municipality && !barangay ? closestBarangays(barangayRaw, municipality, placeNames).sameMunicipality.map((candidate) => candidate.name) : [];
-
     let point: LatLng | null = null;
     const latitude = cell('latitude');
     const longitude = cell('longitude');
@@ -223,6 +218,32 @@ export function buildPreview(file: ParsedFile, settings: ImportSettings, data: D
       // The RAED source, and others, write 0, 0 for "no coordinates".
       else if (parsed.point.lat !== 0 || parsed.point.lng !== 0) point = parsed.point;
     }
+
+    // A road's line comes from the map file, beside the row. A line type has no point columns to map.
+    const fileLine = file.lines?.[index] ?? null;
+    const line = isLine ? fileLine : null;
+    if (isLine && isMapFile(file.kind) && !fileLine) warnings.push('No line for this row in the file, so the road comes in waiting for its traced line.');
+    if (!isLine && fileLine) warnings.push('This row is a line in the file, not a point, so it comes in without coordinates.');
+
+    // A name chosen as blank is no municipality either. With none in the file, the place is where the
+    // point or line is, as on the map's forms.
+    const before = errors.length;
+    let municipalityId = idOf('municipality');
+    let placed: (typeof data.barangays)[number] | undefined;
+    if (municipalityId === null && errors.length === before && (point || line)) {
+      const located = locateShape({ point, line }, places);
+      placed = data.barangays.find((candidate) => candidate.id === located);
+      if (placed) {
+        municipalityId = placed.municipality_id;
+        warnings.push(`No municipality in the file, so it's taken from where the ${line ? 'line' : 'point'} is: ${placed.name}, ${municipalityName.get(placed.municipality_id) ?? ''}.`);
+      }
+    }
+    const municipality = municipalityId === null ? '' : (municipalityName.get(municipalityId) ?? '');
+    if (municipalityId === null && errors.length === before) errors.push('No municipality. Every record needs one.');
+
+    const barangayRaw = cell('barangay');
+    const barangay = barangayRaw && municipality ? barangays.find(municipality, barangayRaw) : barangayRaw ? undefined : placed;
+    const candidates = barangayRaw && municipality && !barangay ? closestBarangays(barangayRaw, municipality, placeNames).sameMunicipality.map((candidate) => candidate.name) : [];
 
     const year = whole('year_funded', 'Year funded', 1900);
     const quantity = whole('quantity', 'Quantity', 1) ?? 1;
@@ -279,6 +300,8 @@ export function buildPreview(file: ParsedFile, settings: ImportSettings, data: D
       barangay_raw: barangayRaw || null,
       location_basis_id: idOf('location_basis'),
       point,
+      // One part is a line as the forms draw it, so it can be reshaped there later.
+      ...(line ? (line.length === 1 ? { line: line[0] } : { line_parts: line }) : {}),
       attributes,
       remarks: cell('remarks') || null,
     };
@@ -293,7 +316,10 @@ export function buildPreview(file: ParsedFile, settings: ImportSettings, data: D
       }
     }
 
-    const flags = municipalityId === null ? [] : computeFlags({ id: null, point, municipality_id: municipalityId, barangay_id: values.barangay_id, barangay_raw: values.barangay_raw, qa_flags: [], deleted_at: null }, data.interventions, places);
+    const flags =
+      municipalityId === null
+        ? []
+        : computeFlags({ id: null, point, ...(isLine ? { line } : {}), municipality_id: municipalityId, barangay_id: values.barangay_id, barangay_raw: values.barangay_raw, qa_flags: [], deleted_at: null }, data.interventions, places);
 
     if (possibleDuplicates({ id: null, category_id: values.category_id, beneficiary: values.beneficiary, year_funded: values.year_funded, barangay_id: values.barangay_id }, data.interventions).length > 0) {
       warnings.push('Looks like a record already on the map: same category, beneficiary, year and barangay.');
@@ -320,11 +346,13 @@ export function buildPreview(file: ParsedFile, settings: ImportSettings, data: D
       warnings,
       flags,
       beneficiary: values.beneficiary,
+      title: values.title,
       municipality,
       barangay: barangay?.name ?? barangayRaw,
       barangayMatched: barangay !== undefined,
       candidates,
       alreadyImported,
+      line: line ? { km: lineLengthKm(line), parts: line.length } : null,
     };
   });
 
