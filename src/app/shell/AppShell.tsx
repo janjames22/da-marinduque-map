@@ -1,6 +1,6 @@
 // The frame around every signed-in page: the sidebar, the top bar and the sources line. On a phone
 // the sidebar is a drawer, opened from the top bar.
-import { ChartColumn, ChevronDown, ClipboardList, FileText, FileUp, Gauge, History, House, KeyRound, List, ListChecks, LogOut, Map as MapIcon, MapPin, Menu, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
+import { ChartColumn, ChevronDown, ClipboardList, FileText, FileUp, Gauge, History, House, KeyRound, List, ListChecks, LogOut, Map as MapIcon, MapPin, Menu, PanelLeftClose, PanelLeftOpen, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { AppUser } from '../../modules/intervention-map/data/types';
@@ -135,11 +135,15 @@ function AccountMenu({ user, account }: { user: AppUser; account: Account }) {
   );
 }
 
-function TopBar({ user, account, menuOpen, onMenu }: { user: AppUser; account?: Account; menuOpen: boolean; onMenu(): void }) {
+function TopBar({ user, account, menuOpen, onMenu, menuHidden, onToggleMenu }: { user: AppUser; account?: Account; menuOpen: boolean; onMenu(): void; menuHidden: boolean; onToggleMenu(): void }) {
   return (
     <header className="topbar">
       <button type="button" className="topbar-menu" aria-label="Open the menu" aria-controls="main-menu" aria-expanded={menuOpen} onClick={onMenu}>
         <Menu aria-hidden="true" />
+      </button>
+      {/* Computers: the sidebar put away for the page's sake, and back. */}
+      <button type="button" className="topbar-menu-toggle" aria-controls="main-menu" aria-expanded={!menuHidden} aria-label={menuHidden ? 'Show the menu' : 'Hide the menu'} title={menuHidden ? 'Show the menu' : 'Hide the menu'} onClick={onToggleMenu}>
+        {menuHidden ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />}
       </button>
       <span className="topbar-title">{APP_NAME}</span>
       {account ? (
@@ -153,8 +157,31 @@ function TopBar({ user, account, menuOpen, onMenu }: { user: AppUser; account?: 
   );
 }
 
+// On a computer the sidebar can be put away, and stays away next time for whoever did it. A phone opens
+// it as a drawer instead.
+const MENU_KEY = 'da-menu-hidden';
+
+function menuHiddenAtStart(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(MENU_KEY) === 'yes';
+  } catch {
+    return false;
+  }
+}
+
 export function AppShell({ user, account, footer, children }: { user: AppUser; account?: Account; footer: ReactNode; children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuHidden, setMenuHidden] = useState(menuHiddenAtStart);
+  const toggleMenu = () => {
+    const hidden = !menuHidden;
+    try {
+      if (hidden) globalThis.localStorage?.setItem(MENU_KEY, 'yes');
+      else globalThis.localStorage?.removeItem(MENU_KEY);
+    } catch {
+      // Only a convenience: the menu just shows again next time.
+    }
+    setMenuHidden(hidden);
+  };
   const { pathname } = useLocation();
 
   // Following a link closes the drawer. The links close it themselves too, for a link to the page
@@ -171,14 +198,14 @@ export function AppShell({ user, account, footer, children }: { user: AppUser; a
   }, [menuOpen]);
 
   return (
-    <div className="shell">
+    <div className={`shell${menuHidden ? ' menu-hidden' : ''}`}>
       <a className="skip-link" href="#main-content">
         Skip to the page
       </a>
       <Sidebar user={user} open={menuOpen} onClose={() => setMenuOpen(false)} />
       {menuOpen && <div className="shell-backdrop" aria-hidden="true" onClick={() => setMenuOpen(false)} />}
       <div className="shell-main">
-        <TopBar user={user} account={account} menuOpen={menuOpen} onMenu={() => setMenuOpen(true)} />
+        <TopBar user={user} account={account} menuOpen={menuOpen} onMenu={() => setMenuOpen(true)} menuHidden={menuHidden} onToggleMenu={toggleMenu} />
         <div className="shell-content" id="main-content" tabIndex={-1}>
           {children}
         </div>

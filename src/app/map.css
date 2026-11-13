@@ -449,3 +449,126 @@
   border-radius: 50%;
   outline: 2px solid var(--focus-ring);
 }
+
+/* Putting the layers card and the panel on the right away, on a computer. A phone has its own sheet
+   and takes the panels in turns, so these buttons are for computers only. They sit among the map's own
+   controls (ControlSlot): the layers one under the zoom buttons, the panel one above the attribution. */
+.map-page .edge-control {
+  display: none;
+}
+
+@media (min-width: 801px) {
+  .map-page .workspace.layers-hidden .panel-left,
+  .map-page .workspace.side-hidden .panel-right {
+    display: none;
+  }
+
+  .map-page .workspace.layers-hidden {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-page .workspace.layers-hidden.has-right-panel {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+
+  .map-page .workspace.layers-hidden.has-insights {
+    grid-template-columns: minmax(320px, 1fr) minmax(0, 440px);
+  }
+
+  .map-page .workspace.layers-hidden.has-insights.insights-wide {
+    grid-template-columns: minmax(320px, 1fr) minmax(0, 62%);
+  }
+
+  .map-page .workspace.side-hidden.has-right-panel,
+  .map-page .workspace.side-hidden.has-insights {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .map-page .workspace.side-hidden.layers-hidden.has-right-panel,
+  .map-page .workspace.side-hidden.layers-hidden.has-insights {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-page .edge-control {
+    display: block;
+  }
+
+  /* Like the zoom buttons: an icon while the card is out, and its name too once it's put away. */
+  .map-page .edge-toggle {
+    align-items: center;
+    background: var(--bg-surface);
+    border: 0;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 1px 3px rgb(31 30 28 / 22%);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: 13px;
+    font-weight: var(--font-weight-semibold);
+    gap: 6px;
+    height: 36px;
+    justify-content: center;
+    min-width: 36px;
+    padding: 0 10px;
+  }
+
+  .map-page .edge-toggle:not(.is-collapsed) {
+    padding: 0;
+  }
+
+  .map-page .edge-toggle svg {
+    height: 18px;
+    width: 18px;
+  }
+
+  .map-page .edge-toggle:hover {
+    background: var(--bg-surface-muted);
+  }
+
+  .map-page .edge-toggle:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* An icon, as the Leaflet buttons are, so the toolbar stays one row on a narrow map. */
+  .map-page .map-toolbar .fullscreen-button {
+    justify-content: center;
+    padding: 0;
+    width: 40px;
+  }
+
+  .map-page .map-toolbar .fullscreen-button .toolbar-label {
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+}
+
+/* Full screen: the map alone, edge to edge. Where the browser has no full screen of its own, as on an
+   iPhone, the map fills the window over the page instead. */
+.map-page .map-area:fullscreen,
+.map-page .map-area.is-window-fullscreen {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.map-page .map-area.is-window-fullscreen {
+  inset: 0;
+  position: fixed;
+  z-index: 2500;
+}
+
+/* What would open a panel outside the map isn't offered there. */
+.map-page .map-area:fullscreen .edge-control,
+.map-page .map-area.is-window-fullscreen .edge-control,
+.map-page .map-area:fullscreen .panel-toggle,
+.map-page .map-area.is-window-fullscreen .panel-toggle,
+.map-page .map-area:fullscreen .insights-open-button,
+.map-page .map-area.is-window-fullscreen .insights-open-button {
+  display: none !important;
+}

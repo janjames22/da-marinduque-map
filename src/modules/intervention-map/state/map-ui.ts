@@ -31,6 +31,27 @@ function rememberInsights(closed: boolean) {
   }
 }
 
+// The layers card on a computer can be put away for the map's sake, and stays away next time for
+// whoever did it. A phone has its own sheet for it.
+const LAYERS_KEY = 'da-map-layers-hidden';
+
+function layersHiddenAtStart(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(LAYERS_KEY) === 'yes';
+  } catch {
+    return false;
+  }
+}
+
+function rememberLayersHidden(hidden: boolean) {
+  try {
+    if (hidden) globalThis.localStorage?.setItem(LAYERS_KEY, 'yes');
+    else globalThis.localStorage?.removeItem(LAYERS_KEY);
+  } catch {
+    // As for the dashboard panel, only a convenience.
+  }
+}
+
 interface MapUiState extends ViewFilters {
   fieldFilters: FieldFilter[];
   colorBy: string;
@@ -41,6 +62,10 @@ interface MapUiState extends ViewFilters {
   showUnassigned: boolean;
   insights: InsightsTab | null;
   insightsWide: boolean;
+  // On a computer: the layers card put away, and the panel on the right (a profile, a form or the
+  // dashboard) put away without closing it. The panel comes back when another one opens.
+  layersHidden: boolean;
+  sideHidden: boolean;
   limitToMapView: boolean;
   focusRecord: { id: string; nonce: number } | null;
   focusBarangay: { id: number; nonce: number } | null;
@@ -69,6 +94,8 @@ interface MapUiState extends ViewFilters {
   showEverything(): void;
   setInsights(tab: InsightsTab | null): void;
   setInsightsWide(wide: boolean): void;
+  setLayersHidden(hidden: boolean): void;
+  setSideHidden(hidden: boolean): void;
   setLimitToMapView(limit: boolean): void;
   applyView(view: ViewConfig): void;
   markDefaultViewHandled(): void;
@@ -97,6 +124,8 @@ export const useMapUi = create<MapUiState>((set) => ({
   showUnassigned: false,
   insights: insightsAtStart(),
   insightsWide: false,
+  layersHidden: layersHiddenAtStart(),
+  sideHidden: false,
   limitToMapView: false,
   focusRecord: null,
   focusBarangay: null,
@@ -134,6 +163,11 @@ export const useMapUi = create<MapUiState>((set) => ({
     set({ insights });
   },
   setInsightsWide: (insightsWide) => set({ insightsWide }),
+  setLayersHidden: (layersHidden) => {
+    rememberLayersHidden(layersHidden);
+    set({ layersHidden });
+  },
+  setSideHidden: (sideHidden) => set({ sideHidden }),
   setLimitToMapView: (limitToMapView) => set({ limitToMapView }),
   applyView: (view) =>
     set((state) => ({

@@ -70,7 +70,7 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
   const deletedCount = data.interventions.filter((r) => r.deleted_at !== null).length;
 
   return (
-    <aside className={`panel panel-left${ui.panelOpen ? ' is-open' : ''}`} aria-label="Layers and filters">
+    <aside id="map-layers" className={`panel panel-left${ui.panelOpen ? ' is-open' : ''}`} aria-label="Layers and filters">
       {/* On a phone the panel is a sheet over the map, closed from its own header. */}
       <div className="sheet-header">
         <span className="sheet-handle" aria-hidden="true" />

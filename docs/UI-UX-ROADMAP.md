@@ -268,7 +268,7 @@ Records outside the province follow the same rule and are counted in the same no
 | M-7 | Choropleth | Keep today's single blue ramp from light to dark. It stays distinct from the green interface and the green markers. The gap view keeps its orange for barangays with no records |
 | M-8 | Legend | A card in a corner that explains exactly what is on screen now, and collapses on phones |
 | M-9 | Popup | A small card: name, type badge, status badge, beneficiary, year, and a link to the full record |
-| M-10 | Controls | Zoom, layers, locate and full screen, styled as one group |
+| M-10 | Controls | Zoom, layers, locate and full screen, styled as one group. Full screen, and putting the layers card and the panel on the right away, since Phase 16c's Gate 1 |
 | M-11 | FMR (later) | A colored line with a white casing, dashed while not yet completed, labelled with its length |
 | M-12 | Print | The print map (`reports/PrintMapDialog.tsx`) uses the same styles |
 
@@ -517,6 +517,7 @@ A phase is done when all of these hold:
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 2026-11-13 | At Phase 16c's Gate 1 the owner asked for more room for the map: full screen for the map alone (M-10), and the menu, the layers card and the panel on the right each put away and back on a computer. Built on the 16c branch |
 | 0.6 | 2026-11-13 | Phase 16 split into 16a, 16b and 16c, and built on sample roads until the FMR data arrives. A road's length is the one its form reports, or else its traced line's. The next production deploy waits until Phase 17 |
 | 0.5 | 2026-11-11 | Phase 14 built. The filters stay in the layers card rather than a bar above the map, approved by the owner at Gate 1. The map opens without the dashboard panel, which also gives it room on laptop screens |
 | 0.4 | 2026-11-11 | Phase 11 done: the design was drawn on a claude.ai design canvas instead of in Figma and signed off. Source in `design/canvas/`. Office name written out in full |
