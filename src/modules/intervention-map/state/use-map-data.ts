@@ -135,6 +135,25 @@ export function startMapData(user: AppUser) {
   openSession(user, useConnection.getState().setLive);
 }
 
+// Calls back once this person's data has loaded, or failed to, so work that can wait, such as fetching
+// other pages' code, doesn't compete with the first page. Returns a function that cancels it.
+export function afterMapData(user: AppUser, callback: () => void): () => void {
+  let done = false;
+  const current = openSession(user, useConnection.getState().setLive);
+  const listener = (state: MapDataState) => {
+    if (done || state.status === 'loading') return;
+    done = true;
+    current.listeners.delete(listener);
+    callback();
+  };
+  current.listeners.add(listener);
+  listener(current.state);
+  return () => {
+    done = true;
+    current.listeners.delete(listener);
+  };
+}
+
 // On signing out: stop the live updates and forget the data, so the next person starts fresh.
 export function closeMapDataSession(user: AppUser) {
   if (session?.user !== user) return; // someone newer already has it

@@ -90,6 +90,6 @@ describe('the first load budget', () => {
     expect(overBudget({ js: FIRST_LOAD_BUDGET.js, css: FIRST_LOAD_BUDGET.css })).toEqual([]);
     const problems = overBudget({ js: FIRST_LOAD_BUDGET.js + 1, css: 0 });
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toMatch(/of script, over its budget of 130\.0 kB/);
+    expect(problems[0]).toMatch(/of script, over its budget of 215\.0 kB/);
   });
 });

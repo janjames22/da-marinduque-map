@@ -30,12 +30,6 @@ function localSeed(): Plugin {
 // self-signed certificate and opens it to the local network, so it's for testing on a trusted network.
 export default defineConfig(({ mode }) => ({
   plugins: [react(), localSeed(), ...(mode === 'phone' ? [basicSsl()] : [])],
-  // The dev server prepares a page's code the first time it's asked for. The map loads apart from the
-  // first screen since Phase 17b, so without this the first visit to it after starting the server
-  // waits several seconds, long enough to fail the first end-to-end tests of a run.
-  server: {
-    warmup: { clientFiles: ['./src/main.tsx', './src/app/auth/AuthGate.tsx', './src/modules/intervention-map/MapPage.tsx', './src/modules/intervention-map/*/*Page.tsx'] },
-  },
   test: {
     include: ['tests/**/*.test.ts'],
     // Many files each run a real database at once, and these limits aren't what they test.

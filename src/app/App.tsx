@@ -4,7 +4,10 @@ import { dataMode } from '../modules/intervention-map/data/app-config';
 import { localUser } from '../modules/intervention-map/data/create-store';
 import type { AppUser } from '../modules/intervention-map/data/types';
 import { permissionsFor } from '../modules/intervention-map/lib/permissions';
-import { closeMapDataSession, startMapData } from '../modules/intervention-map/state/use-map-data';
+import { afterMapData, closeMapDataSession, startMapData } from '../modules/intervention-map/state/use-map-data';
+// The map stays in the first load. Phase 17b tried loading it apart, which halved the first load but
+// made the map, the page most people open, slower to appear after signing in.
+import { MapPage } from '../modules/intervention-map/MapPage';
 import { HomePage } from '../modules/intervention-map/overview/HomePage';
 import { isUpdateError } from '../modules/intervention-map/lib/error-message';
 import { PageError, PageLoading } from '../modules/intervention-map/overview/PageState';
@@ -15,10 +18,6 @@ import { AppShell, type Account } from './shell/AppShell';
 
 // Only loaded when there are logins, so local mode never starts a Supabase client.
 const AuthGate = lazy(() => import('./auth/AuthGate').then((module) => ({ default: module.AuthGate })));
-// The map and Leaflet load apart from the rest, so the sign-in screen and Home show without waiting
-// for them. They're fetched as soon as the browser is idle, so the map is usually there when asked for.
-const loadMap = () => import('../modules/intervention-map/MapPage');
-const MapPage = lazy(() => loadMap().then((module) => ({ default: module.MapPage })));
 // Only loaded when opened, so the map doesn't carry the admin screens.
 const loadAdmin = () => import('../modules/intervention-map/admin/AdminPage');
 const AdminPage = lazy(() => loadAdmin().then((module) => ({ default: module.AdminPage })));
@@ -33,11 +32,23 @@ const ReportsPage = lazy(() => loadReports().then((module) => ({ default: module
 const loadRecords = () => import('../modules/intervention-map/records/RecordsPage');
 const RecordsPage = lazy(() => loadRecords().then((module) => ({ default: module.RecordsPage })));
 
-// Once the first page is up and the browser is idle, fetch the code for the other pages this person
-// can open, so moving to one doesn't wait for it.
+// Once the first page has its data and the browser is idle, fetch the code for the other pages this
+// person can open, so moving to one doesn't wait for it. Not sooner: the browser looks idle while it
+// waits for the first page's code and data, and fetching the rest then slowed the map's first draw.
 function prefetchPages(user: AppUser): () => void {
+  let cancelIdle = () => {};
+  const cancelWait = afterMapData(user, () => {
+    cancelIdle = whenIdle(user);
+  });
+  return () => {
+    cancelWait();
+    cancelIdle();
+  };
+}
+
+function whenIdle(user: AppUser): () => void {
   const { canEdit } = permissionsFor(user.role);
-  const loads = [loadMap, loadDashboard, loadRecords, loadReports, ...(canEdit ? [loadWork] : []), ...(user.role === 'admin' ? [loadAdmin] : [])];
+  const loads = [loadDashboard, loadRecords, loadReports, ...(canEdit ? [loadWork] : []), ...(user.role === 'admin' ? [loadAdmin] : [])];
   const run = () => loads.forEach((load) => void load().catch(() => {}));
   if (typeof requestIdleCallback === 'function') {
     const id = requestIdleCallback(run, { timeout: 4000 });
@@ -54,10 +65,11 @@ function Screen({ user, onDataSources }: { user: AppUser; onDataSources(sources:
   if (moved) return <Navigate to={{ pathname: moved, search: location.search, hash: location.hash }} replace />;
 
   const page = pageFor(location.pathname);
+  if (page === 'map') return <MapPage key={user.id} user={user} onDataSources={onDataSources} />;
   if (page === 'home') return <HomePage key={user.id} user={user} onDataSources={onDataSources} />;
   return (
-    <Suspense fallback={<PageLoading label={page === 'map' ? 'Loading the map…' : undefined} />}>
-      {page === 'map' ? <MapPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'dashboard' ? <DashboardPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'records' ? <RecordsPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'admin' ? <AdminPage key={user.id} user={user} /> : page === 'reports' ? <ReportsPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
+    <Suspense fallback={<PageLoading />}>
+      {page === 'dashboard' ? <DashboardPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'records' ? <RecordsPage key={user.id} user={user} onDataSources={onDataSources} /> : page === 'admin' ? <AdminPage key={user.id} user={user} /> : page === 'reports' ? <ReportsPage key={user.id} user={user} /> : <WorkPage key={user.id} user={user} />}
     </Suspense>
   );
 }

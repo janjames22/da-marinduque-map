@@ -432,9 +432,9 @@ The colors, type and spacing come from `design/tokens.json`, the signed-off desi
 
 ### Loading speed
 
-The first screen, sign-in or Home, loads only what it needs. The map and Leaflet, the Dashboard's charts, the Admin, work and report pages, and the PDF, Excel and file readers each load when they're opened. Once the first page is up, the browser fetches the other pages' code while it's idle, and the data starts loading as soon as someone signs in, so a page is usually ready by the time it's asked for.
+The first load holds the app's frame, Home and the map with Leaflet, as most people open the map. The Dashboard's charts, the Interventions, Admin, work and report pages, and the PDF, Excel and file readers each load when they're opened. The data starts loading as soon as someone signs in, and once the first page has its data the browser fetches the other pages' code while it's idle, so a page is usually ready by the time it's asked for. Phase 17b tried loading the map apart too, which halved the first load, but the map then took 0.2 to 0.4 s longer to appear after signing in, so it was left in.
 
-`npm run build` measures the first load, gzipped as Netlify sends it, and fails if it's over budget: 130 kB of script and 20 kB of styles (`FIRST_LOAD_BUDGET` in `scripts/check-bundle.ts`). Since Phase 17b it's about 109 kB and 14 kB. Before, with the map in the first load, it was about 200 kB of script. If a change goes over, load the new code with the page that needs it, with `lazy()` or `import()`, rather than raising the budget.
+`npm run build` measures the first load, gzipped as Netlify sends it, and fails if it's over budget: 215 kB of script and 22 kB of styles (`FIRST_LOAD_BUDGET` in `scripts/check-bundle.ts`). In Phase 17b it was 199 kB and 20 kB. If a change goes over, load the new code with the page that needs it, with `lazy()` or `import()`, rather than raising the budget.
 
 Files under `/assets` have a hash of their content in their name, so `netlify.toml` lets browsers keep them for a year. `index.html` and the boundaries are checked on every visit, so a deploy shows at once.
 
