@@ -25,6 +25,9 @@ interface EditUiState {
   picking: boolean; // the next map click sets the draft
   pendingMove: PendingMove | null;
   moveNonce: number; // a finished drag, so markers can be rebuilt where they belong
+  // Where the last moved marker settles: the drop point once confirmed, or back where it was once
+  // cancelled. The map brings it out from under the legend there, as the legend comes back.
+  settledMove: { recordId: string; at: LatLng } | null;
   photoId: string | null;
   notice: string | null;
 
@@ -33,7 +36,8 @@ interface EditUiState {
   setDraft(point: LatLng | null, options?: { goTo?: boolean }): void;
   setPicking(picking: boolean): void;
   startMove(move: PendingMove): void;
-  finishMove(): void;
+  finishMove(settlesAt: LatLng | null): void;
+  clearSettledMove(): void;
   showPhoto(id: string | null): void;
   setNotice(notice: string | null): void;
 }
@@ -45,6 +49,7 @@ export const useEditUi = create<EditUiState>((set) => ({
   picking: false,
   pendingMove: null,
   moveNonce: 0,
+  settledMove: null,
   photoId: null,
   notice: null,
 
@@ -55,13 +60,20 @@ export const useEditUi = create<EditUiState>((set) => ({
       picking: options?.picking ?? false,
       moveNonce: state.pendingMove ? state.moveNonce + 1 : state.moveNonce,
       pendingMove: null,
+      settledMove: null,
     })),
   closePanel: () => set({ panel: null, draft: null, picking: false }),
   setDraft: (draft, options) =>
     set((state) => ({ draft, picking: false, draftNonce: options?.goTo ? state.draftNonce + 1 : state.draftNonce })),
   setPicking: (picking) => set({ picking }),
   startMove: (pendingMove) => set({ pendingMove }),
-  finishMove: () => set((state) => ({ pendingMove: null, moveNonce: state.moveNonce + 1 })),
+  finishMove: (settlesAt) =>
+    set((state) => ({
+      pendingMove: null,
+      moveNonce: state.moveNonce + 1,
+      settledMove: state.pendingMove && settlesAt ? { recordId: state.pendingMove.recordId, at: settlesAt } : null,
+    })),
+  clearSettledMove: () => set({ settledMove: null }),
   showPhoto: (photoId) => set({ photoId }),
   setNotice: (notice) => set({ notice }),
 }));

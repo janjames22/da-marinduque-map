@@ -3,7 +3,7 @@ import { ConflictError, type ChangeNote, type InterventionPatch } from '../data/
 import type { Intervention, MapData } from '../data/types';
 import { formatPoint } from '../lib/coordinates';
 import { recordName } from '../lib/display';
-import { editWarnings } from '../lib/qa';
+import { editWarnings, pointOf } from '../lib/qa';
 import { useEditUi, type PendingMove } from '../state/edit-ui';
 import { useStore } from '../state/store-context';
 import { TextField } from './FormParts';
@@ -55,7 +55,7 @@ function MoveDialog({ data, record, pendingMove }: { data: MapData; record: Inte
     const logged: ChangeNote = reason === '' ? { kind: 'move' } : { kind: 'move', reason };
     try {
       await store.updateIntervention(record.id, pendingMove.version, { point: pendingMove.to, ...patch }, logged);
-      finishMove();
+      finishMove(pendingMove.to);
       setNotice('Marker moved.');
     } catch (error) {
       setFailure(
@@ -70,7 +70,7 @@ function MoveDialog({ data, record, pendingMove }: { data: MapData; record: Inte
 
   const cancel = () => {
     setFailure(null);
-    finishMove();
+    finishMove(pointOf(record));
   };
 
   return (

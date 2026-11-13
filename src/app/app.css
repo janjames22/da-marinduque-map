@@ -302,8 +302,10 @@ body {
   z-index: 800;
 }
 
-/* A popup can be as tall as the map, and the legend sits above it. */
-.map.popup-open ~ .legend {
+/* A popup can be as tall as the map, and the legend sits above it. A marker being moved could be
+   dropped under it, so it makes way then too, until the move is confirmed or cancelled. */
+.map.popup-open ~ .legend,
+.map.marker-moving ~ .legend {
   display: none;
 }
 
