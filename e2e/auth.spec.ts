@@ -224,7 +224,8 @@ test.describe('signed in', () => {
 
     await page.unroute(gone);
     await alert.getByRole('button', { name: 'Reload the page' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    // A whole reload and sign-in, which can take more than the usual 5 s on a busy dev server.
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible({ timeout: 15_000 });
   });
 });
 

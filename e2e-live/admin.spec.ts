@@ -5,6 +5,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
 import type { TestAccount } from '../scripts/lib/test-accounts';
 import { readAccounts } from './accounts';
 import { sidebar } from '../e2e/helpers/shell';
+import { layersCard, openLayers } from './map';
 
 const LIVE_LIMIT_MS = 2500; // "about 2 s" in the spec
 
@@ -33,6 +34,8 @@ test('a new program reaches someone else\'s open map, with no reload', async ({ 
   const accounts = readAccounts();
   const watcher = await open(browser, accounts.viewer);
   await expect(watcher.locator('.barangay-shape')).toHaveCount(218, { timeout: 30_000 });
+  // The program filter is in the layers card, put away when the map opens since Phase 16c.
+  await openLayers(watcher);
   let reloads = 0;
   watcher.on('framenavigated', () => {
     reloads += 1;
@@ -47,7 +50,7 @@ test('a new program reaches someone else\'s open map, with no reload', async ({ 
   await expect(row(admin, name)).toBeVisible({ timeout: 15_000 });
 
   const started = Date.now();
-  await expect(watcher.getByRole('combobox', { name: /^Program/ }).locator('option', { hasText: name })).toHaveCount(1, { timeout: 10_000 });
+  await expect(layersCard(watcher).getByRole('combobox', { name: /^Program/ }).locator('option', { hasText: name })).toHaveCount(1, { timeout: 10_000 });
   const elapsed = Date.now() - started;
   console.log(`A new program reached the other person's map in ${elapsed} ms`);
   expect(elapsed).toBeLessThan(LIVE_LIMIT_MS);

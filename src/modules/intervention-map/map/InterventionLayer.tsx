@@ -64,6 +64,7 @@ function revealMarker(map: L.Map, cluster: L.MarkerClusterGroup, marker: L.Marke
   // placed, which Leaflet doesn't expect: it threw, and as this runs inside React the page went blank.
   // So a popup waits for the map to stop, and opens only on a marker still showing on its own.
   let tries = 0;
+  let stopWaiting = () => {};
   const open = () => {
     if (isPanning(map)) {
       map.once('moveend', open);
@@ -90,17 +91,41 @@ function revealMarker(map: L.Map, cluster: L.MarkerClusterGroup, marker: L.Marke
       console.warn('A record popup could not open', error);
     }
   };
-  const spiderfy = (visible: L.MarkerCluster) => {
+  // The cluster library ignores a spiderfy during a zoom animation, and then never says it's done, so
+  // the popup never opened. That happened when zoomToShowLayer called back with the marker still in a
+  // cluster beside a neighbour while the zoom was settling, as from an audit log link on the live site.
+  // So it waits for the map to settle, spreads whichever cluster then holds the marker, and asks again
+  // if the spread doesn't come.
+  const spiderfy = (_cluster: L.MarkerCluster) => {
     cluster.off('spiderfied'); // only the latest request should open a popup
-    cluster.once('spiderfied', open);
-    visible.spiderfy();
+    stopWaiting();
+    stopWaiting = whenSettled(map, cluster, () => {
+      const now = cluster.getVisibleParent(marker);
+      if (now === marker) {
+        open();
+        return;
+      }
+      if (!(now instanceof L.MarkerCluster)) return;
+      cluster.once('spiderfied', open);
+      const retry = setTimeout(() => {
+        cluster.off('spiderfied', open);
+        if (tries < 3) open();
+      }, SPIDERFY_WAIT_MS);
+      cluster.once('spiderfied', () => clearTimeout(retry));
+      const stopSettle = stopWaiting;
+      stopWaiting = () => {
+        stopSettle();
+        clearTimeout(retry);
+      };
+      now.spiderfy();
+    });
   };
   const parent = cluster.getVisibleParent(marker);
 
   // Already showing, on its own or spiderfied. The popup pans itself into view.
   if (parent === marker) {
     open();
-    return () => {};
+    return () => stopWaiting();
   }
 
   if (parent instanceof L.MarkerCluster) {
@@ -111,7 +136,7 @@ function revealMarker(map: L.Map, cluster: L.MarkerClusterGroup, marker: L.Marke
       const visible = cluster.getVisibleParent(marker);
       if (visible instanceof L.MarkerCluster) {
         spiderfy(visible);
-        return () => {};
+        return () => stopWaiting();
       }
     }
   }
@@ -123,17 +148,23 @@ function revealMarker(map: L.Map, cluster: L.MarkerClusterGroup, marker: L.Marke
   const sharesItsPoint = cluster.getLayers().some((other) => other !== marker && other instanceof L.Marker && other.getLatLng().equals(point));
   if (sharesItsPoint) {
     map.setView(point, map.getMaxZoom(), { animate: false });
-    return whenSettled(map, cluster, () => {
+    const stopSettle = whenSettled(map, cluster, () => {
       const visible = cluster.getVisibleParent(marker);
       if (visible === marker) open();
       else if (visible instanceof L.MarkerCluster) spiderfy(visible);
     });
+    return () => {
+      stopSettle();
+      stopWaiting();
+    };
   }
   cluster.zoomToShowLayer(marker, open);
-  return () => {};
+  return () => stopWaiting();
 }
 
 const SETTLE_POLL_MS = 50;
+// How long a spiderfy may take before the popup asks again. Leaflet.markercluster animates it in 200 ms.
+const SPIDERFY_WAIT_MS = 600;
 const SETTLE_MAX_TRIES = 60;
 
 // The cluster library silently ignores a spiderfy during a zoom animation, so a record chosen

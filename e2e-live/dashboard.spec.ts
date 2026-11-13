@@ -5,6 +5,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
 import { connectDb, loadEnv } from '../scripts/lib/env';
 import type { TestAccount } from '../scripts/lib/test-accounts';
 import { readAccounts } from './accounts';
+import { openDashboard, openLayers } from './map';
 import { skipNetlifyBadge } from './netlify';
 
 const LIVE_LIMIT_MS = 2500; // "about 2 s" in the spec
@@ -12,6 +13,9 @@ const LIVE_LIMIT_MS = 2500; // "about 2 s" in the spec
 const panel = (page: Page) => page.getByRole('complementary', { name: 'Dashboard and records' });
 const kpi = (page: Page, id: string) => page.locator(`[data-kpi="${id}"] .kpi-value`);
 const savedView = (page: Page, name: string) => page.getByRole('complementary', { name: 'Layers and filters' }).locator(`[data-view="${name}"]`);
+
+// The map opens with the layers card and the dashboard put away since Phase 16c, so each test brings
+// out what it reads.
 
 // Every window a test opens is closed after it, as an open map reloads on every change and would
 // slow the timing tests that come later.
@@ -25,8 +29,6 @@ async function open(browser: Browser, account: TestAccount, path = '/map') {
   contexts.push(context);
   await skipNetlifyBadge(context);
   const page = await context.newPage();
-  // The panel beside the map starts closed since Phase 14. These tests are about it.
-  await page.addInitScript(() => localStorage.setItem('da-map-insights-open', 'yes'));
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.abort());
   await page.goto(path);
   await page.getByLabel('Email').fill(account.email);
@@ -42,6 +44,7 @@ async function openMap(browser: Browser, account: TestAccount) {
 }
 
 async function saveSharedView(page: Page, name: string) {
+  await openLayers(page);
   const layers = page.getByRole('complementary', { name: 'Layers and filters' });
   await layers.getByRole('button', { name: 'Save this view' }).click();
   const form = layers.getByRole('form', { name: 'Save this view' });
@@ -58,6 +61,7 @@ test('the charts load and draw under the real security rules, and agree with an 
     if (/Content Security Policy|Refused to/.test(message.text())) blocked.push(message.text());
   });
 
+  await openDashboard(page);
   await expect(kpi(page, 'records')).toBeVisible({ timeout: 30_000 });
   for (const name of ['Units by municipality', 'Units by program', 'Units by year funded', 'Status by municipality']) {
     await expect(page.getByRole('figure', { name }).locator('.recharts-bar-rectangle').first()).toBeVisible();
@@ -73,6 +77,7 @@ test('the charts load and draw under the real security rules, and agree with an 
 
 test('the table finds a record, and a row goes to it', async ({ browser }) => {
   const page = await openMap(browser, readAccounts().viewer);
+  await openDashboard(page);
   await panel(page).getByRole('button', { name: 'Records', exact: true }).click();
   const rows = page.locator('.records-table tbody tr');
   await expect(rows.first()).toBeVisible({ timeout: 30_000 });
@@ -92,7 +97,9 @@ test('a shared view reaches someone else\'s open map with no reload, and brings 
     reloads += 1;
   });
 
+  await openLayers(watcher);
   const owner = await openMap(browser, accounts.encoder);
+  await openLayers(owner);
   const municipality = owner.getByRole('complementary', { name: 'Layers and filters' }).getByRole('combobox', { name: /^Municipality/ });
   await municipality.selectOption({ label: 'Gasan' });
   const chosen = await municipality.inputValue();
@@ -125,6 +132,7 @@ test('the default view opens for everyone, once an Admin chooses it', async ({ b
   await expect(savedView(admin, name)).toContainText('Opens by default', { timeout: 15_000 });
 
   const viewer = await openMap(browser, accounts.viewer);
+  await openLayers(viewer);
   await expect(viewer.getByText(`Opened on the shared view "${name}".`)).toBeVisible();
   // Nobody but an Admin is offered the choice.
   await expect(savedView(viewer, name).getByRole('button', { name: /Stop opening on this/ })).toHaveCount(0);

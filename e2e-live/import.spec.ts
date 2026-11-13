@@ -4,6 +4,7 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import type { TestAccount } from '../scripts/lib/test-accounts';
 import { readAccounts } from './accounts';
+import { openDashboard } from './map';
 import { skipNetlifyBadge } from './netlify';
 
 const LIVE_LIMIT_MS = 2500; // "about 2 s" in the spec
@@ -18,8 +19,6 @@ async function open(browser: Browser, account: TestAccount, path: string) {
   contexts.push(context);
   await skipNetlifyBadge(context);
   const page = await context.newPage();
-  // The map's dashboard panel starts closed since Phase 14, and this test reads its count.
-  await page.addInitScript(() => localStorage.setItem('da-map-insights-open', 'yes'));
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.abort());
   await page.goto(path);
   await page.getByLabel('Email').fill(account.email);
@@ -36,6 +35,8 @@ test('a file imported in the wizard reaches another person\'s map, and undoing i
 
   const map = await open(browser, accounts.viewer, '/map');
   await expect(map.locator('.barangay-shape')).toHaveCount(218, { timeout: 30_000 });
+  // The map opens with its dashboard put away since Phase 16c, and this test reads its count.
+  await openDashboard(map);
   await expect(map.locator('[data-kpi="records"] .kpi-value')).toBeVisible({ timeout: 30_000 });
   const before = await records(map);
 
