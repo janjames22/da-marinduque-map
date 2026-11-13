@@ -2,6 +2,9 @@ import type { LatLng } from '../lib/coordinates';
 import type { AppUser, AuditAction, AuditEntry, Barangay, CoreFieldRule, FieldSchema, Intervention, InterventionType, MapData, StatusEntry, UserRole } from './types';
 
 // Everything a person enters for a record. Location is a point for now, as both active types are.
+// A line as [longitude, latitude] pairs, in order along it, as GeoJSON writes a LineString.
+export type LinePositions = [number, number][];
+
 export interface InterventionValues {
   intervention_type_id: number;
   category_id: number | null;
@@ -17,6 +20,9 @@ export interface InterventionValues {
   barangay_id: number | null;
   location_basis_id: number | null;
   point: LatLng | null;
+  // A line type's record: its line, null while it waits for one. Left out for a point type's record, and
+  // left out of a patch that doesn't change the line. Since Phase 16b.
+  line?: LinePositions | null;
   attributes: Record<string, unknown>;
   remarks: string | null;
   // New files for photo fields, by field key. Their attributes hold PENDING_PHOTO until they're saved.

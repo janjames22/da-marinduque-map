@@ -79,9 +79,18 @@ export function validateIntervention(
   if (previous === null && type.geometry_kind === 'polygon' && values.point === null) {
     errors.intervention_type_id = `${type.name} needs a shape, and drawing tools aren't built yet.`;
   }
-  // The database takes only a line for a line type, so a point placed for one is refused here first.
+  // The database takes only a line for a line type, and a point for a point type, so the wrong one is
+  // refused here first. Mirrors line_from_json and the type's geometry check.
   if (type.geometry_kind === 'line' && values.point !== null) {
-    errors.intervention_type_id = `${type.name} is a line on the map, not a point. Leave the location empty, and the road waits for its traced line.`;
+    errors.intervention_type_id = `${type.name} is a line on the map, not a point. Draw its line, or leave it empty and the road waits for one.`;
+  }
+  if (type.geometry_kind !== 'line' && values.line) {
+    errors.intervention_type_id = `${type.name} is a point on the map, not a line.`;
+  }
+  if (values.line && values.line.length < 2) {
+    errors.line = 'A line needs at least two points. Add another, or clear the line.';
+  } else if (values.line?.some((position) => position.length !== 2 || !position.every(Number.isFinite))) {
+    errors.line = 'Each point of the line needs a longitude and a latitude.';
   }
 
   if (!values.municipality_id) errors.municipality_id = 'Choose a municipality.';

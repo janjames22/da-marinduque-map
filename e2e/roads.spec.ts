@@ -108,11 +108,21 @@ test.describe("a road's own page", () => {
     await expect(page.getByRole('region', { name: 'Details' })).not.toContainText('km km');
   });
 
-  test('says a road without a line is waiting for one, with nothing to enter yet', async ({ page }) => {
+  test('says a road without a line is waiting for one, and offers an editor to draw it', async ({ page }) => {
     await open(page, `/records/${waiting.id}`);
     await expect(page.locator('.unplotted-badge')).toHaveText('No traced line yet');
     await expect(page.getByRole('region', { name: 'Location' })).toContainText('No traced line yet, so this road is not on the map.');
     await expect(page.getByRole('link', { name: 'Enter verified coordinates' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Draw its line on the map' })).toBeVisible();
+  });
+
+  test("doesn't offer a Viewer the drawing", async ({ page }) => {
+    await open(page, `/records/${waiting.id}`, 'viewer');
+    await expect(page.locator('.unplotted-badge')).toHaveText('No traced line yet');
+    await expect(page.getByRole('link', { name: 'Draw its line on the map' })).toHaveCount(0);
+    await page.goto(`/records/${reported.id}`);
+    await expect(page.getByRole('region', { name: 'Location' })).toContainText('Traced line');
+    await expect(page.getByRole('link', { name: 'Reshape on the map' })).toHaveCount(0);
   });
 });
 
@@ -120,7 +130,8 @@ test('an edit to a road keeps its line', async ({ page }) => {
   await open(page, `/map/records/${reported.id}`);
   await popup(page).getByRole('button', { name: 'Edit' }).click();
   const edit = page.getByRole('form', { name: 'Edit record' });
-  await expect(edit.getByTestId('location-readout')).toHaveText(`Traced line, ${formatKm(lineLength(reported).tracedKm!)}`);
+  const points = (reported.geojson as GeoJSON.LineString).coordinates.length;
+  await expect(edit.getByTestId('location-readout')).toHaveText(`Traced line, ${formatKm(lineLength(reported).tracedKm!)}, ${points} points`);
   await edit.getByLabel(/^Title/).fill('Sample FMR: renamed');
   await edit.getByRole('button', { name: 'Save changes' }).click();
   await expect(edit).toHaveCount(0);
@@ -129,6 +140,193 @@ test('an edit to a road keeps its line', async ({ page }) => {
   await page.goto(`/records/${reported.id}`);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sample FMR: renamed');
   await expect(page.getByRole('region', { name: 'Location' })).toContainText(`Traced line${formatKm(lineLength(reported).tracedKm!)}`);
+});
+
+// Phase 16b: drawing and reshaping a road's line on the map.
+test.describe('drawing a road', () => {
+  const form = (page: Page, name: string) => page.getByRole('form', { name });
+  const readout = (page: Page) => page.getByTestId('location-readout');
+  const handles = (page: Page) => page.locator('.line-handle');
+  const bends = (page: Page) => page.locator('.line-midpoint');
+
+  // A point on the map, by its offset from the middle of what's on screen.
+  async function tapMap(page: Page, dx: number, dy: number) {
+    const box = (await page.locator('.leaflet-container').boundingBox())!;
+    await page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
+  }
+
+  // As a person would: once the popup has faded away and the map has stopped moving.
+  async function drag(page: Page, handle: ReturnType<Page['locator']>, dx: number, dy: number) {
+    await expect(page.locator('.leaflet-popup')).toHaveCount(0);
+    let last = '';
+    await expect
+      .poll(async () => {
+        const current = JSON.stringify(await handle.boundingBox());
+        const settled = current === last;
+        last = current;
+        return settled;
+      }, { intervals: [200] })
+      .toBe(true);
+    const box = (await handle.boundingBox())!;
+    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + dx / 2, y + dy / 2, { steps: 5 });
+    await page.mouse.move(x + dx, y + dy, { steps: 5 });
+    await page.mouse.up();
+  }
+
+  test('a new road is drawn point by point, with its length as it goes, and saved on the map', async ({ page }) => {
+    await open(page, '/map');
+    await expect(page.locator('.barangay-shape')).toHaveCount(218);
+    await page.getByRole('button', { name: '+ Add intervention' }).click();
+    const add = form(page, 'Add intervention');
+    await add.getByRole('combobox', { name: /^Type/ }).selectOption({ label: roadType.name });
+    await expect(readout(page)).toHaveText('No traced line yet');
+
+    await add.getByRole('button', { name: 'Draw the line' }).click();
+    await tapMap(page, -30, -10);
+    await expect(readout(page)).toHaveText('1 point. Add another to make a line.');
+    await tapMap(page, 10, 5);
+    await tapMap(page, 40, 20);
+    await expect(readout(page)).toHaveText(/^Traced line, [\d.]+ km, 3 points$/);
+    await expect(handles(page)).toHaveCount(3);
+
+    // Undo takes the last point back.
+    await add.getByRole('button', { name: 'Undo last point' }).click();
+    await expect(readout(page)).toHaveText(/, 2 points$/);
+    await tapMap(page, 40, 20);
+    await add.getByRole('button', { name: 'Done' }).click();
+    // Once done, a click on the map adds nothing, and a bend can be made between each two points.
+    await tapMap(page, 0, 40);
+    await expect(readout(page)).toHaveText(/, 3 points$/);
+    await expect(bends(page)).toHaveCount(2);
+    const drawn = (await readout(page).textContent())!.match(/Traced line, ([\d.]+ km)/)![1];
+
+    await add.getByLabel(/^Title/).fill('Drawn test road');
+    await add.getByRole('button', { name: 'Save record' }).click();
+    await expect(add).toHaveCount(0);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length + 1);
+    await expect(handles(page)).toHaveCount(0);
+
+    await page.goto('/records');
+    await page.getByLabel('Search these records').fill('Drawn test road');
+    await page.locator('.records-table tbody tr').first().click();
+    await expect(page.getByRole('region', { name: 'Location' })).toContainText(`Traced line${drawn}`);
+  });
+
+  test('a road is reshaped by dragging a point and adding a bend, and the change is saved', async ({ page }) => {
+    await open(page, `/map/records/${reported.id}`);
+    await popup(page).getByRole('button', { name: 'Edit' }).click();
+    const edit = form(page, 'Edit record');
+    const points = (reported.geojson as GeoJSON.LineString).coordinates.length;
+    await expect(handles(page)).toHaveCount(points);
+    await expect(bends(page)).toHaveCount(points - 1);
+    // While its form is open, the road's own line gives way to the one being reshaped.
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length - 1);
+    const before = await readout(page).textContent();
+
+    await drag(page, handles(page).last(), 60, 40);
+    await expect(readout(page)).not.toHaveText(before!);
+    await expect(readout(page)).toHaveText(new RegExp(`, ${points} points$`));
+    await drag(page, bends(page).first(), -30, 30);
+    await expect(readout(page)).toHaveText(new RegExp(`, ${points + 1} points$`));
+    const reshaped = (await readout(page).textContent())!.match(/Traced line, ([\d.]+ km)/)![1];
+
+    await edit.getByRole('button', { name: 'Save changes' }).click();
+    await expect(edit).toHaveCount(0);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length);
+    await page.goto(`/records/${reported.id}`);
+    await expect(page.getByRole('region', { name: 'Location' })).toContainText(`Traced line${reshaped}`);
+  });
+
+  test('a picked point can be removed, and a cleared line leaves the road waiting for one', async ({ page }) => {
+    await open(page, `/records/${reported.id}`);
+    await page.getByRole('link', { name: 'Reshape on the map' }).click();
+    const edit = form(page, 'Edit record');
+    const points = (reported.geojson as GeoJSON.LineString).coordinates.length;
+    await expect(handles(page)).toHaveCount(points);
+
+    await handles(page).nth(1).click();
+    await expect(handles(page).nth(1)).toHaveClass(/is-selected/);
+    await edit.getByRole('button', { name: 'Remove point 2' }).click();
+    await expect(readout(page)).toHaveText(new RegExp(`, ${points - 1} points$`));
+
+    await edit.getByRole('button', { name: 'Clear the line' }).click();
+    await expect(readout(page)).toHaveText('No traced line yet');
+    await expect(handles(page)).toHaveCount(0);
+    await expect(edit.getByRole('button', { name: 'Draw the line' })).toBeVisible();
+    await edit.getByRole('button', { name: 'Save changes' }).click();
+    await expect(edit).toHaveCount(0);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length - 1);
+
+    await page.goto(`/records/${reported.id}`);
+    await expect(page.locator('.unplotted-badge')).toHaveText('No traced line yet');
+  });
+
+  test('a road waiting for its line gets one from its own page', async ({ page }) => {
+    await open(page, `/records/${waiting.id}`);
+    await page.getByRole('link', { name: 'Draw its line on the map' }).click();
+    const edit = form(page, 'Edit record');
+    // Straight into adding points.
+    await expect(edit.getByRole('button', { name: 'Done' })).toBeVisible();
+    await tapMap(page, -20, 0);
+    await tapMap(page, 20, 10);
+    await expect(readout(page)).toHaveText(/, 2 points$/);
+    await edit.getByRole('button', { name: 'Done' }).click();
+    await edit.getByRole('button', { name: 'Save changes' }).click();
+    await expect(edit).toHaveCount(0);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length + 1);
+  });
+
+  test('a single point is refused as a line, and nothing is saved', async ({ page }) => {
+    await open(page, `/records/${waiting.id}`);
+    await page.getByRole('link', { name: 'Draw its line on the map' }).click();
+    const edit = form(page, 'Edit record');
+    await tapMap(page, 0, 0);
+    await edit.getByRole('button', { name: 'Save changes' }).click();
+    await expect(edit.getByText('A line needs at least two points.')).toBeVisible();
+    await expect(edit).toBeVisible();
+  });
+
+  // The QA queue's "Fix on the map", for a road flagged No coordinates.
+  test('a road waiting for its line gets one in the Resolve flag form, and its flag clears', async ({ page }) => {
+    await open(page, `/map/records/${waiting.id}?fix=resolve`);
+    const resolve = form(page, 'Resolve flag');
+    await expect(resolve.getByRole('region', { name: 'Current flags' })).toContainText('No coordinates');
+    // Straight into adding points, as from the road's own page.
+    await expect(resolve.getByRole('button', { name: 'Done' })).toBeVisible();
+    await tapMap(page, -20, 0);
+    await expect(resolve.getByTestId('flags-after-saving')).toContainText('No coordinates');
+    await tapMap(page, 20, 10);
+    await expect(readout(page)).toHaveText(/, 2 points$/);
+    await expect(resolve.getByTestId('flags-after-saving')).not.toContainText('No coordinates');
+    await resolve.getByRole('button', { name: 'Done' }).click();
+    await resolve.getByLabel(/^Reason for this change/).fill('Traced from the field sketch');
+    await resolve.getByRole('button', { name: 'Save and log' }).click();
+    await expect(resolve).toHaveCount(0);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length + 1);
+
+    await page.goto(`/records/${waiting.id}`);
+    await expect(page.locator('.unplotted-badge')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Location' })).toContainText('Traced line');
+  });
+
+  test("a traced road's Resolve flag form opens with its line ready to reshape", async ({ page }) => {
+    await open(page, `/map/records/${reported.id}?fix=resolve`);
+    const resolve = form(page, 'Resolve flag');
+    const points = (reported.geojson as GeoJSON.LineString).coordinates.length;
+    await expect(resolve.getByTestId('location-readout')).toHaveText(new RegExp(`, ${points} points$`));
+    await expect(handles(page)).toHaveCount(points);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length - 1);
+    // Nothing changed yet, so there's nothing to save.
+    await resolve.getByLabel(/^Reason for this change/).fill('Checked');
+    await resolve.getByRole('button', { name: 'Save and log' }).click();
+    await expect(resolve.getByText('Nothing has changed yet.')).toBeVisible();
+    await resolve.getByRole('button', { name: 'Cancel' }).click();
+    await expect(handles(page)).toHaveCount(0);
+    await expect(page.locator('path.road-hit')).toHaveCount(traced.length);
+  });
 });
 
 test('a KMZ carries the traced roads as lines', async ({ page }) => {

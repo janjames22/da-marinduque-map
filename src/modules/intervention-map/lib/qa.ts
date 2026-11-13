@@ -155,6 +155,17 @@ export function samePoint(a: LatLng | null, b: LatLng | null): boolean {
   return a !== null && b !== null && a.lat === b.lat && a.lng === b.lng;
 }
 
+// A one-part line's positions, as the forms draw and save it. A line in several parts, as a file can bring
+// in, gives null here: the editor reshapes one line at a time.
+export function linePositionsOf(record: Pick<Intervention, 'geojson'>): [number, number][] | null {
+  return record.geojson?.type === 'LineString' ? (record.geojson.coordinates as [number, number][]) : null;
+}
+
+export function sameLine(a: [number, number][] | null, b: [number, number][] | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.length === b.length && a.every(([lng, lat], i) => lng === b[i][0] && lat === b[i][1]);
+}
+
 // A line's parts, each a list of [longitude, latitude]: one part for a LineString, several for a
 // MultiLineString.
 export type LineParts = [number, number][][];

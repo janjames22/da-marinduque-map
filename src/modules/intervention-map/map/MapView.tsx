@@ -10,6 +10,7 @@ import { BarangayLayer } from './BarangayLayer';
 import { BoundaryLines } from './BoundaryLines';
 import { DraftLayer } from './DraftLayer';
 import { InterventionLayer } from './InterventionLayer';
+import { LineDraftLayer } from './LineDraftLayer';
 import { RoadLayer } from './RoadLayer';
 
 const DEFAULT_CENTER: [number, number] = [13.4, 121.97];
@@ -128,6 +129,7 @@ export function MapView({ data, boundaries, shading, counts, markers, colorOf, s
       <RoadLayer data={data} records={markers} colorOf={colorOf} />
       <InterventionLayer data={data} records={markers} colorOf={colorOf} />
       <DraftLayer />
+      <LineDraftLayer />
     </MapContainer>
   );
 }

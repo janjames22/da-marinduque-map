@@ -1,13 +1,14 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { ConflictError, ValidationError, type InterventionPatch } from '../data/store';
+import { ConflictError, ValidationError, type InterventionPatch, type LinePositions } from '../data/store';
 import type { Intervention, MapData } from '../data/types';
 import { FLAG_LABELS, isOnMap, recordName } from '../lib/display';
-import { computeFlags, editWarnings, linePartsOf, pointOf, samePoint } from '../lib/qa';
+import { computeFlags, editWarnings, linePartsOf, linePositionsOf, pointOf, sameLine, samePoint } from '../lib/qa';
 import type { FieldErrors } from '../lib/validation';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
 import { useStore } from '../state/store-context';
 import { PanelFrame, PlaceFields, SelectField, TextField, WarningList } from './FormParts';
+import { LineLocation } from './LineLocation';
 import { LocationInput } from './LocationInput';
 
 // Fixes what a flag points at, and records why. Flags clear themselves when the data agrees, except
@@ -17,6 +18,7 @@ export function ResolveForm({ data, record: latest }: { data: MapData; record: I
   const [record] = useState(latest);
   const { store, places } = useStore();
   const draft = useEditUi((state) => state.draft);
+  const draftLine = useEditUi((state) => state.draftLine);
   const closePanel = useEditUi((state) => state.closePanel);
   const setNotice = useEditUi((state) => state.setNotice);
   const zoomToRecord = useMapUi((state) => state.zoomToRecord);
@@ -36,12 +38,17 @@ export function ResolveForm({ data, record: latest }: { data: MapData; record: I
   const nextBasis = basisId === '' ? null : Number(basisId);
   const nextBeneficiary = beneficiary.trim() === '' ? null : beneficiary.trim();
 
-  // A road keeps its line here, as reshaping it isn't built yet.
+  // A road's location is its line, drawn and reshaped here as in its Edit form (Phase 16b). A line in
+  // several parts can't be reshaped, so it stays as it is.
   const isLine = data.types.find((type) => type.id === record.intervention_type_id)?.geometry_kind === 'line';
+  const lineEditable = record.geojson?.type !== 'MultiLineString';
+  const linePositions = useMemo<LinePositions | null>(() => (draftLine ? draftLine.map(({ lat, lng }) => [lng, lat]) : null), [draftLine]);
+  // The line as drawn so far. One point isn't a line yet.
+  const candidateLine = !lineEditable ? linePartsOf(record) : linePositions && linePositions.length >= 2 ? [linePositions] : null;
   const candidate = {
     id: record.id,
     point: isLine ? null : draft,
-    ...(isLine ? { line: linePartsOf(record) } : {}),
+    ...(isLine ? { line: candidateLine } : {}),
     municipality_id: Number(municipalityId),
     barangay_id: nextBarangay,
     barangay_raw: record.barangay_raw,
@@ -58,7 +65,7 @@ export function ResolveForm({ data, record: latest }: { data: MapData; record: I
         data,
       ),
     // candidate is rebuilt from these on every render
-    [draft, municipalityId, nextBarangay, nextBeneficiary, nameChecked, data, places, record],
+    [draft, linePositions, municipalityId, nextBarangay, nextBeneficiary, nameChecked, data, places, record],
   );
   const remaining = computeFlags(candidate, data.interventions, places);
 
@@ -69,6 +76,7 @@ export function ResolveForm({ data, record: latest }: { data: MapData; record: I
   if (nextBeneficiary !== record.beneficiary) patch.beneficiary = nextBeneficiary;
   const originalPoint = pointOf(record);
   if (!isLine && (draft === null ? originalPoint !== null : !samePoint(originalPoint, draft))) patch.point = draft;
+  if (isLine && lineEditable && !sameLine(linePositionsOf(record), linePositions)) patch.line = linePositions;
   if (nameChecked) patch.clear_name_check = true;
 
   const submit = async (event: FormEvent) => {
@@ -130,7 +138,7 @@ export function ResolveForm({ data, record: latest }: { data: MapData; record: I
             setBarangayId(barangay);
           }}
         />
-        {!isLine && <LocationInput />}
+        {isLine ? <LineLocation editable={lineEditable} error={errors.line} /> : <LocationInput />}
         <SelectField
           label="Location basis"
           value={basisId}

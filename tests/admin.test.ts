@@ -391,6 +391,47 @@ describe('a type', () => {
     expect(waiting.qa_flags).toContain('no_coords');
   });
 
+  // Phase 16b: a road's line, drawn on the map, through the store, create_intervention and
+  // update_intervention.
+  it("saves a road's line, reshapes it and takes it away, through the database", async () => {
+    const LINE: [number, number][] = [[121.85, 13.45], [121.855, 13.452], [121.86, 13.46]];
+    const road = await admin.saveType(null, null, typeValues({ geometry_kind: 'line' }), statusList(['Proposed']));
+    await encoder.load();
+    const status = { status_id: statusId('Proposed'), status_date: '2024-01-01', remarks: null };
+    const made = await encoder.createIntervention({ ...recordValues(road.id), line: LINE }, status);
+    expect(made.geojson).toEqual({ type: 'LineString', coordinates: LINE });
+    expect(made.qa_flags).not.toContain('no_coords');
+    expect(made).not.toHaveProperty('line');
+
+    const reshaped = await encoder.updateIntervention(made.id, made.version, { line: [LINE[0], LINE[2]] });
+    expect(reshaped.geojson).toEqual({ type: 'LineString', coordinates: [LINE[0], LINE[2]] });
+    // An edit that leaves the line out keeps it.
+    const renamed = await encoder.updateIntervention(made.id, reshaped.version, { title: 'Renamed road' });
+    expect(renamed.geojson).toEqual(reshaped.geojson);
+    const cleared = await encoder.updateIntervention(made.id, renamed.version, { line: null });
+    expect(cleared.geojson).toBeNull();
+    expect(cleared.qa_flags).toContain('no_coords');
+  });
+
+  it('takes a line of two points or more, and only for a line type, in the screens and the database alike', async () => {
+    const road = await admin.saveType(null, null, typeValues({ geometry_kind: 'line' }), statusList(['Proposed']));
+    const machinery = data.types.find((t) => t.code === 'farm-machinery')!;
+    await encoder.load();
+    const status = { status_id: statusId('Proposed'), status_date: '2024-01-01', remarks: null };
+    await expect(encoder.createIntervention({ ...recordValues(road.id), line: [[121.85, 13.45]] }, status)).rejects.toThrow(ValidationError);
+    await expect(encoder.createIntervention({ ...recordValues(machinery.id), point: null, line: [[121.85, 13.45], [121.86, 13.46]] }, status)).rejects.toThrow(ValidationError);
+
+    // Past the screens' checks, the database refuses them too.
+    const base = { intervention_type_id: road.id, title: 'Test road', municipality_id: data.municipalities[0].id, year_funded: 2024 };
+    const create = (values: Record<string, unknown>) =>
+      attempt(ENCODER, 'select public.create_intervention($1::jsonb, $2::jsonb)', [JSON.stringify({ ...base, ...values }), JSON.stringify(status)]);
+    expect((await create({ line: [[121.85, 13.45]] })).message).toMatch(/at least two points/);
+    expect((await create({ line: [[121.85, 13.45], ['east', 13.46]] })).message).toMatch(/longitude and a latitude/);
+    expect((await create({ line: [[121.85, 13.45], [121.86, 13.46]], point: { lat: 13.45, lng: 121.85 } })).message).toMatch(/not both/);
+    expect((await create({ intervention_type_id: machinery.id, line: [[121.85, 13.45], [121.86, 13.46]] })).message).toMatch(/needs a point geometry/);
+    expect((await create({ line: [[121.85, 13.45], [121.86, 13.46]] })).ok).toBe(true);
+  });
+
   it('refuses a stale save, and names no winner silently', async () => {
     const saved = await admin.saveType(null, null, typeValues(), statusList(['Proposed']));
     const values = typeValues({ code: saved.code, name: saved.name });
@@ -738,6 +779,26 @@ describe('local mode', () => {
     const waiting = engine.createIntervention(local.rows, contextNow(), recordValues(line.id));
     expect(waiting.geojson).toBeNull();
     expect(waiting.qa_flags).toContain('no_coords');
+  });
+
+  it("draws, reshapes and clears a road's line in local mode, linking it to the barangays it crosses", () => {
+    const line = localAdmin.saveType(local.rows, context, null, null, typeValues({ code: 'local-road', name: 'Local road', geometry_kind: 'line' }), statusList(['Proposed']));
+    const contextNow = { ...context, types: lists().types, typeStatuses: lists().typeStatuses };
+    // Across two barangays: from the middle of one to the middle of the next, in the boundary files.
+    const LINE: [number, number][] = [[121.85, 13.45], [121.855, 13.452], [121.86, 13.46]];
+    const made = engine.createIntervention(local.rows, contextNow, { ...recordValues(line.id), line: LINE });
+    expect(made.geojson).toEqual({ type: 'LineString', coordinates: LINE });
+    expect(made.qa_flags).not.toContain('no_coords');
+    expect(made).not.toHaveProperty('line');
+    expect(local.rows.links.filter((link) => link.intervention_id === made.id && link.link_source === 'spatial').length).toBeGreaterThan(0);
+
+    const kept = engine.updateIntervention(local.rows, contextNow, made.id, made.version, { title: 'Renamed' });
+    expect(kept.geojson).toEqual({ type: 'LineString', coordinates: LINE });
+    const cleared = engine.updateIntervention(local.rows, contextNow, made.id, kept.version, { line: null });
+    expect(cleared.geojson).toBeNull();
+    expect(cleared.qa_flags).toContain('no_coords');
+    expect(local.rows.links.filter((link) => link.intervention_id === made.id && link.link_source === 'spatial')).toHaveLength(0);
+    expect(() => engine.updateIntervention(local.rows, contextNow, made.id, cleared.version, { line: [[121.85, 13.45]] })).toThrow(ValidationError);
   });
 
   it('saves the barangay form, refusing a stale save, a lost field and a photo', () => {

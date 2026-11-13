@@ -93,7 +93,7 @@ Editable lookups are archived rather than deleted, so existing records keep thei
 
 **Active types:** Farm Machinery (point) and SSIP (point, marking the pump or intake location).
 
-**Inactive types:** Farm-to-Market Road (line), Postharvest Facility (point), Irrigation Canal (line), Service Area (polygon) and Other (point). These have `is_active = false` and are hidden in the UI. The framework stays in place, so an admin can activate the point types from `/admin`. The line and polygon types wait for drawing tools (§5.4).
+**Inactive types:** Farm-to-Market Road (line), Postharvest Facility (point), Irrigation Canal (line), Service Area (polygon) and Other (point). These have `is_active = false` and are hidden in the UI. The framework stays in place, so an admin can activate the point types from `/admin`. Since Phase 16 a line type can be activated, and since Phase 16b its lines are drawn and reshaped on the map (§5.3). The polygon types wait for drawing tools (§5.4).
 
 `geom` stays generic so SSIP service-area polygons can be added later. SSIP is a point type for now, and a type's geometry kind can't change once it has records, so that change will need its own design: a separate polygon on the record, or a linked Service Area record.
 
@@ -254,7 +254,7 @@ Admins can edit these lists per type.
 
 ### 5.3 Real-time editing on the map
 
-This is the main use of the system. Phase 3 builds point editing only, since both active types are points. Line and polygon drawing and vertex editing follow when those types are activated.
+This is the main use of the system. Phase 3 builds point editing only, since both active types are points. Phase 16b adds drawing a line and editing its vertices, for Farm-to-Market Roads. Polygon drawing follows when a polygon type is activated.
 
 - **Add:** click the map (point) or draw (line/polygon). Starting from a barangay profile preselects that barangay.
 - **Edit:** drag to move, edit vertices, and delete (soft), all directly on the map. A dragged marker doesn't move until the move is confirmed, so a slip of the finger changes nothing. The confirmation takes an optional note. Its "Move and set barangay" choice needs a reason, as resolving a flag does, because it can clear a flag. Either goes in the audit log.
@@ -280,7 +280,7 @@ This is the main use of the system. Phase 3 builds point editing only, since bot
 - **Barangay baseline fields:** the same form builder, without photo fields, as photos belong to a record.
 - **Users:** invite by email or by link, set a role, correct a name, deactivate and reactivate, all from `/admin`. A Supabase Edge Function holds the secret key this needs, and the database refuses any change that would leave no active Admin.
 - Changes appear on open maps without a code release.
-- **Not built yet: drawing lines and polygons** (§5.3). A polygon type can be set up but not activated. Its Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses both activating it and any polygon record without a shape. Since Phase 16 (`0012_lines.sql`) a line type can be activated: the map draws its lines, and a record of it can wait for its traced line, counted and kept off the map, as a point record waits for coordinates.
+- **Not built yet: drawing polygons** (§5.3). A polygon type can be set up but not activated. Its Active switch is greyed out with the note "Needs drawing tools (not yet built)", and the database refuses both activating it and any polygon record without a shape. Since Phase 16 (`0012_lines.sql`) a line type can be activated: the map draws its lines, and a record of it can wait for its traced line, counted and kept off the map, as a point record waits for coordinates. Since Phase 16b (`0013_line_drawing.sql`) the line is drawn and reshaped on the map in the record's Edit or Resolve flag form, and saved through `create_intervention` and `update_intervention` as [longitude, latitude] pairs. A line needs two points or more, and a record has a point or a line, never both. A line in several parts can't be reshaped yet and stays as it is.
 - **Audit log page:** Admin only, in the database as well as on screen. Who changed what and when, with filters by person, record, action and date (whole days, Philippine time), one page at a time. Each line links to its record, or to where the item is managed. A record's lines include its status entries and photos. The raw source row is left out.
 
 ### 5.5 Dashboard
@@ -410,7 +410,7 @@ Chosen so a solo developer can build and host it cheaply.
 |---|---|---|
 | Frontend | **React + Vite + TypeScript** | Component-based, easy to merge into ABE PDCS later |
 | Map | **Leaflet** + `react-leaflet`, `leaflet.markercluster`, `leaflet.heat` | Lightweight, free, well documented |
-| On-map drawing and editing | Leaflet's own marker dragging for points. **Leaflet-Geoman** (free version) when line and polygon types are activated | Geoman handles draw, drag, vertex editing and delete for all three geometry kinds, but nothing active needs it yet |
+| On-map drawing and editing | Leaflet's own marker dragging for points, and for a line's points since Phase 16b (`map/LineDraftLayer.tsx`). **Leaflet-Geoman** (free version) when polygon types are activated | A line needs only adding, dragging, inserting and removing points, which Leaflet's markers do without another library. Geoman handles polygons too, but nothing active needs it yet |
 | Forms | Plain React forms, generated from `core_field_rules` and `field_schema`, with the validation rules in one module shared with local mode | The rules are needed outside the form too, so a form library would add little |
 | Photo location | `exifr` (lite build) | Reads GPS and date from JPEG and HEIC in the browser |
 | Charts | Recharts 3 | Loaded only when the dashboard opens |

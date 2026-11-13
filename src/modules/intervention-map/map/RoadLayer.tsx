@@ -9,6 +9,7 @@ import type { Intervention, MapData } from '../data/types';
 import { isOnMap, popupHtml } from '../lib/display';
 import { linePartsOf, pointOnLine } from '../lib/qa';
 import { formatKm, isUnfinished, lineLength } from '../lib/roads';
+import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
 import { usePermissions } from '../state/store-context';
 import { onPopupClick } from './InterventionLayer';
@@ -39,6 +40,9 @@ export function RoadLayer({ data, records, colorOf }: RoadLayerProps) {
   const groupRef = useRef<L.LayerGroup | null>(null);
   const shown = useRef(new Map<string, ShownRoad>());
   const focusRecord = useMapUi((state) => state.focusRecord);
+  // The road an Edit or Resolve flag form is open on: its draft takes its place on the map until the
+  // form closes, even with the draft cleared, as that's what saving would do.
+  const editingId = useEditUi((state) => (state.panel?.kind === 'edit' || state.panel?.kind === 'resolve' ? state.panel.id : null));
   const permissions = usePermissions();
   const navigate = useNavigate();
 
@@ -73,7 +77,9 @@ export function RoadLayer({ data, records, colorOf }: RoadLayerProps) {
 
     const wanted = new Map<string, { record: Intervention; latlngs: L.LatLngExpression[][]; color: string; dashed: boolean; km: number | null; key: string }>();
     for (const record of records) {
-      const parts = isOnMap(record) ? linePartsOf(record) : null;
+      // A line in several parts can't be reshaped, so it stays drawn while its form is open.
+      const beingReshaped = record.id === editingId && record.geojson?.type === 'LineString';
+      const parts = isOnMap(record) && !beingReshaped ? linePartsOf(record) : null;
       if (!parts) continue;
       const latlngs = parts.map((part) => part.map(([lng, lat]) => [lat, lng] as L.LatLngTuple));
       const color = colorOf(record);
@@ -126,7 +132,7 @@ export function RoadLayer({ data, records, colorOf }: RoadLayerProps) {
     for (const { hit } of roads.values()) {
       if (hit.isPopupOpen()) hit.getPopup()?.update();
     }
-  }, [records, data, colorOf]);
+  }, [records, data, colorOf, editingId]);
 
   // A road chosen elsewhere, such as from its own page: the map fits it and opens its popup. Each request
   // is acted on once, when the road is drawn, so later data changes don't move the map again.

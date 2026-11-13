@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { ConflictError, ValidationError, type InterventionValues } from '../data/store';
+import { ConflictError, ValidationError, type InterventionValues, type LinePositions } from '../data/store';
 import type { AuditEntry, Intervention, InterventionType, MapData } from '../data/types';
 import { auditChanges } from '../lib/audit-display';
 import { recordsInView } from '../lib/choropleth';
@@ -17,32 +17,14 @@ import {
   type FormState,
 } from '../lib/form-values';
 import { photoProblem } from '../lib/photo-meta';
-import { editWarnings, linePartsOf, locatePoint, pointOf } from '../lib/qa';
+import { editWarnings, linePartsOf, linePositionsOf, locatePoint, pointOf } from '../lib/qa';
 import { activeFields, attributeKey, validateIntervention, validateStatus, type FieldErrors } from '../lib/validation';
 import { useEditUi } from '../state/edit-ui';
 import { useMapUi } from '../state/map-ui';
 import { useStore } from '../state/store-context';
 import { CustomField, PanelFrame, PhotoField, PlaceFields, SelectField, TextField, WarningList } from './FormParts';
+import { LineLocation } from './LineLocation';
 import { LocationInput } from './LocationInput';
-import { formatKm, lineLength } from '../lib/roads';
-
-// A road's location is its line. The form shows what it has, and keeps it through the edit.
-function LineLocation({ record }: { record: Intervention | null }) {
-  const traced = record ? lineLength(record).tracedKm : null;
-  return (
-    <fieldset className="location-input">
-      <legend>Location</legend>
-      <p className="location-readout" data-testid="location-readout">
-        {traced === null ? 'No traced line yet' : `Traced line, ${formatKm(traced)}`}
-      </p>
-      <p className="field-hint">
-        {traced === null
-          ? "Drawing a road's line on the map isn't built yet. Until it's traced, the road is counted in every total and kept off the map."
-          : 'The line stays as it is. Reshaping it on the map isn\'t built yet.'}
-      </p>
-    </fieldset>
-  );
-}
 
 interface InterventionFormProps {
   data: MapData;
@@ -57,6 +39,7 @@ function activeLookup<T extends { id: number; name: string; is_active: boolean }
 export function InterventionForm({ data, record, prefill }: InterventionFormProps) {
   const { store, places } = useStore();
   const draft = useEditUi((state) => state.draft);
+  const draftLine = useEditUi((state) => state.draftLine);
   const closePanel = useEditUi((state) => state.closePanel);
   const setDraft = useEditUi((state) => state.setDraft);
   const setNotice = useEditUi((state) => state.setNotice);
@@ -69,6 +52,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
   );
   const initialForm = useRef(form);
   const initialPoint = useRef(draft);
+  const initialLine = useRef(draftLine);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -87,19 +71,27 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
   const latest = record ? (data.interventions.find((r) => r.id === record.id) ?? null) : null;
   const changedElsewhere = latest !== null && latest.version !== knownVersion;
 
-  // A new record's place follows where it's put, until someone chooses a place themselves.
+  const typeId = Number(form.intervention_type_id);
+  const type = data.types.find((t) => t.id === typeId) as InterventionType | undefined;
+  // A road is a line, so a point placed on the map isn't its location: its line, drawn on the map, is.
+  // A line in several parts can't be reshaped here, so it's left out and stays as it is.
+  const isLine = type?.geometry_kind === 'line';
+  const lineEditable = base?.geojson?.type !== 'MultiLineString';
+  const linePositions = useMemo<LinePositions | null>(() => (draftLine ? draftLine.map(({ lat, lng }) => [lng, lat]) : null), [draftLine]);
+
+  // A new record's place follows where it's put, until someone chooses a place themselves. A road's
+  // follows its first point.
   const placeChosen = useRef(record !== null || prefill !== undefined);
+  const placedAt = isLine ? (draftLine?.[0] ?? null) : draft;
   useEffect(() => {
-    if (placeChosen.current || !draft) return;
-    const id = locatePoint(draft, places);
+    if (placeChosen.current || !placedAt) return;
+    const id = locatePoint(placedAt, places);
     const barangay = data.barangays.find((b) => b.id === id);
     if (barangay) {
       setForm((current) => ({ ...current, municipality_id: String(barangay.municipality_id), barangay_id: String(barangay.id) }));
     }
-  }, [draft, places, data.barangays]);
+  }, [placedAt?.lat, placedAt?.lng, places, data.barangays]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const typeId = Number(form.intervention_type_id);
-  const type = data.types.find((t) => t.id === typeId) as InterventionType | undefined;
   const fields = type ? activeFields(type.field_schema) : [];
   const rule = (key: string) => type?.core_field_rules[key] ?? 'optional';
 
@@ -112,10 +104,9 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     required: rule(key) === 'required',
   });
 
-  // A road is a line, so a point placed on the map isn't its location. Its line stays as it is.
-  const isLine = type?.geometry_kind === 'line';
   const point = isLine ? null : draft;
-  const values: InterventionValues | null = type ? { ...valuesFromForm(form, point, type.field_schema, base?.attributes), field_photos: photoFiles } : null;
+  const lineValue = isLine && lineEditable ? linePositions : undefined;
+  const values: InterventionValues | null = type ? { ...valuesFromForm(form, point, type.field_schema, base?.attributes, lineValue), field_photos: photoFiles } : null;
 
   const warnings = useMemo(() => {
     const municipalityId = Number(form.municipality_id);
@@ -125,7 +116,8 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
       {
         id: record?.id ?? null,
         point,
-        ...(isLine ? { line: base ? linePartsOf(base) : null } : {}),
+        // The line as drawn so far, or as it is if it can't be reshaped here. One point isn't a line yet.
+        ...(isLine ? { line: !lineEditable && base ? linePartsOf(base) : linePositions && linePositions.length >= 2 ? [linePositions] : null } : {}),
         municipality_id: municipalityId,
         barangay_id: barangayId,
         barangay_raw: latest?.barangay_raw ?? null,
@@ -139,9 +131,12 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
       places,
       data,
     );
-  }, [form, point, isLine, base, data, places, record, latest]);
+  }, [form, point, isLine, lineEditable, linePositions, base, data, places, record, latest]);
 
-  const isDirty = () => JSON.stringify(form) !== JSON.stringify(initialForm.current) || JSON.stringify(draft) !== JSON.stringify(initialPoint.current);
+  const isDirty = () =>
+    JSON.stringify(form) !== JSON.stringify(initialForm.current) ||
+    JSON.stringify(draft) !== JSON.stringify(initialPoint.current) ||
+    JSON.stringify(draftLine) !== JSON.stringify(initialLine.current);
 
   const close = () => {
     if (!isDirty() || window.confirm('Discard your changes?')) closePanel();
@@ -233,6 +228,9 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     const point = pointOf(latest);
     setDraft(point);
     initialPoint.current = point;
+    const line = linePositionsOf(latest)?.map(([lng, lat]) => ({ lat, lng })) ?? null;
+    useEditUi.getState().setDraftLine(line);
+    initialLine.current = line;
     setBase(latest);
     setKnownVersion(latest.version);
     setFailure(null);
@@ -272,6 +270,19 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
     });
     setPhotoFiles({});
     setErrors({});
+
+    // A point placed before choosing a road becomes the road's first point, and back again.
+    const toLine = data.types.find((t) => t.id === id)?.geometry_kind === 'line';
+    const edit = useEditUi.getState();
+    if (toLine && !isLine) {
+      const start = edit.draft;
+      edit.setDraft(null);
+      edit.setDraftLine(start ? [start] : null, start ? 'add' : null);
+    } else if (!toLine && isLine) {
+      const first = edit.draftLine?.[0] ?? null;
+      edit.setDraftLine(null, null);
+      edit.setDraft(first);
+    }
   };
 
   const setPhoto = (key: string, file: File | null) => {
@@ -363,7 +374,7 @@ export function InterventionForm({ data, record, prefill }: InterventionFormProp
           />
         )}
 
-        {isLine ? <LineLocation record={base} /> : <LocationInput />}
+        {isLine ? <LineLocation editable={lineEditable} error={errors.line} /> : <LocationInput />}
 
         <PlaceFields
           data={data}

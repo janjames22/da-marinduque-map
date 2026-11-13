@@ -388,3 +388,64 @@
 .legend-roads-title {
   margin-top: var(--space-3);
 }
+
+/* Drawing a road's line (Phase 16b), in the draft marker's orange. While adding points, a click must
+   reach the map even over a marker or another road, as when placing a point. */
+.is-drawing,
+.is-drawing .barangay-shape {
+  cursor: crosshair !important;
+}
+
+.is-drawing .leaflet-marker-icon:not(.line-handle, .line-midpoint),
+.is-drawing .road-hit {
+  pointer-events: none !important;
+}
+
+/* The legend makes way while a line is drawn or reshaped, as it does for a popup, so no point is under it. */
+.map.has-line-draft ~ .legend {
+  display: none;
+}
+
+/* Each handle's box is its touch area. The dot inside is what shows. */
+.line-handle,
+.line-midpoint {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.line-handle span {
+  background: #ffffff;
+  border: 3px solid #eb6834;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 40%);
+  box-sizing: border-box;
+  height: 20px;
+  width: 20px;
+}
+
+.line-handle.is-selected span {
+  background: #eb6834;
+  border-color: #ffffff;
+  box-shadow:
+    0 0 0 2px #2b2a28,
+    0 2px 6px rgb(0 0 0 / 50%);
+  height: 24px;
+  width: 24px;
+}
+
+.line-midpoint span {
+  background: #ffffff;
+  border: 2px solid #eb6834;
+  border-radius: 50%;
+  box-sizing: border-box;
+  height: 12px;
+  opacity: 0.9;
+  width: 12px;
+}
+
+.line-handle:focus-visible,
+.line-midpoint:focus-visible {
+  border-radius: 50%;
+  outline: 2px solid var(--focus-ring);
+}

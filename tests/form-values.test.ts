@@ -125,6 +125,15 @@ describe('validateIntervention', () => {
     expect(validateIntervention(values, null, context)).toEqual({});
   });
 
+  it("takes a line only for a line type, and only with two points or more", () => {
+    const road = { ...context, type: { ...context.type, geometry_kind: 'line' as const } };
+    expect(validateIntervention({ ...values, point: null, line: [[121.85, 13.45], [121.86, 13.46]] }, null, road)).toEqual({});
+    expect(validateIntervention({ ...values, point: null, line: null }, null, road)).toEqual({});
+    expect(Object.keys(validateIntervention({ ...values, point: null, line: [[121.85, 13.45]] }, null, road))).toEqual(['line']);
+    expect(Object.keys(validateIntervention({ ...values, line: [[121.85, 13.45], [121.86, 13.46]] }, null, context))).toEqual(['intervention_type_id']);
+    expect(Object.keys(validateIntervention({ ...values, point: { lat: 13.45, lng: 121.85 } }, null, road))).toEqual(['intervention_type_id']);
+  });
+
   it('requires what the type requires on a new record', () => {
     const errors = validateIntervention({ ...values, category_id: null, year_funded: null, beneficiary: null, title: 'A title' }, null, context);
     expect(Object.keys(errors).sort()).toEqual(['beneficiary', 'category_id', 'year_funded']);
@@ -227,6 +236,27 @@ describe('buildPatch', () => {
     expect(buildPatch(base, { ...values, point: { lat: 13.5, lng: 122 } }, base)).toEqual({ point: { lat: 13.5, lng: 122 } });
     expect(buildPatch(base, { ...values, point: null }, base)).toEqual({ point: null });
     expect(buildPatch(base, { ...values, point: { lat: 13.4, lng: 122 } }, base)).toEqual({});
+  });
+
+  // Phase 16b: a road's line, as the form draws it.
+  it("sends a reshaped or cleared line, nothing for the same line, and keeps a line the form leaves out", () => {
+    const LINE: [number, number][] = [[121.85, 13.45], [121.86, 13.46]];
+    const road = record({ geojson: { type: 'LineString', coordinates: LINE } });
+    const values = valuesFromRecord(road);
+    expect(values.line).toEqual(LINE);
+    expect(buildPatch(road, values, road)).toEqual({});
+    expect(buildPatch(road, { ...values, line: [...LINE, [121.87, 13.47]] }, road)).toEqual({ line: [...LINE, [121.87, 13.47]] });
+    expect(buildPatch(road, { ...values, line: null }, road)).toEqual({ line: null });
+    const { line: _left, ...withoutLine } = values;
+    expect(buildPatch(road, withoutLine, road)).toEqual({});
+
+    // A road waiting for its line gets one.
+    const waiting = record({ geojson: null });
+    expect(valuesFromRecord(waiting)).not.toHaveProperty('line');
+    expect(buildPatch(waiting, { ...valuesFromRecord(waiting), line: LINE }, waiting)).toEqual({ line: LINE });
+    // A line in several parts can't be drawn here, so the form never sends it.
+    const parts = record({ geojson: { type: 'MultiLineString', coordinates: [LINE, LINE] } });
+    expect(valuesFromRecord(parts)).not.toHaveProperty('line');
   });
 
   it('keeps fields someone else changed in the meantime', () => {
