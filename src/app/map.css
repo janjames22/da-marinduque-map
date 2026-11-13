@@ -451,13 +451,56 @@
 }
 
 /* Putting the layers card and the panel on the right away, on a computer. A phone has its own sheet
-   and takes the panels in turns, so these buttons are for computers only. They sit among the map's own
-   controls (ControlSlot): the layers one under the zoom buttons, the panel one above the attribution. */
+   and takes the panels in turns, so those buttons are for computers only. They sit among the map's own
+   controls (ControlSlot): the layers one under the zoom buttons, the panel one above the attribution.
+   Full screen sits under the zoom buttons too, on a phone as well. */
 .map-page .edge-control {
   display: none;
 }
 
+/* Like the zoom buttons: an icon, and a name too once a panel is put away. */
+.map-page .edge-toggle {
+  align-items: center;
+  background: var(--bg-surface);
+  border: 0;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px rgb(31 30 28 / 22%);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  gap: 6px;
+  height: 36px;
+  justify-content: center;
+  min-width: 36px;
+  padding: 0 10px;
+}
+
+.map-page .edge-toggle:not(.is-collapsed) {
+  padding: 0;
+}
+
+.map-page .edge-toggle svg {
+  height: 18px;
+  width: 18px;
+}
+
+.map-page .edge-toggle:hover {
+  background: var(--bg-surface-muted);
+}
+
+.map-page .edge-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 @media (min-width: 801px) {
+  .map-page .edge-control {
+    display: block;
+  }
+
   .map-page .workspace.layers-hidden .panel-left,
   .map-page .workspace.side-hidden .panel-right {
     display: none;
@@ -487,64 +530,6 @@
   .map-page .workspace.side-hidden.layers-hidden.has-right-panel,
   .map-page .workspace.side-hidden.layers-hidden.has-insights {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .map-page .edge-control {
-    display: block;
-  }
-
-  /* Like the zoom buttons: an icon while the card is out, and its name too once it's put away. */
-  .map-page .edge-toggle {
-    align-items: center;
-    background: var(--bg-surface);
-    border: 0;
-    border-radius: var(--radius-sm);
-    box-shadow: 0 1px 3px rgb(31 30 28 / 22%);
-    color: var(--text-primary);
-    cursor: pointer;
-    display: inline-flex;
-    font: inherit;
-    font-size: 13px;
-    font-weight: var(--font-weight-semibold);
-    gap: 6px;
-    height: 36px;
-    justify-content: center;
-    min-width: 36px;
-    padding: 0 10px;
-  }
-
-  .map-page .edge-toggle:not(.is-collapsed) {
-    padding: 0;
-  }
-
-  .map-page .edge-toggle svg {
-    height: 18px;
-    width: 18px;
-  }
-
-  .map-page .edge-toggle:hover {
-    background: var(--bg-surface-muted);
-  }
-
-  .map-page .edge-toggle:focus-visible {
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 2px;
-  }
-
-  /* An icon, as the Leaflet buttons are, so the toolbar stays one row on a narrow map. */
-  .map-page .map-toolbar .fullscreen-button {
-    justify-content: center;
-    padding: 0;
-    width: 40px;
-  }
-
-  .map-page .map-toolbar .fullscreen-button .toolbar-label {
-    clip-path: inset(50%);
-    height: 1px;
-    overflow: hidden;
-    position: absolute;
-    white-space: nowrap;
-    width: 1px;
   }
 }
 

@@ -26,14 +26,14 @@ test.describe('on a computer', () => {
   test('the layers card is put away for a wider map, and stays away next time', async ({ page }) => {
     await open(page);
     const before = await mapWidth(page);
-    await page.getByRole('button', { name: 'Hide the layers and filters' }).click();
+    await page.getByRole('button', { name: 'Hide layers' }).click();
     await expect(layers(page)).toBeHidden();
     await expect.poll(() => mapWidth(page)).toBeGreaterThan(before + 200);
     // Remembered, as the dashboard panel is.
     await page.reload();
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await expect(layers(page)).toBeHidden();
-    await page.getByRole('button', { name: 'Show the layers and filters' }).click();
+    await page.getByRole('button', { name: 'Show layers' }).click();
     await expect(layers(page)).toBeVisible();
     await expect.poll(() => mapWidth(page)).toBe(before);
   });
@@ -56,18 +56,19 @@ test.describe('on a computer', () => {
     const profile = page.getByRole('complementary', { name: `Profile of barangay ${bantad.name}` });
     await expect(profile).toBeVisible();
     const before = await mapWidth(page);
-    await page.getByRole('button', { name: 'Hide the barangay profile' }).click();
+    await page.getByRole('button', { name: 'Hide the side panel' }).click();
     await expect(profile).toBeHidden();
     await expect.poll(() => mapWidth(page)).toBeGreaterThan(before + 200);
-    await page.getByRole('button', { name: 'Show the barangay profile' }).click();
+    await expect(page.getByRole('button', { name: 'Show the side panel' })).toHaveText('Barangay profile');
+    await page.getByRole('button', { name: 'Show the side panel' }).click();
     await expect(profile).toBeVisible();
 
     // Put away again, then another panel takes its place: that one shows.
-    await page.getByRole('button', { name: 'Hide the barangay profile' }).click();
+    await page.getByRole('button', { name: 'Hide the side panel' }).click();
     await expect(profile).toBeHidden();
     await page.getByRole('button', { name: /^Unassigned: \d+ records?$/ }).click();
     await expect(page.getByRole('complementary', { name: 'Unassigned records' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Hide the unassigned records' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Hide the side panel' })).toBeVisible();
   });
 
   test('the dashboard beside the map is put away and back the same way', async ({ page }) => {
@@ -75,9 +76,9 @@ test.describe('on a computer', () => {
     const dashboard = page.getByRole('complementary', { name: 'Dashboard and records' });
     await page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true }).click();
     await expect(dashboard).toBeVisible();
-    await page.getByRole('button', { name: 'Hide the dashboard' }).click();
+    await page.getByRole('button', { name: 'Hide the side panel' }).click();
     await expect(dashboard).toBeHidden();
-    await page.getByRole('button', { name: 'Show the dashboard' }).click();
+    await page.getByRole('button', { name: 'Show the side panel' }).click();
     await expect(dashboard).toBeVisible();
   });
 });
@@ -90,7 +91,7 @@ test('the map fills the screen alone, and leaves it for a profile, or by its but
   await expect.poll(async () => (await page.locator('.leaflet-container').boundingBox())!.width).toBe(viewport.width);
   // Only the map's own buttons: nothing that would open a panel outside it.
   await expect(page.getByRole('button', { name: 'Layers and filters' })).toBeHidden();
-  await expect(page.getByRole('button', { name: /^(Hide|Show) the layers and filters$/ })).toBeHidden();
+  await expect(page.getByRole('button', { name: /^(Hide|Show) layers$/ })).toBeHidden();
 
   await page.getByRole('button', { name: 'Exit full screen' }).click();
   await expect.poll(() => fullscreen(page)).toBeNull();

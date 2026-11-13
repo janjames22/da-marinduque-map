@@ -193,10 +193,10 @@ On a computer, each of these can be put away for a wider map, and brought back:
 | To put away | Use | To bring it back |
 |---|---|---|
 | **The menu** on the left | The panel button at the top left of the top bar | The same button. The menu stays away on every page, and next time, until it's brought back |
-| **The layers and filters card** | The panel button under the map's zoom buttons | The **Layers** button there. It stays away next time too |
+| **The layers and filters card** | The panel button under the map's zoom and full screen buttons | The **Layers** button there. It stays away next time too |
 | **The panel on the right**: a barangay's profile, a form, the list of unassigned records or the dashboard | The panel button at the bottom right of the map | The button there, named after the panel. A form or profile put away keeps what's in it. Opening another panel brings it back |
 
-**Full screen**, the last button in the map's toolbar, gives the map the whole screen alone, with its zoom buttons, toolbar and legend. **Esc**, or the same button, leaves it. Anything that opens beside or over the map, such as a barangay's profile, a form, Export, Print map or a photo, leaves full screen first. On a phone it hides the browser's bars too. An iPhone has no full screen for pages, so there the map fills the browser window instead.
+**Full screen**, the button under the map's zoom buttons, gives the map the whole screen alone, with its zoom buttons, toolbar and legend. **Esc**, or the same button, leaves it. Anything that opens beside or over the map, such as a barangay's profile, a form, Export, Print map or a photo, leaves full screen first. On a phone it hides the browser's bars too. An iPhone has no full screen for pages, so there the map fills the browser window instead.
 
 ## The dashboard and records table
 

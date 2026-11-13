@@ -187,7 +187,8 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   const layout = otherPanel ? ' has-right-panel' : ui.insights ? ` has-insights${ui.insightsWide ? ' insights-wide' : ''}` : '';
 
   // On a computer the layers card and the panel on the right can each be put away for the map's sake.
-  // The panel comes back when another one takes its place.
+  // The panel comes back when another one takes its place. The buttons' names are kept apart from the
+  // panels' own names, such as "Layers and filters", so a screen reader doesn't hear one as the other.
   const rightPanel = otherPanel || ui.insights !== null;
   const sideHidden = ui.sideHidden && rightPanel;
   const rightKey = panel ? `${panel.kind}:${'id' in panel ? panel.id : ''}` : ui.showUnassigned ? 'unassigned' : selected ? `barangay:${selected.id}` : (ui.insights ?? '');
@@ -287,6 +288,13 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
             selectedBarangayId={selectedId}
             onSelectBarangay={onMapSelectBarangay}
           >
+            {/* Under the zoom buttons, as on most web maps, rather than in the toolbar: one more button
+                there made it wrap onto a second row over a popup when the map is narrow. */}
+            <ControlSlot position="topleft" className="fullscreen-control">
+              <button type="button" className="edge-toggle" aria-label={fullscreen.mode ? 'Exit full screen' : 'Full screen'} title={fullscreen.mode ? 'Exit full screen (Esc)' : 'Full screen'} onClick={fullscreen.toggle}>
+                {fullscreen.mode ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+              </button>
+            </ControlSlot>
             {/* Computers only: put the layers card, or the panel on the right, away and back. Among
                 the map's own controls, so they stay clear of the legend and the toolbar. */}
             <ControlSlot position="topleft" className="edge-control">
@@ -295,7 +303,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
                 className={`edge-toggle${ui.layersHidden ? ' is-collapsed' : ''}`}
                 aria-controls="map-layers"
                 aria-expanded={!ui.layersHidden}
-                aria-label={ui.layersHidden ? 'Show the layers and filters' : 'Hide the layers and filters'}
+                aria-label={ui.layersHidden ? 'Show layers' : 'Hide layers'}
                 title={ui.layersHidden ? 'Show the layers and filters' : 'Hide the layers and filters'}
                 onClick={() => ui.setLayersHidden(!ui.layersHidden)}
               >
@@ -309,7 +317,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
                   type="button"
                   className={`edge-toggle${sideHidden ? ' is-collapsed' : ''}`}
                   aria-expanded={!sideHidden}
-                  aria-label={`${sideHidden ? 'Show' : 'Hide'} the ${rightName}`}
+                  aria-label={sideHidden ? 'Show the side panel' : 'Hide the side panel'}
                   title={`${sideHidden ? 'Show' : 'Hide'} the ${rightName}`}
                   onClick={() => ui.setSideHidden(!sideHidden)}
                 >
@@ -365,15 +373,6 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
                   Dashboard
                 </button>
               )}
-              <button
-                type="button"
-                className="export-button fullscreen-button"
-                title={fullscreen.mode ? 'Exit full screen (Esc)' : 'Full screen'}
-                onClick={fullscreen.toggle}
-              >
-                {fullscreen.mode ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
-                <span className="toolbar-label">{fullscreen.mode ? 'Exit full screen' : 'Full screen'}</span>
-              </button>
             </div>
           )}
           {picking && (
