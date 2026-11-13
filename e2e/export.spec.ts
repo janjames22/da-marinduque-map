@@ -54,7 +54,11 @@ async function withFilters(page: Page, change: () => Promise<unknown>) {
   const drawer = await toggle.isVisible();
   if (drawer) await toggle.click();
   await change();
-  if (drawer) await page.getByRole('button', { name: 'Close layers' }).click();
+  if (drawer) {
+    await page.getByRole('button', { name: 'Close layers' }).click();
+    // The card fades out before its Layers button comes back.
+    await expect(page.getByRole('complementary', { name: 'Layers and filters' })).toBeHidden();
+  }
 }
 
 const filterToGasan = (page: Page) => withFilters(page, () => page.getByRole('combobox', { name: /^Municipality/ }).selectOption(String(gasan.id)));

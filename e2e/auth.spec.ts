@@ -227,7 +227,7 @@ test.describe('what each role is offered', () => {
     for (const name of ['Edit', 'Update status', 'History', 'Delete']) await expect(popupAction(page, name)).toBeVisible();
   });
 
-  test('an Admin also gets the deleted records', async ({ page, isMobile }) => {
+  test('an Admin also gets the deleted records', async ({ page }) => {
     await signedIn(page, USERS.admin);
     await page.getByRole('button', { name: 'Layers and filters' }).click();
     await expect(page.getByRole('button', { name: /Deleted records/ })).toBeVisible();
@@ -672,7 +672,7 @@ test.describe('saved views', () => {
   const gasan = seedData.municipalities.find((m) => m.name === 'Gasan')!;
   const inGasan = seedData.barangays.filter((b) => b.municipality_id === gasan.id).length;
 
-  async function openLayers(page: Page, isMobile: boolean) {
+  async function openLayers(page: Page, _isMobile: boolean) {
     await page.getByRole('button', { name: 'Layers and filters' }).click();
     await expect(layers(page)).toBeVisible();
   }

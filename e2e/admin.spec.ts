@@ -60,7 +60,11 @@ async function withLayerPanel(page: Page, look: (panel: Locator) => Promise<unkn
   const drawer = await toggle.isVisible();
   if (drawer) await toggle.click();
   await look(page.getByRole('complementary', { name: 'Layers and filters' }));
-  if (drawer) await page.getByRole('button', { name: 'Close layers' }).click();
+  if (drawer) {
+    await page.getByRole('button', { name: 'Close layers' }).click();
+    // The card fades out before its Layers button comes back.
+    await expect(page.getByRole('complementary', { name: 'Layers and filters' })).toBeHidden();
+  }
 }
 
 async function addFieldTo(scope: Locator, label: string, kind?: string) {

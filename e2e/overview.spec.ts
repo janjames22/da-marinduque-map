@@ -100,7 +100,7 @@ test.describe('the frame', () => {
 });
 
 test.describe('the Dashboard page', () => {
-  test('shares its filters with the map, and the totals follow them', async ({ page, isMobile }) => {
+  test('shares its filters with the map, and the totals follow them', async ({ page }) => {
     await open(page, '/dashboard');
     await expect(tile(page, 'records')).toHaveText(String(live.length));
     await expect(tile(page, 'awaiting')).toHaveText(String(offMap.length));

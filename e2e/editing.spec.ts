@@ -992,7 +992,7 @@ test.describe('editing a record', () => {
 });
 
 test.describe('delete and restore', () => {
-  test('a deleted record leaves the map and counts, and can be restored', async ({ page, isMobile }) => {
+  test('a deleted record leaves the map and counts, and can be restored', async ({ page }) => {
     await openPopup(page, cleanRecord);
     const countText = profile(page).locator('.section-title').filter({ hasText: 'Interventions' });
     const before = Number((await countText.locator('.count').textContent()) ?? '0');
@@ -1131,7 +1131,7 @@ test.describe('more than one tab', () => {
 });
 
 test.describe('local data', () => {
-  test('counts changes, and can go back to the seed', async ({ page, isMobile }) => {
+  test('counts changes, and can go back to the seed', async ({ page }) => {
     await openProfile(page, emptyBarangay.id);
     await profile(page).getByRole('button', { name: 'Edit baseline' }).click();
     await form(page, 'Edit baseline').getByLabel('Number of farmers').fill('9');
@@ -1157,7 +1157,7 @@ test.describe('when the seed is rebuilt', () => {
       await route.fulfill({ response, body: `${await response.text()} ` });
     });
 
-  test('an unchanged browser picks it up by itself', async ({ page, isMobile }) => {
+  test('an unchanged browser picks it up by itself', async ({ page }) => {
     await ready(page);
     await serveRebuiltSeed(page);
     await ready(page);
@@ -1166,7 +1166,7 @@ test.describe('when the seed is rebuilt', () => {
     await expect(page.getByText('The seed data was rebuilt.')).toHaveCount(0);
   });
 
-  test('local changes are kept until the person chooses to discard them', async ({ page, isMobile }) => {
+  test('local changes are kept until the person chooses to discard them', async ({ page }) => {
     await openProfile(page, emptyBarangay.id);
     await profile(page).getByRole('button', { name: 'Edit baseline' }).click();
     await form(page, 'Edit baseline').getByLabel('Number of farmers').fill('77');

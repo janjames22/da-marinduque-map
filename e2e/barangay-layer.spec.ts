@@ -44,7 +44,7 @@ const profile = (page: Page) => page.getByLabel(/^Profile of barangay/);
 const programSelect = (page: Page) => page.getByRole('combobox', { name: 'Program', exact: true });
 const typeSelect = (page: Page) => page.getByRole('combobox', { name: 'Type', exact: true });
 
-async function openPanel(page: Page, isMobile: boolean) {
+async function openPanel(page: Page, _isMobile: boolean) {
   await page.getByRole('button', { name: 'Layers and filters' }).click();
 }
 

@@ -84,15 +84,28 @@ async function ready(page: Page, path = '/map', { panelOpen = true } = {}) {
   if (panelOpen && (await open.isVisible())) await open.click();
 }
 
+// On a computer the panel starts closed each time the Map opens, so it's opened from the toolbar first.
+async function openPanel(page: Page) {
+  if (await panel(page).isVisible()) return;
+  await page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await expect(panel(page)).toBeVisible();
+}
+
 async function showDashboard(page: Page, isMobile: boolean) {
   if (isMobile) await tabs(page).getByRole('button', { name: 'Dashboard' }).click();
-  else await panel(page).getByRole('button', { name: 'Dashboard', exact: true }).click();
+  else {
+    await openPanel(page);
+    await panel(page).getByRole('button', { name: 'Dashboard', exact: true }).click();
+  }
   await expect(kpi(page, 'records')).toBeVisible({ timeout: 30_000 });
 }
 
 async function showRecords(page: Page, isMobile: boolean) {
   if (isMobile) await tabs(page).getByRole('button', { name: 'List' }).click();
-  else await panel(page).getByRole('button', { name: 'Records', exact: true }).click();
+  else {
+    await openPanel(page);
+    await panel(page).getByRole('button', { name: 'Records', exact: true }).click();
+  }
   await expect(page.getByRole('region', { name: 'Records table' })).toBeVisible({ timeout: 30_000 });
 }
 
@@ -125,7 +138,7 @@ async function goToBarangayAndCloseIt(page: Page, isMobile: boolean, name: strin
 const filterToGasan = (page: Page, isMobile: boolean) => withLayers(page, isMobile, () => layers(page).getByRole('combobox', { name: /^Municipality/ }).selectOption(String(gasan.id)));
 
 test.describe('where it sits', () => {
-  test('beside the map on a computer, closed until opened, and remembered either way', async ({ page, isMobile }) => {
+  test('beside the map on a computer, closed until opened, and closed again when the Map opens next', async ({ page, isMobile }) => {
     test.skip(isMobile, 'the computer layout');
     // The map opens on its own, so it isn't crowded. The Dashboard page has the full figures.
     await ready(page, '/map', { panelOpen: false });
@@ -140,13 +153,12 @@ test.describe('where it sits', () => {
     expect(box.x).toBeGreaterThanOrEqual(beside.x + beside.width - 1);
     expect(beside.width).toBeLessThan(alone.width);
 
-    // Opening it is remembered, for someone who works with it.
-    await page.reload();
-    await expect(page.locator('.barangay-shape')).toHaveCount(218);
-    await expect(panel(page)).toBeVisible();
-
     await panel(page).getByRole('button', { name: 'Close the dashboard' }).click();
     await expect(panel(page)).toHaveCount(0);
+
+    // The Map opens map first every time (Phase 16c's Gate 1), so an open panel isn't kept for next time.
+    await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+    await expect(panel(page)).toBeVisible();
     await page.reload();
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await expect(panel(page)).toHaveCount(0);
