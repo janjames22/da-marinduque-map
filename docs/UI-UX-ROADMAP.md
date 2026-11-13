@@ -464,6 +464,7 @@ Phase numbers continue from the project history, which ends at Phase 9.
 |---|---|
 | **Goal** | Ready for daily use on any device |
 | **Branch** | `phase-17-polish` |
+| **Parts** | 17a: accessibility and devices (an axe-core check of every page, 44 px touch targets, keyboard, tablets). 17b: empty, loading and error states, and loading speed. 17c: the user guide, the spec §10 checklist and the release. Each with its own gates, the owner's choice on 2026-11-13 |
 | **Scope** | Phone and tablet layouts. Keyboard and screen-reader pass. Loading speed and bundle size (`scripts/check-bundle.ts`). Empty, loading and error states everywhere. A short user guide with screenshots |
 | **Deliverables** | The release, the guide, an updated spec §10 checklist |
 | **Done when** | The [definition of done](#14-definition-of-done) holds for the whole app |

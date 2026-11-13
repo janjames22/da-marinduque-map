@@ -1,0 +1,111 @@
+/* Touch targets (Phase 17a). On a phone, and on a touch screen of any size such as a tablet held either
+   way, what a finger has to hit is at least 44 px, as the roadmap's accessibility rule asks. Only the
+   minimum sizes are set, and they win over a page's own compact sizes, which load after this file:
+   the controls look the same, with a little more room around their words.
+
+   Left as they are: the skip link, seen only from a keyboard; links within a sentence, which the rule
+   exempts; and markers, which keep their size on the map but get a larger touch area here. */
+
+@media (max-width: 800px), (pointer: coarse) {
+  :root .primary-button,
+  :root .secondary-button,
+  :root .ui-button,
+  :root .link-button,
+  :root .popup-action,
+  :root .export-button,
+  :root .add-record-button,
+  :root .panel-toggle,
+  :root .phone-tabs button,
+  :root .legend-toggle,
+  :root .edge-toggle,
+  :root .close-button,
+  :root .sheet-close,
+  :root .records-table th button,
+  :root .insights-tabs button,
+  :root .page-tabs a,
+  :root .back-link,
+  :root select,
+  :root input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden']) {
+    min-height: 44px !important;
+  }
+
+  :root .icon-button,
+  :root .close-button,
+  :root .sheet-close,
+  :root .edge-toggle,
+  :root .export-button,
+  :root .link-button,
+  :root .popup-action,
+  :root .records-table th button,
+  :root .ui-dialog-close,
+  :root .map .leaflet-bar a {
+    min-width: 44px !important;
+  }
+
+  :root .ui-dialog-close {
+    min-height: 44px !important;
+  }
+
+  /* The popup's close mark keeps its look, with a fingertip's room around it. */
+  :root .map .leaflet-popup-close-button {
+    align-items: center;
+    display: flex;
+    height: 44px;
+    justify-content: center;
+    width: 44px;
+  }
+
+  :root .map .leaflet-bar a {
+    height: 44px !important;
+    line-height: 44px !important;
+  }
+
+  :root .icon-button {
+    min-height: 44px !important;
+  }
+
+  /* Words in a button that's taller now stay in its middle. */
+  :root .primary-button,
+  :root .secondary-button {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+  }
+
+  :root .link-button,
+  :root .popup-action,
+  :root .back-link,
+  :root .records-table th button {
+    align-items: center;
+    display: inline-flex;
+  }
+
+  /* A row's name is a taller button now, so the row's other words line up with it. */
+  :root .records-table td {
+    vertical-align: middle;
+  }
+
+  /* A box the size of a fingertip, as its label is a target too. */
+  :root input[type='checkbox'],
+  :root input[type='radio'] {
+    min-height: 22px;
+    min-width: 22px;
+  }
+
+  /* A marker's touch area reaches past its icon, so a tap just beside it still opens it. */
+  .intervention-marker::after,
+  .marker-cluster-count::after,
+  .line-midpoint::after {
+    content: '';
+    inset: -9px;
+    position: absolute;
+  }
+
+  .marker-cluster-count::after {
+    inset: -5px;
+  }
+
+  .line-midpoint::after {
+    inset: -4px;
+  }
+}

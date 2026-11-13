@@ -13,6 +13,7 @@ import './app/controls.css';
 import './app/shell.css';
 import './app/map.css';
 import './app/map-phone.css';
+import './app/touch.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
