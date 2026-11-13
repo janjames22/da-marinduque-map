@@ -5,6 +5,7 @@ import L from './leaflet-setup';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import type { Intervention, MapData } from '../data/types';
+import { shiftToClear } from '../lib/clear-view';
 import { roundPoint } from '../lib/coordinates';
 import { copyText } from '../lib/copy-text';
 import { isOnMap, popupHtml, recordIcon, whiteIconSvg, type PopupAction } from '../lib/display';
@@ -19,6 +20,24 @@ const FOCUS_HOLD_MS = 2000;
 // A popup folded away by a redraw is opened again after this long, this many times at most.
 const REOPEN_DELAY_MS = 150;
 const MAX_REOPENS = 3;
+
+// On the map while a marker is being moved, from the drag until the move is confirmed or cancelled.
+// The legend makes way meanwhile (app.css), so a marker can't be dragged or dropped out of sight.
+const MOVING_CLASS = 'marker-moving';
+// A marker's half height and some room, kept between a marker and the legend.
+const CLEAR_MARGIN = 24;
+
+// Pans the map just enough to bring a point out from under the legend, if it's under it. A popup can
+// pan its marker to where the hidden legend sits, and the legend comes back when the popup closes.
+function bringClearOfLegend(map: L.Map, at: L.LatLng) {
+  const frame = map.getContainer();
+  const legend = frame.parentElement?.querySelector<HTMLElement>('.legend')?.getBoundingClientRect();
+  if (!legend || legend.width === 0) return; // hidden, as while a popup is open
+  const origin = frame.getBoundingClientRect();
+  const cover = { left: legend.left - origin.left, top: legend.top - origin.top, right: legend.right - origin.left, bottom: legend.bottom - origin.top };
+  const shift = shiftToClear(map.latLngToContainerPoint(at), [cover], map.getSize(), CLEAR_MARGIN);
+  if (shift) map.panBy([-shift.x, -shift.y]);
+}
 
 // Icons load through <img>, so even an uploaded icon couldn't run a script, and uploads are checked too.
 function iconDataUrl(svg: string): string {
@@ -129,6 +148,7 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
   const focusRecord = useMapUi((state) => state.focusRecord);
   const moveNonce = useEditUi((state) => state.moveNonce);
   const pendingMove = useEditUi((state) => state.pendingMove);
+  const settledMove = useEditUi((state) => state.settledMove);
   const lastMoveNonce = useRef(moveNonce);
   const permissions = usePermissions();
 
@@ -181,6 +201,7 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
     return () => {
       map.off('popupopen', markOpen);
       map.off('popupclose', markClosed);
+      container.classList.remove(MOVING_CLASS);
       removeHeld(markers);
       cluster.remove();
       clusterRef.current = null;
@@ -244,7 +265,10 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
         // The top padding keeps a popup clear of the zoom buttons and the phone's layers button.
         { maxWidth: 320, autoPanPaddingTopLeft: [10, 64] },
       );
-      marker.on('dragstart', () => marker.closePopup());
+      marker.on('dragstart', () => {
+        map.getContainer().classList.add(MOVING_CLASS);
+        marker.closePopup();
+      });
       marker.on('dragend', () => {
         const current = latest.current.interventions.find((r) => r.id === id) ?? record;
         useEditUi.getState().startMove({ recordId: id, version: current.version, to: roundPoint(marker.getLatLng()) });
@@ -263,6 +287,23 @@ export function InterventionLayer({ data, records, colorOf }: InterventionLayerP
 
     tryFocus();
   }, [records, data, iconFor, moveNonce, pendingMove]);
+
+  // The legend stays away while a drop waits to be confirmed, and comes back once the move ends.
+  useEffect(() => {
+    map.getContainer().classList.toggle(MOVING_CLASS, pendingMove !== null);
+  }, [map, pendingMove]);
+
+  // As the move ends and the legend comes back, the marker is brought out from under it, so the person
+  // sees where it went. That waits until the marker is drawn where it settles, which after a save can
+  // be a moment after the move ends. In a cluster, the cluster is brought clear.
+  useEffect(() => {
+    const cluster = clusterRef.current;
+    const marker = settledMove ? shown.current.get(settledMove.recordId)?.marker : undefined;
+    if (!settledMove || !cluster || !marker || !marker.getLatLng().equals(L.latLng(settledMove.at.lat, settledMove.at.lng), 1e-7)) return;
+    useEditUi.getState().clearSettledMove();
+    const visible = cluster.getVisibleParent(marker);
+    if (visible) bringClearOfLegend(map, visible.getLatLng());
+  }, [map, records, moveNonce, settledMove]);
 
   function tryFocus() {
     const pending = pendingFocus.current;
