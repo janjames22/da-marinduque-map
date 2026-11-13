@@ -85,10 +85,11 @@ async function ready(page: Page, path = '/map', { panelOpen = true } = {}) {
 }
 
 // On a computer the panel starts closed each time the Map opens, so it's opened from the toolbar first.
+// The toolbar's button shows only while the panel is closed. The panel itself can still be loading.
 async function openPanel(page: Page) {
-  if (await panel(page).isVisible()) return;
-  await page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true }).click();
-  await expect(panel(page)).toBeVisible();
+  const open = page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true });
+  if (await open.isVisible()) await open.click();
+  await expect(panel(page)).toBeVisible({ timeout: 30_000 });
 }
 
 async function showDashboard(page: Page, isMobile: boolean) {
