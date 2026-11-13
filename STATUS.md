@@ -13,10 +13,10 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 ## Current state
 
-_Last updated: 2026-11-13_
+_Last updated: 2026-11-14_
 
 - **Branch:** `phase-17b-states`, for Phase 17b, waiting for Gate 1. `main` is in sync with `origin/main`, with Phases 15b, 15c, 16a, 16b, 16c and 17a and the hidden marker fix merged.
-- **Phase 17b built, waiting for Gate 1:** empty, loading and error states, and loading speed. See the work log. Its `netlify.toml` changes (caching for `/assets`, and a 404 for a missing asset) only take effect on a deploy, so they're checked on the Gate 2 draft.
+- **Phase 17b ready for Gate 1:** empty, loading and error states, and loading speed. See the work log. Its `netlify.toml` changes (caching for `/assets`, and a 404 for a missing asset) only take effect on a deploy, so they're checked on the Gate 2 draft.
 - **Phase 17a approved, live deploy pending:** accessibility checks, touch targets and tablet layouts passed both gates on 2026-11-13 and are merged into `main`.
 - **Phase 17 in three parts**, the owner's choice on 2026-11-13: 17a accessibility and devices, 17b empty, loading and error states and loading speed, 17c the user guide, the spec checklist and the release, each with its own gates.
 - **Phase 16c approved, live deploy pending:** passed both gates on 2026-11-13 and is merged into `main`. It goes live with 15b, 15c, 16a, 16b and 17 in the one deploy after Phase 17. Phase 16 is done.
@@ -32,6 +32,7 @@ _Last updated: 2026-11-13_
 - **Next:** Gate 1 for Phase 17b, then 17c. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
+  - The import test "a workbook is read under the site's security rules" fails if a run crosses midnight, as it takes the date once at its start.
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
   - ABE PDCS integration is only a proposal. The options are written up and nothing is merged.
   - Drawing polygons on the map isn't built yet. Roads are drawn on the map since Phase 16a, their lines drawn and reshaped since 16b, and imported since 16c.
@@ -87,6 +88,10 @@ The phases were built in a different order from the spec's §9. Export came befo
 ## Work log
 
 New entries go at the top. Each entry gets the date, what was done, and the commit or branch.
+
+### 2026-11-14
+
+- Phase 17b ready for Gate 1, after the full e2e run: 741 passed, 1 failed and 18 skipped, in 22 minutes. The failure, "a workbook is read under the site's security rules" in `e2e/auth.spec.ts`, was the run crossing midnight: the test takes today's date as it starts, and the import recorded the next day's. It passed three times after, on all three servers. It's older than this phase, and noted under open items.
 
 ### 2026-11-13
 
