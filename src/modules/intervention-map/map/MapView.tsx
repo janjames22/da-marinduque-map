@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import { useExportUi } from '../state/export-ui';
 import type { Boundaries } from '../state/use-map-data';
@@ -108,9 +108,11 @@ interface MapViewProps {
   colorOf(record: Intervention): string;
   selectedBarangayId: number | null;
   onSelectBarangay(id: number): void;
+  // The page's own buttons among the map's controls, each in a ControlSlot.
+  children?: ReactNode;
 }
 
-export function MapView({ data, boundaries, shading, counts, markers, colorOf, selectedBarangayId, onSelectBarangay }: MapViewProps) {
+export function MapView({ data, boundaries, shading, counts, markers, colorOf, selectedBarangayId, onSelectBarangay, children }: MapViewProps) {
   return (
     <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} maxZoom={MAX_ZOOM} className="map" zoomSnap={0.5}>
       <Basemap />
@@ -130,6 +132,7 @@ export function MapView({ data, boundaries, shading, counts, markers, colorOf, s
       <InterventionLayer data={data} records={markers} colorOf={colorOf} />
       <DraftLayer />
       <LineDraftLayer />
+      {children}
     </MapContainer>
   );
 }

@@ -1,0 +1,102 @@
+{
+  "type": "FeatureCollection",
+  "name": "Sample FMR roads (made up for testing the import)",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "Title": "Sample import FMR: Mainit farm road",
+        "Municipality": "Boac",
+        "Barangay": "Mainit",
+        "Length (km)": 1.2,
+        "Program": "Rice Program",
+        "Year": 2025,
+        "Status": "Completed"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            121.89591,
+            13.41573
+          ],
+          [
+            121.893579,
+            13.413732
+          ],
+          [
+            121.891415,
+            13.413065
+          ],
+          [
+            121.88925,
+            13.412399
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Title": "Sample import FMR: Masiga road, in two parts"
+      },
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [
+            [
+              121.82529,
+              13.349314
+            ],
+            [
+              121.823217,
+              13.350481
+            ]
+          ],
+          [
+            [
+              121.821934,
+              13.351704
+            ],
+            [
+              121.82065,
+              13.352927
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Title": "Sample import FMR: Tawiran access road",
+        "Municipality": "Santa Cruz",
+        "Barangay": "Tawiran",
+        "Program": "Corn Program",
+        "Year": 2026,
+        "Status": "Proposed"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            122.071,
+            13.45145
+          ],
+          [
+            122.069466,
+            13.447984
+          ],
+          [
+            122.069223,
+            13.445182
+          ],
+          [
+            122.06898,
+            13.44238
+          ]
+        ]
+      }
+    }
+  ]
+}

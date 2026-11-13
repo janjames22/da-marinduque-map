@@ -62,9 +62,13 @@ const NAMES: Record<string, string[]> = {
   remarks: ['remarks', 'notes', 'note', 'comments'],
 };
 
+// A point's own columns. A line type's records take their line from a map file instead (Phase 16c).
+const POINT_TARGETS = new Set(['latitude', 'longitude', 'coordinates']);
+
 export function targetsFor(type: InterventionType): Target[] {
   const rules = type.core_field_rules;
-  const core = CORE.filter((target) => !target.column || rules[target.column] !== 'hidden').map((target) => ({
+  const offered = CORE.filter((target) => (!target.column || rules[target.column] !== 'hidden') && !(type.geometry_kind === 'line' && POINT_TARGETS.has(target.id)));
+  const core = offered.map((target) => ({
     id: target.id,
     label: target.column ? coreFieldLabel(target.column) : target.label,
     required: target.id === 'municipality' || (target.column !== undefined && rules[target.column] === 'required'),

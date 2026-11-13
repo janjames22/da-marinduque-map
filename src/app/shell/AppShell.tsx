@@ -1,10 +1,11 @@
 // The frame around every signed-in page: the sidebar, the top bar and the sources line. On a phone
 // the sidebar is a drawer, opened from the top bar.
-import { ChartColumn, ChevronDown, ClipboardList, FileText, FileUp, Gauge, History, House, KeyRound, List, ListChecks, LogOut, Map as MapIcon, MapPin, Menu, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
+import { ChartColumn, ChevronDown, ClipboardList, FileText, FileUp, Gauge, History, House, KeyRound, List, ListChecks, LogOut, Map as MapIcon, MapPin, Menu, PanelLeftClose, PanelLeftOpen, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { AppUser } from '../../modules/intervention-map/data/types';
 import { ROLE_LABELS } from '../../modules/intervention-map/lib/permissions';
+import { MAP_PATH } from '../../modules/intervention-map/lib/map-paths';
 import { APP_NAME, OFFICE_NAME } from '../brand';
 import { isCurrent, navGroups, type NavIcon } from './nav';
 
@@ -135,11 +136,16 @@ function AccountMenu({ user, account }: { user: AppUser; account: Account }) {
   );
 }
 
-function TopBar({ user, account, menuOpen, onMenu }: { user: AppUser; account?: Account; menuOpen: boolean; onMenu(): void }) {
+function TopBar({ user, account, menuOpen, onMenu, menuHidden, onToggleMenu }: { user: AppUser; account?: Account; menuOpen: boolean; onMenu(): void; menuHidden: boolean; onToggleMenu(): void }) {
   return (
     <header className="topbar">
       <button type="button" className="topbar-menu" aria-label="Open the menu" aria-controls="main-menu" aria-expanded={menuOpen} onClick={onMenu}>
         <Menu aria-hidden="true" />
+      </button>
+      {/* Computers: the sidebar put away for the page's sake, and back. */}
+      <button type="button" className="topbar-menu-toggle" aria-controls="main-menu" aria-expanded={!menuHidden} aria-label={menuHidden ? 'Show the menu' : 'Hide the menu'} title={menuHidden ? 'Show the menu' : 'Hide the menu'} onClick={onToggleMenu}>
+        {menuHidden ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />}
+        {menuHidden && <span aria-hidden="true">Menu</span>}
       </button>
       <span className="topbar-title">{APP_NAME}</span>
       {account ? (
@@ -153,9 +159,45 @@ function TopBar({ user, account, menuOpen, onMenu }: { user: AppUser; account?: 
   );
 }
 
+// On a computer the sidebar can be put away, and stays away next time for whoever did it. A phone opens
+// it as a drawer instead. The Map is the map first: its menu starts put away each time it's opened, and
+// bringing it out there lasts for that visit (the owner's choice at Phase 16c's Gate 1).
+const MENU_KEY = 'da-menu-hidden';
+const onMapPage = (pathname: string) => pathname === MAP_PATH || pathname.startsWith(`${MAP_PATH}/`);
+
+function menuHiddenAtStart(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(MENU_KEY) === 'yes';
+  } catch {
+    return false;
+  }
+}
+
 export function AppShell({ user, account, footer, children }: { user: AppUser; account?: Account; footer: ReactNode; children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
+  const onMap = onMapPage(pathname);
+  const [savedHidden, setSavedHidden] = useState(menuHiddenAtStart);
+  const [shownOnMap, setShownOnMap] = useState(false);
+  const menuHidden = onMap ? !shownOnMap : savedHidden;
+  // Reset on leaving, so the Map never opens with the menu out, even for a moment.
+  useEffect(() => {
+    if (!onMap) setShownOnMap(false);
+  }, [onMap]);
+  const toggleMenu = () => {
+    if (onMap) {
+      setShownOnMap(menuHidden);
+      return;
+    }
+    const hidden = !savedHidden;
+    try {
+      if (hidden) globalThis.localStorage?.setItem(MENU_KEY, 'yes');
+      else globalThis.localStorage?.removeItem(MENU_KEY);
+    } catch {
+      // Only a convenience: the menu just shows again next time.
+    }
+    setSavedHidden(hidden);
+  };
 
   // Following a link closes the drawer. The links close it themselves too, for a link to the page
   // already open, which leaves the address as it was.
@@ -171,14 +213,14 @@ export function AppShell({ user, account, footer, children }: { user: AppUser; a
   }, [menuOpen]);
 
   return (
-    <div className="shell">
+    <div className={`shell${menuHidden ? ' menu-hidden' : ''}`}>
       <a className="skip-link" href="#main-content">
         Skip to the page
       </a>
       <Sidebar user={user} open={menuOpen} onClose={() => setMenuOpen(false)} />
       {menuOpen && <div className="shell-backdrop" aria-hidden="true" onClick={() => setMenuOpen(false)} />}
       <div className="shell-main">
-        <TopBar user={user} account={account} menuOpen={menuOpen} onMenu={() => setMenuOpen(true)} />
+        <TopBar user={user} account={account} menuOpen={menuOpen} onMenu={() => setMenuOpen(true)} menuHidden={menuHidden} onToggleMenu={toggleMenu} />
         <div className="shell-content" id="main-content" tabIndex={-1}>
           {children}
         </div>

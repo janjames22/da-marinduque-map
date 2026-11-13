@@ -23,6 +23,9 @@ export interface InterventionValues {
   // A line type's record: its line, null while it waits for one. Left out for a point type's record, and
   // left out of a patch that doesn't change the line. Since Phase 16b.
   line?: LinePositions | null;
+  // A line in several parts, as an imported file can bring one (Phase 16c). Only an import sets it, as
+  // the forms reshape one part at a time. Saved as a MultiLineString.
+  line_parts?: LinePositions[] | null;
   attributes: Record<string, unknown>;
   remarks: string | null;
   // New files for photo fields, by field key. Their attributes hold PENDING_PHOTO until they're saved.
@@ -53,8 +56,9 @@ export interface ImportBatchInput {
 // The most rows one import takes, as the database does.
 export const MOST_IMPORT_ROWS = 2000;
 
-// A record's type can't change, because its custom fields and status list belong to the type.
-export type InterventionPatch = Partial<Omit<InterventionValues, 'intervention_type_id'>> & {
+// A record's type can't change, because its custom fields and status list belong to the type. A line in
+// several parts comes only from an import, so a patch can't set one.
+export type InterventionPatch = Partial<Omit<InterventionValues, 'intervention_type_id' | 'line_parts'>> & {
   clear_name_check?: boolean;
 };
 

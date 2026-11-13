@@ -52,11 +52,44 @@ function clusterIcon(cluster: L.MarkerCluster) {
   });
 }
 
+// Leaflet doesn't say whether a pan is running, so this reads its pan animation, as Leaflet does itself.
+const isPanning = (map: L.Map) => Boolean((map as L.Map & { _panAnim?: { _inProgress?: boolean } })._panAnim?._inProgress);
+
 // zoomToShowLayer waits for the map to move, which never happens for a marker that zooming can't
 // separate from its cluster, so its callback would never run. Those are spiderfied directly.
 // Returns a function that cancels anything still waiting.
 function revealMarker(map: L.Map, cluster: L.MarkerClusterGroup, marker: L.Marker): () => void {
-  const open = () => marker.openPopup();
+  // A popup opening while the map still pans, such as from the last popup, stops that pan first. That
+  // ends the move at once, the clusters regroup, and this marker can fold into one before its popup is
+  // placed, which Leaflet doesn't expect: it threw, and as this runs inside React the page went blank.
+  // So a popup waits for the map to stop, and opens only on a marker still showing on its own.
+  let tries = 0;
+  const open = () => {
+    if (isPanning(map)) {
+      map.once('moveend', open);
+      return;
+    }
+    let visible = cluster.getVisibleParent(marker);
+    // The pan waited for can carry the marker out of view, where the clusters take it off the map, so
+    // the map comes back to it first.
+    if (!visible && tries < 3) {
+      tries += 1;
+      map.setView(marker.getLatLng(), map.getZoom(), { animate: false });
+      visible = cluster.getVisibleParent(marker);
+    }
+    if (visible instanceof L.MarkerCluster && tries < 3) {
+      tries += 1;
+      spiderfy(visible);
+      return;
+    }
+    if (visible !== marker) return;
+    try {
+      marker.openPopup();
+    } catch (error) {
+      // Never the whole page for one popup. The record stays reachable from its marker.
+      console.warn('A record popup could not open', error);
+    }
+  };
   const spiderfy = (visible: L.MarkerCluster) => {
     cluster.off('spiderfied'); // only the latest request should open a popup
     cluster.once('spiderfied', open);

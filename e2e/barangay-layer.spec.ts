@@ -32,7 +32,7 @@ const recordById = (n: string) => seed.interventions.find((r) => r.source_id ===
 
 const legend = (page: Page) => page.getByLabel('Map legend');
 
-// On a phone the legend starts folded into a button. On a computer it's always open.
+// The legend starts folded into a button on a phone, and on a computer when the map is too short for it.
 async function openLegend(page: Page) {
   await expect(legend(page)).toBeVisible();
   const toggle = legend(page).getByRole('button', { name: 'Legend', exact: true });
@@ -44,8 +44,8 @@ const profile = (page: Page) => page.getByLabel(/^Profile of barangay/);
 const programSelect = (page: Page) => page.getByRole('combobox', { name: 'Program', exact: true });
 const typeSelect = (page: Page) => page.getByRole('combobox', { name: 'Type', exact: true });
 
-async function openPanel(page: Page, isMobile: boolean) {
-  if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+async function openPanel(page: Page, _isMobile: boolean) {
+  await page.getByRole('button', { name: 'Layers and filters' }).click();
 }
 
 // Clicking through Leaflet's own event handling, wherever the shape is on screen.

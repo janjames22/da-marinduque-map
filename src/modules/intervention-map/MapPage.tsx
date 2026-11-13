@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Download, Info, Layers, Printer } from 'lucide-react';
+import { Download, Info, Layers, Maximize2, Minimize2, PanelLeftOpen, PanelRightClose, PanelRightOpen, Printer } from 'lucide-react';
 import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { LocalSeedMissingError } from './data/store';
 import type { AppUser, MapData } from './data/types';
@@ -24,6 +24,8 @@ import { EditPanelHost } from './edit/EditPanelHost';
 import { MoveConfirm } from './edit/MoveConfirm';
 import { openRecordPanel } from './edit/open-panel';
 import { ConnectionNotice, Notice, PhotoDialog } from './edit/RecordPanels';
+import { ControlSlot } from './map/ControlSlot';
+import { useFullscreen } from './map/fullscreen';
 import { MapView } from './map/MapView';
 import { BarangayProfile } from './panel/BarangayProfile';
 import { ExportDialog } from './panel/ExportDialog';
@@ -62,6 +64,12 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   const openPanel = useEditUi((state) => state.openPanel);
   const closePanel = useEditUi((state) => state.closePanel);
   const { canEdit, canSeeHistory } = usePermissions();
+
+  // The map first, each time the Map is opened: the layers card and the dashboard start put away.
+  // Moving between the map, a barangay and a record keeps this page, and what's been brought out.
+  useLayoutEffect(() => {
+    useMapUi.getState().enterMap();
+  }, []);
 
   // Before the first paint, so the map doesn't flash up as something else. A link to a particular
   // place or record is asking for that instead.
@@ -183,6 +191,39 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
   if (ui.insights) insightsOpened.current = true;
 
   const layout = otherPanel ? ' has-right-panel' : ui.insights ? ` has-insights${ui.insightsWide ? ' insights-wide' : ''}` : '';
+
+  // On a computer the layers card and the panel on the right can each be put away for the map's sake.
+  // The panel comes back when another one takes its place. The buttons' names are kept apart from the
+  // panels' own names, such as "Layers and filters", so a screen reader doesn't hear one as the other.
+  const rightPanel = otherPanel || ui.insights !== null;
+  const sideHidden = ui.sideHidden && rightPanel;
+  const rightKey = panel ? `${panel.kind}:${'id' in panel ? panel.id : ''}` : ui.showUnassigned ? 'unassigned' : selected ? `barangay:${selected.id}` : (ui.insights ?? '');
+  const rightName = panel
+    ? panel.kind === 'history'
+      ? 'history'
+      : panel.kind === 'deleted'
+        ? 'deleted records'
+        : 'form'
+    : ui.showUnassigned
+      ? 'unassigned records'
+      : selected
+        ? 'barangay profile'
+        : ui.insights === 'records'
+          ? 'records list'
+          : 'dashboard';
+  useEffect(() => {
+    useMapUi.getState().showSide();
+  }, [rightKey]);
+
+  // Full screen is the map alone, so it gives way to anything that opens beside it or over it.
+  const area = useRef<HTMLDivElement>(null);
+  const fullscreen = useFullscreen(area);
+  const leaveFullscreen = fullscreen.exit;
+  const exporting = useExportUi((state) => state.open !== null);
+  const photoId = useEditUi((state) => state.photoId);
+  useEffect(() => {
+    if (rightKey || exporting || printing || photoId) leaveFullscreen();
+  }, [rightKey, exporting, printing, photoId, leaveFullscreen]);
   // Counted, but not drawn: no coordinates yet, or coordinates outside Marinduque.
   const onMap = markers.filter(isOnMap).length;
   const offMap = markers.length - onMap;
@@ -213,7 +254,9 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
           </p>
         )}
       </header>
-      <div className={`workspace${layout}`}>
+      <div
+        className={`workspace${layout}${ui.layersHidden ? ' layers-hidden' : ui.layersLeaving ? ' layers-leaving' : ''}${sideHidden ? ' side-hidden' : ui.sideLeaving && rightPanel ? ' side-leaving' : ''}`}
+      >
         <nav className="phone-tabs" aria-label="Views">
           <button type="button" aria-pressed={!ui.insights} onClick={() => ui.setInsights(null)}>
             Map
@@ -242,7 +285,7 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
           }}
         />
 
-        <div className="map-area">
+        <div className={`map-area${fullscreen.mode === 'window' ? ' is-window-fullscreen' : ''}`} ref={area}>
           <MapView
             data={data}
             boundaries={boundaries}
@@ -252,7 +295,43 @@ function MapWorkspace({ data, boundaries }: { data: MapData; boundaries: Boundar
             colorOf={scale.colorOf}
             selectedBarangayId={selectedId}
             onSelectBarangay={onMapSelectBarangay}
-          />
+          >
+            {/* Under the zoom buttons, as on most web maps, rather than in the toolbar: one more button
+                there made it wrap onto a second row over a popup when the map is narrow. */}
+            <ControlSlot position="topleft" className="fullscreen-control">
+              <button type="button" className="edge-toggle" aria-label={fullscreen.mode ? 'Exit full screen' : 'Full screen'} title={fullscreen.mode ? 'Exit full screen (Esc)' : 'Full screen'} onClick={fullscreen.toggle}>
+                {fullscreen.mode ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+              </button>
+            </ControlSlot>
+            {/* Computers only, among the map's own controls so they stay clear of the legend and the
+                toolbar. The layers card comes out from here, named as a phone's Layers button is, and
+                goes away by its own close button. The panel on the right goes away and back here. */}
+            {ui.layersHidden && (
+              <ControlSlot position="topleft" className="edge-control">
+                <button type="button" className="edge-toggle is-collapsed" aria-controls="map-layers" aria-expanded={false} onClick={ui.showLayers}>
+                  <PanelLeftOpen aria-hidden="true" />
+                  <span>
+                    Layers<span className="visually-hidden"> and filters</span>
+                  </span>
+                </button>
+              </ControlSlot>
+            )}
+            {rightPanel && (
+              <ControlSlot position="bottomright" className="edge-control">
+                <button
+                  type="button"
+                  className={`edge-toggle${sideHidden ? ' is-collapsed' : ''}`}
+                  aria-expanded={!sideHidden}
+                  aria-label={sideHidden ? 'Show the side panel' : 'Hide the side panel'}
+                  title={`${sideHidden ? 'Show' : 'Hide'} the ${rightName}`}
+                  onClick={sideHidden ? ui.showSide : ui.hideSide}
+                >
+                  {sideHidden && <span aria-hidden="true">{rightName.charAt(0).toUpperCase() + rightName.slice(1)}</span>}
+                  {sideHidden ? <PanelRightOpen aria-hidden="true" /> : <PanelRightClose aria-hidden="true" />}
+                </button>
+              </ControlSlot>
+            )}
+          </MapView>
           {/* Phones only. The sheet it opens has its own close button. */}
           <button type="button" className="panel-toggle" aria-expanded={ui.panelOpen} onClick={() => ui.setPanelOpen(!ui.panelOpen)}>
             <Layers aria-hidden="true" />

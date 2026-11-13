@@ -78,6 +78,10 @@ const geojsonOf = (point: LatLng | null): GeoJSON.Point | null =>
 const lineGeojsonOf = (line: LinePositions | null | undefined): GeoJSON.LineString | null =>
   line ? { type: 'LineString', coordinates: line.map(([lng, lat]) => [lng, lat]) } : null;
 
+// A line in several parts, as an import brings it and lines_from_json makes it.
+const partsGeojsonOf = (parts: LinePositions[] | null | undefined): GeoJSON.MultiLineString | null =>
+  parts ? { type: 'MultiLineString', coordinates: parts.map((part) => part.map(([lng, lat]) => [lng, lat])) } : null;
+
 // The view's plotted columns aren't part of the table, so they stay out of the log.
 function rowImage(record: Intervention): Record<string, unknown> {
   const { plotted_barangay_id: _id, plotted_barangay: _name, plotted_municipality: _municipality, ...row } = record;
@@ -189,7 +193,7 @@ export function createIntervention(rows: LocalRows, context: EngineContext, inpu
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);
 
   const now = context.now();
-  const { point, line, field_photos: _files, ...columns } = values;
+  const { point, line, line_parts: lineParts, field_photos: _files, ...columns } = values;
   const record: Intervention = {
     ...columns,
     id: context.newId(),
@@ -198,7 +202,7 @@ export function createIntervention(rows: LocalRows, context: EngineContext, inpu
     data_source: MANUAL_DATA_SOURCE,
     ...origin,
     qa_flags: [],
-    geojson: geojsonOf(point) ?? lineGeojsonOf(line),
+    geojson: geojsonOf(point) ?? lineGeojsonOf(line) ?? partsGeojsonOf(lineParts),
     plotted_barangay_id: null,
     plotted_barangay: null,
     plotted_municipality: null,
@@ -249,7 +253,7 @@ export function updateIntervention(
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);
 
   const before = rowImage(record);
-  const { point, line: _line, ...newColumns } = values;
+  const { point, line: _line, line_parts: _parts, ...newColumns } = values;
   Object.assign(record, newColumns, {
     // An edit that leaves the location alone keeps the shape as it is, so a road keeps its line.
     geojson: patchedPoint !== undefined ? geojsonOf(point) : patchedLine !== undefined ? lineGeojsonOf(patchedLine) : record.geojson,

@@ -191,6 +191,65 @@
   display: none;
 }
 
+/* Computers: puts the sidebar away and back. A phone opens it as a drawer from .topbar-menu. */
+.topbar-menu-toggle {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  gap: 6px;
+  height: 36px;
+  justify-content: center;
+  margin-left: calc(-1 * var(--space-2));
+  margin-right: auto;
+  min-width: 36px;
+  padding: 0 8px;
+}
+
+.topbar-menu-toggle:hover {
+  background: var(--bg-surface-muted);
+  color: var(--text-primary);
+}
+
+.topbar-menu-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+}
+
+.topbar-menu-toggle svg {
+  height: 20px;
+  width: 20px;
+}
+
+@media (min-width: 901px) {
+  .shell.menu-hidden {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shell.menu-hidden .sidebar {
+    display: none;
+  }
+}
+
+/* The menu comes back gently, as the map's panels do. Off for anyone who has asked for less motion. */
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  .sidebar {
+    animation: menu-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
 .topbar-local {
   color: var(--text-secondary);
   font-size: var(--font-size-caption);
@@ -364,6 +423,10 @@
     justify-content: flex-start;
     min-height: 56px;
     padding: 0 var(--space-2) 0 var(--space-1);
+  }
+
+  .topbar-menu-toggle {
+    display: none;
   }
 
   .topbar-menu {

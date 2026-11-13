@@ -165,7 +165,7 @@ The Farm-to-Market Road type is a line type. It stays off until an Admin switche
 - **A road's length** is the Length entered on its form, as the source reports it, so the totals match the source. A road without one counts the length of its traced line, measured along the earth's surface.
 - **A road without a traced line** is counted in every total and kept off the map, as a record without coordinates is. It says "No traced line yet", and it's on the Dashboard's list for the region to verify.
 - **A road links to every barangay its line crosses**, so a barangay's filter and profile count it, as the database's `intervention_barangays` does.
-- **Not built yet:** importing roads from a file (Phase 16c).
+- **Roads come in from a file** through **Import**, with their lines, since Phase 16c. See [Importing roads](#importing-roads).
 
 ### Drawing and reshaping a road's line
 
@@ -185,6 +185,24 @@ Since Phase 16b, Encoders and Admins draw a road's line on the map, in its Edit 
 - **A line needs two points or more.** A road placed as a single point is refused, by the form and by the database.
 - **A line in several parts**, as an import can bring in, can't be reshaped in a form yet. Its form says so, and an edit keeps the line as it is.
 - A point placed before the type is set to Farm-to-Market Road becomes the road's first point.
+
+## Room for the map
+
+**The Map opens map first, every time.** On a computer the menu, the layers and filters card and the dashboard start put away, so the map has the page, and each has a button to bring it out. What's brought out stays out while you move about the map, a barangay or a record, until you leave the Map. The next visit starts map first again. On a phone the menu is a drawer, the layers a sheet and the dashboard a tab, as before.
+
+| To bring out | Use | To put it away |
+|---|---|---|
+| **The menu** | **Menu**, at the top left of the top bar | The same button. On the Map this lasts for the visit. On other pages the menu stays as you last left it, next time too |
+| **The layers and filters card** | **Layers**, under the map's zoom and full screen buttons | The **×** at the top of the card |
+| **The dashboard** | **Dashboard**, in the map's toolbar | Its own close button |
+
+**The panel on the right**, a barangay's profile, a form, the list of unassigned records or the dashboard, can also be put away without closing it: the panel button at the bottom right of the map. While it's away the button names it, and brings it back. A form or profile put away keeps what's in it. Opening another panel brings it out.
+
+**The legend** has its own button at its top. It starts open when the map has room for it, and folded into a small **Legend** button when the map is short, such as in a small window. It's never taller than the room below the map's buttons on the left, and scrolls inside when it needs more.
+
+**Full screen**, the button under the map's zoom buttons, gives the map the whole screen alone, with its zoom buttons, toolbar and legend. **Esc**, or the same button, leaves it. Anything that opens beside or over the map, such as a barangay's profile, a form, Export, Print map or a photo, leaves full screen first. On a phone it hides the browser's bars too. An iPhone has no full screen for pages, so there the map fills the browser window instead.
+
+Panels slide in and fade out, and the legend folds, unless your device is set to reduce motion.
 
 ## The dashboard and records table
 
@@ -256,12 +274,25 @@ Units delivered but not yet looked at: those at a status that doesn't **count as
 
 **Import** brings a file in as one batch. Nothing is saved until the last step.
 
-1. **File:** a CSV, Excel (.xlsx) or Google Earth (.kml, .kmz) file of up to 2,000 rows. Choose what it lists and say where it came from, such as "ABEMIS export". Use the same name for every file from that source, because the columns and values chosen are remembered under it. For a workbook, the first sheet with anything on it is read, and title rows above the header are skipped.
+1. **File:** a CSV, Excel (.xlsx), Google Earth (.kml, .kmz) or GeoJSON (.geojson) file of up to 2,000 rows. Choose what it lists and say where it came from, such as "ABEMIS export". Use the same name for every file from that source, because the columns and values chosen are remembered under it. For a workbook, the first sheet with anything on it is read, and title rows above the header are skipped.
 2. **Columns:** check which field each column fills. Starred fields need a column. Set the status for rows without one, and the date the file's statuses were true, such as the day it was exported.
 3. **Values:** names the lists don't know, such as "RICE PROG", need a choice. A name the lists already have, in any case or spacing, is matched by itself. Sta. Cruz is Santa Cruz.
 4. **Check:** every row, with the same checks as the Edit form and the flags it will get. Rows to fix must be fixed in the file or left out. Rows whose ID was already imported from the same source are left out unless you untick that. Rows that only look like a record already on the map are warned about, not left out.
 
 A barangay the list doesn't have still comes in, flagged, and waits in the QA queue. Every row keeps its whole source row with the record.
+
+**A map file's rows** are its placemarks or features: their fields are the columns, and a point's coordinates come as two more columns, "Latitude (from the map file)" and "Longitude (from the map file)". **A row with no municipality** in the file takes it, and its barangay, from where its point or line is, and says so in a warning. Then the file needs no Municipality column. A row that can't be placed that way is stopped at the check.
+
+#### Importing roads
+
+Choose **Farm-to-Market Road** under what the file lists, once an Admin has switched the type on. A road's line comes from a KML, KMZ or GeoJSON file, so a road type isn't offered the latitude and longitude columns.
+
+- **A line in one part** comes in as a line drawn on the map does, so it can be reshaped there later.
+- **A line in several parts**, as QGIS or Google Earth's MultiGeometry can save one, comes in as one road in parts. It shows and measures like any road, but can't be reshaped in a form yet.
+- **A row with no line**, or with a point, comes in waiting for its traced line, with a warning, as a road added on the map does.
+- **The check** shows each road's traced line, its length and its parts.
+- **The file must be in longitude and latitude** (WGS 84, EPSG:4326), as KML always is. A GeoJSON file saved in metres, such as UTM, is refused with a note to save it again in WGS 84.
+- **To try it,** import [`docs/samples/sample-fmr-roads.geojson`](samples/sample-fmr-roads.geojson) in local mode. It has three made-up roads, one in two parts with only a title.
 
 **Undo this import**, under Earlier imports, takes a whole batch off the map, with a reason. The person who imported it or an Admin can do this, until anyone changes one of its records. After that, change or delete those records one at a time. Undone records are deleted, so an Admin can still restore one from its history. The RAED batches were loaded by script and can't be undone here.
 
@@ -353,7 +384,7 @@ A backup made before `0011_reports.sql` has no signature blocks. Restoring it ke
 
 ## Changing the database
 
-Run the migration before deploying the site that needs it. Otherwise, people can't use the new features until it's applied. For example, exports are refused until `0006_export.sql` is in. `0012_lines.sql` (Phase 16) only relaxes two rules and switches nothing on, so it's safe to apply while the live site still runs older screens. `npm run test:live` passes before and after it, as its type test is about polygons, which stay refused. `0013_line_drawing.sql` (Phase 16b) lets the save functions take a road's line, and saves points as before, so it's safe to apply early too. It has to be in before the screens that draw lines go live: the older save functions ignore a line, so a drawn line would be dropped without an error.
+Run the migration before deploying the site that needs it. Otherwise, people can't use the new features until it's applied. For example, exports are refused until `0006_export.sql` is in. `0012_lines.sql` (Phase 16) only relaxes two rules and switches nothing on, so it's safe to apply while the live site still runs older screens. `npm run test:live` passes before and after it, as its type test is about polygons, which stay refused. `0013_line_drawing.sql` (Phase 16b) lets the save functions take a road's line, and saves points as before, so it's safe to apply early too. It has to be in before the screens that draw lines go live: the older save functions ignore a line, so a drawn line would be dropped without an error. `0014_line_import.sql` (Phase 16c) does the same for imports: it lets `import_records` take a road's line, in one part or several, and imports points as before. It has to be in before the screens that import lines go live, for the same reason.
 
 Add a new numbered file to `supabase/migrations`, take a backup, then run `npm run db:migrate`. Each file runs once, in its own transaction, and a failed file is rolled back. Never edit a file that has already been applied, because the change won't run.
 

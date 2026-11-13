@@ -12,6 +12,7 @@ import { columnFor, guessMapping, targetsFor, type ColumnMapping } from '../impo
 import { parseFile, type ParsedFile } from '../import/parse';
 import { manilaToday } from '../lib/dates';
 import { FLAG_LABELS } from '../lib/display';
+import { formatKm } from '../lib/roads';
 import { defaultStatusId, statusChoices } from '../lib/form-values';
 import { looseKey } from '../lib/matching';
 import { MAP_PATH } from '../lib/map-paths';
@@ -197,7 +198,8 @@ function BatchList({ data, user }: { data: MapData; user: AppUser }) {
   );
 }
 
-function PreviewTable({ rows }: { rows: PreviewRow[] }) {
+// For a line type, the rows are roads: each is known by its title, and has its traced line from the file.
+function PreviewTable({ rows, roads }: { rows: PreviewRow[]; roads: boolean }) {
   const [show, setShow] = useState<'all' | 'fix' | 'warnings' | 'flagged'>('all');
   const [page, setPage] = useState(0);
   const shown = rows.filter((row) => (show === 'fix' ? row.input === null : show === 'warnings' ? row.warnings.length > 0 : show === 'flagged' ? row.flags.length > 0 : true));
@@ -233,9 +235,10 @@ function PreviewTable({ rows }: { rows: PreviewRow[] }) {
             <thead>
               <tr>
                 <th scope="col">Row</th>
-                <th scope="col">Beneficiary</th>
+                <th scope="col">{roads ? 'Title' : 'Beneficiary'}</th>
                 <th scope="col">Municipality</th>
                 <th scope="col">Barangay</th>
+                {roads && <th scope="col">Traced line</th>}
                 <th scope="col">Will be flagged</th>
                 <th scope="col">Notes</th>
               </tr>
@@ -244,7 +247,7 @@ function PreviewTable({ rows }: { rows: PreviewRow[] }) {
               {shown.slice(at * PREVIEW_PAGE, (at + 1) * PREVIEW_PAGE).map((row) => (
                 <tr key={row.row} data-row={row.row} className={row.input === null ? 'to-fix' : row.warnings.length > 0 ? 'has-warning' : undefined}>
                   <td className="number">{row.row}</td>
-                  <td>{row.beneficiary ?? '—'}</td>
+                  <td>{(roads ? row.title : row.beneficiary) ?? '—'}</td>
                   <td>{row.municipality || '—'}</td>
                   <td>
                     {row.barangay || '—'}
@@ -255,6 +258,7 @@ function PreviewTable({ rows }: { rows: PreviewRow[] }) {
                       </span>
                     )}
                   </td>
+                  {roads && <td>{row.line ? `${formatKm(row.line.km)}${row.line.parts > 1 ? `, in ${row.line.parts} parts` : ''}` : 'None yet'}</td>}
                   <td>{row.flags.length === 0 ? '—' : row.flags.map((flag) => FLAG_LABELS[flag] ?? flag).join('; ')}</td>
                   <td>
                     {row.errors.map((message) => (
@@ -296,7 +300,8 @@ function PreviewTable({ rows }: { rows: PreviewRow[] }) {
 export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
   const { store, places } = useStore();
   const saving = useSaving();
-  const types = data.types.filter((type) => type.is_active && type.geometry_kind === 'point').sort((a, b) => a.sort_order - b.sort_order);
+  // Points, and lines since Phase 16c. Nothing draws an area yet.
+  const types = data.types.filter((type) => type.is_active && type.geometry_kind !== 'polygon').sort((a, b) => a.sort_order - b.sort_order);
 
   const [step, setStep] = useState<Step>('file');
   const [typeId, setTypeId] = useState(types.length === 1 ? String(types[0].id) : '');
@@ -391,7 +396,13 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
     });
   };
 
-  const missing = targets.filter((target) => target.required && !columnFor(mapping, target.id));
+  // Rows with a line, or coordinates, can take their municipality from where they are, so the column
+  // isn't needed. A row that can't is stopped at the check, as one with no municipality is.
+  const placedByShape =
+    type?.geometry_kind === 'line'
+      ? Boolean(file?.lines?.some((line) => line !== null))
+      : (Boolean(columnFor(mapping, 'latitude')) && Boolean(columnFor(mapping, 'longitude'))) || Boolean(columnFor(mapping, 'coordinates'));
+  const missing = targets.filter((target) => target.required && !columnFor(mapping, target.id) && !(target.id === 'municipality' && placedByShape));
   const halfCoordinates = Boolean(columnFor(mapping, 'latitude')) !== Boolean(columnFor(mapping, 'longitude'));
 
   const toValues = (event: FormEvent) => {
@@ -452,7 +463,7 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
     <main className="overview-page work-page import-page" aria-labelledby="import-title">
       <header className="page-header">
         <h1 id="import-title">Import</h1>
-        <p>A CSV, Excel (.xlsx) or Google Earth (.kml, .kmz) file of records, brought in as one batch. Nothing is saved until the last step, and the whole batch can be undone while its records are untouched.</p>
+        <p>A CSV, Excel (.xlsx), Google Earth (.kml, .kmz) or GeoJSON file of records, brought in as one batch. A map file's lines come in as roads' traced lines. Nothing is saved until the last step, and the whole batch can be undone while its records are untouched.</p>
       </header>
 
       {step !== 'done' && (
@@ -497,7 +508,7 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
                   <input
                     id="import-file"
                     type="file"
-                    accept=".csv,.txt,.xlsx,.xls,.kml,.kmz"
+                    accept=".csv,.txt,.xlsx,.xls,.kml,.kmz,.geojson,.json"
                     aria-describedby="import-file-hint"
                     onChange={(event) => {
                       setDragging(false);
@@ -512,7 +523,7 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
                   </span>
                   <span className="file-drop-text">
                     <strong>{reading ? 'Reading the file…' : file ? file.fileName : 'Choose a file, or drop it here'}</strong>
-                    <span id="import-file-hint">{file ? 'Choose another to replace it.' : `CSV, Excel (.xlsx) or Google Earth (.kml, .kmz), up to ${MOST_IMPORT_ROWS.toLocaleString('en-US')} rows.`}</span>
+                    <span id="import-file-hint">{file ? 'Choose another to replace it.' : `CSV, Excel (.xlsx), Google Earth (.kml, .kmz) or GeoJSON (.geojson), up to ${MOST_IMPORT_ROWS.toLocaleString('en-US')} rows.`}</span>
                   </span>
                 </div>
                 {(fileError ?? stepErrors.file) && (
@@ -706,7 +717,7 @@ export function ImportPage({ data, user }: { data: MapData; user: AppUser }) {
                   {summary.flags.barangay_unmatched || summary.flags.barangay_mismatch ? <p className="field-hint">Flagged records come in and wait in the QA queue, where they can be fixed.</p> : null}
                 </div>
               )}
-              <PreviewTable rows={preview} />
+              <PreviewTable rows={preview} roads={type?.geometry_kind === 'line'} />
 
               {(already > 0 || summary.toFix > 0) && (
                 <div className="import-choices">

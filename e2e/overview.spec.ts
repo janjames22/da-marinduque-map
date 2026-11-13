@@ -79,11 +79,15 @@ test.describe('the frame', () => {
   // a short window scrolled past the frame onto blank space.
   test('only the panels scroll, never the window, even when it is short', async ({ page, isMobile }) => {
     if (!isMobile) await page.setViewportSize({ width: 1290, height: 610 });
-    await page.addInitScript(() => localStorage.setItem('da-map-insights-open', 'yes'));
     for (const path of ['/', '/dashboard', '/map', '/reports', '/admin/types', '/qa']) {
       await open(page, path);
       await expect(page.getByRole('banner')).toBeVisible();
-      if (path === '/map') await expect(page.locator('.barangay-shape')).toHaveCount(218);
+      if (path === '/map') {
+        await expect(page.locator('.barangay-shape')).toHaveCount(218);
+        // With the dashboard beside the map, as its charts are what once stretched the window.
+        const dashboard = page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true });
+        if (await dashboard.isVisible()) await dashboard.click();
+      }
       if (path === '/dashboard') await expect(tile(page, 'records')).toBeVisible();
       await expect.poll(() => page.evaluate(() => document.scrollingElement!.scrollHeight - innerHeight), { message: path }).toBeLessThanOrEqual(0);
       // Nor the frame's own box: anything taller than it lets a focused field scroll the page out of
@@ -96,7 +100,7 @@ test.describe('the frame', () => {
 });
 
 test.describe('the Dashboard page', () => {
-  test('shares its filters with the map, and the totals follow them', async ({ page, isMobile }) => {
+  test('shares its filters with the map, and the totals follow them', async ({ page }) => {
     await open(page, '/dashboard');
     await expect(tile(page, 'records')).toHaveText(String(live.length));
     await expect(tile(page, 'awaiting')).toHaveText(String(offMap.length));
@@ -108,7 +112,7 @@ test.describe('the Dashboard page', () => {
 
     await (await sidebar(page)).getByRole('link', { name: 'Map', exact: true }).click();
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
-    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await page.getByRole('button', { name: 'Layers and filters' }).click();
     // The map's select is inside its label, so it goes by its accessible name.
     await expect(page.locator('.panel-left').getByRole('combobox', { name: 'Municipality', exact: true })).toHaveValue(String(gasan.id));
   });

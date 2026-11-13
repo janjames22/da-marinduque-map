@@ -311,13 +311,14 @@ Records table:
 
 The wizard at `/import` is for Admins and Encoders. It has four steps, and nothing is saved until the last.
 
-1. **File:** upload a CSV, XLSX, KML or KMZ file, of 2,000 rows at most. Choose the intervention type (active point types) and say where the file came from, such as "ABEMIS export". A sheet's header is found under any title rows. A map file's placemarks become rows, with their points as Latitude and Longitude columns.
+1. **File:** upload a CSV, XLSX, KML, KMZ or GeoJSON file, of 2,000 rows at most. Choose the intervention type (active point and line types) and say where the file came from, such as "ABEMIS export". A sheet's header is found under any title rows. A map file's placemarks or features become rows, with their points as Latitude and Longitude columns. Since Phase 16c (`0014_line_import.sql`) a line type's rows take their lines from the file: one part as a LineString, which the forms can reshape, and several as a MultiLineString. A line type isn't offered point columns, and a row with no line comes in waiting for its traced line. A map file must be in longitude and latitude (WGS 84). One in metres is refused.
 2. **Columns:** map each column to a standard or custom field. The first guess comes from the last file from the same source and type, then from a field's own name, then from usual names such as Brgy., Qty and Name of FCA. Choose the status for rows without one, and the date the file's statuses were true.
 3. **Values:** list columns are category, program, municipality, status and dropdowns. For each value the lists don't know, choose what it is. The choices are remembered for the source.
 4. **Check:** every row gets the form's own checks and shows the QA flags it will get. Warnings mark what looks like a record already on the map (same category, beneficiary, year and barangay), an ID already imported from the same source, and a repeat within the file. Rows with something to fix can be left out, and so can rows already imported. The rest commit as one batch, tagged with its `data_source`, in one transaction that the database checks again.
 
 - An import can be undone as a whole, with a reason, while none of its records has been changed since. The person who imported it or an Admin can do this. Its records are deleted, so an Admin can still restore one. The RAED batches can't be undone this way.
 - Never drop rows. Unmatched barangay names are kept and flagged, with closest candidates shown.
+- A row with no municipality takes it, and its barangay, from where its point or line is, as a record placed on the map does, with a warning. A file whose rows can all be placed that way needs no Municipality column.
 - Barangay names are matched within their municipality, ignoring differences in case, spacing, hyphens and Pob./Poblacion. ñ matches both n and ny.
 - The complete source row is kept in `source_raw`.
 - The ABEMIS export format should import directly. The RAED seed follows this same path, so future datasets of any type are handled the same way.
@@ -418,7 +419,7 @@ Chosen so a solo developer can build and host it cheaply.
 | Backend / DB | **Supabase** (PostgreSQL + **PostGIS** + Auth + Storage + **Realtime**) | Realtime gives live map updates; PostGIS handles spatial checks |
 | Data access | A `DataStore` interface with two implementations: local (IndexedDB) and Supabase | The app can switch without changing screens |
 | KML/KMZ export | Custom builder (for folders and styles) + **JSZip** | Runs in the browser, no server needed |
-| KML import | `@tmcw/togeojson` + JSZip | |
+| KML and GeoJSON import | `@tmcw/togeojson` + JSZip for KML and KMZ. GeoJSON is read as it is | |
 | CSV/XLSX | PapaParse, SheetJS | |
 | PDF/print | Print-layout view with `html-to-image` + jsPDF | Supports the full layout in §5.7 |
 | Boundaries | HDX COD-AB Philippines (NAMRIA, PSA; CC BY-IGO, attribution required), simplified with mapshaper | |
@@ -436,7 +437,7 @@ Chosen so a solo developer can build and host it cheaply.
 | `/barangays/:id` | Barangay profile (also opens as a panel on the map) |
 | `/records/:id` | A link to one record, such as from the audit log. Clears the filters and zooms to it, or opens its history if it isn't on the map |
 | `/records/new`, `/records/:id/edit` | Full form, for when the map isn't convenient |
-| `/import` | CSV / XLSX / KML / KMZ import wizard, and earlier imports with Undo (Admins and Encoders) |
+| `/import` | CSV / XLSX / KML / KMZ / GeoJSON import wizard, and earlier imports with Undo (Admins and Encoders) |
 | `/qa` | QA queue: every flagged record by flag and municipality. Quick fixes: set barangay, set location basis, update status, and dismiss with a reason. A link fixes the location on the map (Admins and Encoders) |
 | `/qa/condition` | Condition check: units at a status that doesn't count as assessed, Turned-over first, by municipality. Set the status found on a visit (Admins and Encoders) |
 | `/export` | Export options (also reachable from the map toolbar) |
