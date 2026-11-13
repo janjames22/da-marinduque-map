@@ -15,6 +15,7 @@
     "build:field-sheet": "tsx scripts/build-field-verification.ts",
     "build:local-seed": "tsx scripts/build-local-seed.ts",
     "build:tokens": "tsx scripts/build-tokens.ts",
+    "guide:screenshots": "tsx scripts/guide-screenshots.ts",
     "test:e2e": "playwright test",
     "test:live": "vitest run --config vitest.live.config.ts",
     "test:e2e:live": "playwright test --config playwright.live.config.ts",
