@@ -16,7 +16,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 _Last updated: 2026-11-14_
 
 - **Branch:** `phase-17b-states`, for Phase 17b, waiting for Gate 1. `main` is in sync with `origin/main`, with Phases 15b, 15c, 16a, 16b, 16c and 17a and the hidden marker fix merged.
-- **Phase 17b ready for Gate 1:** empty, loading and error states, and loading speed. See the work log. Its `netlify.toml` changes (caching for `/assets`, and a 404 for a missing asset) only take effect on a deploy, so they're checked on the Gate 2 draft.
+- **Phase 17b passed Gate 1, its Gate 2 draft is up:** https://6af7374025359466db1ca087--marinduque-intervention-system.netlify.app, built from `e171e91`. Empty, loading and error states, and loading speed. See the work log.
 - **Phase 17a approved, live deploy pending:** accessibility checks, touch targets and tablet layouts passed both gates on 2026-11-13 and are merged into `main`.
 - **Phase 17 in three parts**, the owner's choice on 2026-11-13: 17a accessibility and devices, 17b empty, loading and error states and loading speed, 17c the user guide, the spec checklist and the release, each with its own gates.
 - **Phase 16c approved, live deploy pending:** passed both gates on 2026-11-13 and is merged into `main`. It goes live with 15b, 15c, 16a, 16b and 17 in the one deploy after Phase 17. Phase 16 is done.
@@ -29,7 +29,7 @@ _Last updated: 2026-11-14_
 - **Every migration file on `main` is applied live but `0014_line_import.sql`**, which waits for the owner's go-ahead. An applied file must not be edited, so a later change to the save functions goes in a new file.
 - **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. Until the next production deploy the live site is on Phase 15a.
 - **Next production deploy after Phase 17:** the owner decided on 2026-11-12 to hold the live deploy until Phase 17 is done, so 15b, 15c, 16 and 17 go live in one `npm run deploy`, one 15-credit deploy instead of three. Every phase still gets its Gate 2 draft, which costs nothing. Only approved work is merged into `main`, so a deploy from it stays safe if a live bug needs one sooner. Phase 16's database changes are already on the live database, so they have to keep working with the 15a site.
-- **Next:** Gate 1 for Phase 17b, then 17c. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
+- **Next:** Gate 2 for Phase 17b, then 17c. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The import test "a workbook is read under the site's security rules" fails if a run crosses midnight, as it takes the date once at its start.
@@ -91,6 +91,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-14
 
+- Phase 17b passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af7374025359466db1ca087--marinduque-intervention-system.netlify.app, built from `e171e91`. Checked signed out: the security headers are on, the Inter fonts load, there are no console errors or failed requests, and the local dataset and sample roads aren't in the deployed files. The new `netlify.toml` rules work: files under `/assets`, the fonts among them, are cached for a year (`immutable`), `index.html` and the boundaries are still checked on every visit, a missing file under `/assets` gets a 404 rather than the app's page, and an app address such as `/map/barangays/12` still opens the app.
 - Phase 17b ready for Gate 1, after the full e2e run: 741 passed, 1 failed and 18 skipped, in 22 minutes. The failure, "a workbook is read under the site's security rules" in `e2e/auth.spec.ts`, was the run crossing midnight: the test takes today's date as it starts, and the import recorded the next day's. It passed three times after, on all three servers. It's older than this phase, and noted under open items.
 
 ### 2026-11-13
