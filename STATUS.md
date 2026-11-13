@@ -15,7 +15,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-13_
 
-- **Branch:** `phase-17a-accessibility`, with Phase 17a ready for Gate 1. `main` is in sync with `origin/main`, with Phases 15b, 15c, 16a, 16b and 16c and the hidden marker fix merged.
+- **Branch:** `phase-17a-accessibility`, with Phase 17a at Gate 2. Draft: https://6af6db9f6a0fe4c026952c9c--marinduque-intervention-system.netlify.app. `main` is in sync with `origin/main`, with Phases 15b, 15c, 16a, 16b and 16c and the hidden marker fix merged.
 - **Phase 17 in three parts**, the owner's choice on 2026-11-13: 17a accessibility and devices, 17b empty, loading and error states and loading speed, 17c the user guide, the spec checklist and the release, each with its own gates.
 - **Phase 16c approved, live deploy pending:** passed both gates on 2026-11-13 and is merged into `main`. It goes live with 15b, 15c, 16a, 16b and 17 in the one deploy after Phase 17. Phase 16 is done.
 - **Phase 16c, what it holds:** roads imported from KML, KMZ and GeoJSON files with their lines, in one part or several. At Gate 1 the owner asked for more room for the map before the next phase, so the branch also has full screen for the map, and the menu, the layers card and the panel on the right each put away and back. After trying it, the owner asked for the Map to open map first every time, with the menu, the layers card and the dashboard put away and a button for each, and for the legend to stop running under the map's buttons, with smooth movement. See the work log.
@@ -27,7 +27,7 @@ _Last updated: 2026-11-13_
 - **Every migration file on `main` is applied live but `0014_line_import.sql`**, which waits for the owner's go-ahead. An applied file must not be edited, so a later change to the save functions goes in a new file.
 - **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. Until the next production deploy the live site is on Phase 15a.
 - **Next production deploy after Phase 17:** the owner decided on 2026-11-12 to hold the live deploy until Phase 17 is done, so 15b, 15c, 16 and 17 go live in one `npm run deploy`, one 15-credit deploy instead of three. Every phase still gets its Gate 2 draft, which costs nothing. Only approved work is merged into `main`, so a deploy from it stays safe if a live bug needs one sooner. Phase 16's database changes are already on the live database, so they have to keep working with the 15a site.
-- **Next:** Gate 1 for Phase 17a, then 17b and 17c. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
+- **Next:** Gate 2 for Phase 17a, then 17b and 17c. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -87,6 +87,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-13
 
+- Phase 17a passed Gate 1, approved by the owner. The Gate 2 draft is up: https://6af6db9f6a0fe4c026952c9c--marinduque-intervention-system.netlify.app, built from `3b543e2`. Checked signed out: the security headers are on, the Inter fonts load, the touch-target styles are served, the sample roads aren't in the deployed files, and there are no console errors or failed requests.
 - Phase 17a ready for Gate 1, on branch `phase-17a-accessibility`: accessibility and devices.
   - **Audit:** axe-core (`@axe-core/playwright`, a new dev dependency) on 13 pages and the map's open states, on a computer and a phone. It found two problems, now fixed: Home's figure tiles held their icon beside the term in a definition list, which screen readers misread (the icon is inside the term now), and archived types and fields were faded to 4.4:1, under AA (greyed in an AA color now).
   - **Touch targets:** on a phone, and on any touch screen such as a tablet, what a finger hits is at least 44 px (`src/app/touch.css`, loaded last): buttons, tabs, popup actions, fields, the records table's sort headers, the dialogs' and popups' close buttons, and the map's zoom buttons. Markers, clusters and a line's bend handles keep their size on the map with a larger touch area around it, and a line's point handles are 44 px. Before, many were 24 to 36 px.
