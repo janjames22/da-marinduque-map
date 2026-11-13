@@ -15,8 +15,8 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-13_
 
-- **Branch:** `phase-16c-line-import`, with Phase 16c built and its full e2e run to come before Gate 1. `main` is in sync with `origin/main`, with Phases 15b, 15c, 16a and 16b and the hidden marker fix merged.
-- **Phase 16c built, not yet through Gate 1:** roads imported from KML, KMZ and GeoJSON files with their lines, in one part or several. See the work log.
+- **Branch:** `phase-16c-line-import`, with Phase 16c ready for Gate 1. `main` is in sync with `origin/main`, with Phases 15b, 15c, 16a and 16b and the hidden marker fix merged.
+- **Phase 16c ready for Gate 1:** roads imported from KML, KMZ and GeoJSON files with their lines, in one part or several. The full e2e run passed with nothing failing. See the work log.
 - **Database change waiting:** `supabase/migrations/0014_line_import.sql`, on the 16c branch, isn't applied to the live database. It lets `import_records` take a road's line, and imports points as before, so the live 15a site is unaffected. It needs the owner's go-ahead before `npm run db:migrate`, and has to be in before the production deploy, or imported lines would be dropped without an error.
 - **The live site's address is now https://marinduque-intervention-system.netlify.app:** the owner renamed the Netlify site from `da-marinduque-map` on 2026-11-13. It's the same site (the same site id since 2026-11-11), still on Phase 15a. **https://da-marinduque-map.netlify.app returns 404**, as Netlify doesn't redirect an old name, so old links and bookmarks need the new address. Drafts are now at `<deploy id>--marinduque-intervention-system.netlify.app`. The earlier entries keep the old address, as it was then. `APP_URL` in `.env.local` has the new address. The owner is setting it in Supabase too (Authentication > URL Configuration: the Site URL, and a Redirect URL), which invites and password resets from the Users page need.
 - **Phase 16b approved, live deploy pending:** drawing and reshaping a road's line on the map, in its Edit form and its Resolve flag form, passed both gates on 2026-11-13 and is merged into `main`, with the hidden marker fix. It goes live with 15b, 15c, 16a, 16c and 17 in the one deploy after Phase 17.
@@ -25,7 +25,7 @@ _Last updated: 2026-11-13_
 - **Every migration file on `main` is applied live**, `0013_line_drawing.sql` included since 16b's merge. An applied file must not be edited, so a later change to the save functions goes in a new file.
 - **Phases 15b and 15c approved, live deploy pending:** the work pages, Reports, the Export and Print map dialogs, the Admin pages, the forms and the shared controls passed both gates on 2026-11-12 and are merged into `main`. Until the next production deploy the live site is on Phase 15a.
 - **Next production deploy after Phase 17:** the owner decided on 2026-11-12 to hold the live deploy until Phase 17 is done, so 15b, 15c, 16 and 17 go live in one `npm run deploy`, one 15-credit deploy instead of three. Every phase still gets its Gate 2 draft, which costs nothing. Only approved work is merged into `main`, so a deploy from it stays safe if a live bug needs one sooner. Phase 16's database changes are already on the live database, so they have to keep working with the 15a site.
-- **Next:** the full e2e run and Gate 1 for Phase 16c, then its Gate 2 draft, then Phase 17. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
+- **Next:** Gate 1 for Phase 16c, then its Gate 2 draft, then Phase 17. The owner decided on 2026-11-12 to build Phase 16 without the FMR data, on made-up sample roads. The real import gets checked when the data comes (Q-5).
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The Shapefile export still needs a manual check in QGIS. So far only automated tests check it.
@@ -84,6 +84,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-13
 
+- Phase 16c ready for Gate 1. The full e2e run had 715 passed, 0 failed and 12 skipped, in 17 minutes. The skips are the usual 11 and the hidden marker test on a phone.
 - Phase 16c built on branch `phase-16c-line-import`, not yet through Gate 1. Roads come in through **Import** with their lines:
   - **Files:** KML and KMZ as before, and now GeoJSON (`.geojson`, `.json`). A feature's fields are its columns, a point's coordinates two more, and a line comes beside its row, as it's too long for a cell (`import/parse.ts`). Heights are dropped. A KML MultiGeometry of lines, or a MultiLineString, is one road in parts. A GeoJSON file in metres, such as UTM, or naming another coordinate system, is refused with a note to save it again in WGS 84.
   - **Roads:** the wizard now offers line types. A road type isn't offered the point columns. A line in one part comes in as `line`, as a drawn one is, so it can be reshaped later, and one in several parts as `line_parts`, saved as a MultiLineString. A row with no line comes in waiting for one, with a warning, and a line given to a point type comes in without coordinates, with a warning. The check shows each road's title and traced line, with its length and parts.
