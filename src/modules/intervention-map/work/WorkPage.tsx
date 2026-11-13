@@ -11,6 +11,7 @@ import { QaQueue } from './QaQueue';
 import '../overview/overview.css';
 import '../records/records.css';
 import './work.css';
+import { PageError, PageLoading, PageNoAccess } from '../overview/PageState';
 
 // The file readers are only needed once a file is chosen.
 const ImportPage = lazy(() => import('./ImportPage').then((module) => ({ default: module.ImportPage })));
@@ -23,7 +24,7 @@ function Workspace({ data, user }: { data: MapData; user: AppUser }) {
       <Route
         path="/import"
         element={
-          <Suspense fallback={<p className="page-message is-loading">Loading…</p>}>
+          <Suspense fallback={<PageLoading />}>
             <ImportPage data={data} user={user} />
           </Suspense>
         }
@@ -35,15 +36,8 @@ function Workspace({ data, user }: { data: MapData; user: AppUser }) {
 
 function WorkLoader({ user }: { user: AppUser }) {
   const state = useMapData(user);
-  if (state.status === 'loading') return <p className="page-message is-loading">Loading…</p>;
-  if (state.status === 'error') {
-    return (
-      <div className="page-message" role="alert">
-        <h2>This page could not load</h2>
-        <p>{state.error.message}</p>
-      </div>
-    );
-  }
+  if (state.status === 'loading') return <PageLoading />;
+  if (state.status === 'error') return <PageError error={state.error} onRetry={state.retry} />;
   return (
     <StoreContext.Provider value={{ store: state.store, places: state.places }}>
       <Workspace data={state.data} user={user} />
@@ -54,12 +48,9 @@ function WorkLoader({ user }: { user: AppUser }) {
 export function WorkPage({ user }: { user: AppUser }) {
   if (user.role === 'viewer') {
     return (
-      <div className="page-message" role="alert">
-        <h2>This page is for Encoders and Admins</h2>
-        <p>
-          Your account can view records but not change them. <Link to="/">Back to Home</Link>
-        </p>
-      </div>
+      <PageNoAccess title="This page is for Encoders and Admins">
+        Your account can view records but not change them. <Link to="/">Back to Home</Link>
+      </PageNoAccess>
     );
   }
   return <WorkLoader user={user} />;

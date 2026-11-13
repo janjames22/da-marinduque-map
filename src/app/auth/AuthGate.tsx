@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { authLink, getSupabase } from '../../modules/intervention-map/data/supabase-client';
 import type { AppUser, UserRole } from '../../modules/intervention-map/data/types';
+import { PageLoading } from '../../modules/intervention-map/overview/PageState';
 import { useEditUi } from '../../modules/intervention-map/state/edit-ui';
 import { AuthLayout } from './AuthLayout';
 
@@ -118,7 +119,7 @@ export function AuthGate({ children }: { children(session: SignedIn): ReactNode 
 
   switch (state.status) {
     case 'loading':
-      return <p className="page-message is-loading">Loading…</p>;
+      return <PageLoading />;
     case 'signed-out':
       return (
         <AuthLayout>

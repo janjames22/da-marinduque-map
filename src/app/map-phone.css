@@ -358,7 +358,7 @@
   }
 }
 
-.page-message.is-loading {
+.page-state.is-loading {
   animation: show-late 0.01s linear 0.3s both;
 }
 

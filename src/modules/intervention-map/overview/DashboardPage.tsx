@@ -23,6 +23,8 @@ import { useMapData } from '../state/use-map-data';
 import { FilterBar } from './FilterBar';
 import { SegmentedBar, Tile } from './HomePage';
 import './overview.css';
+import { PageError, PageLoading } from './PageState';
+import { NoRecords } from './EmptyState';
 
 const count = (value: number) => value.toLocaleString('en-US');
 
@@ -104,48 +106,51 @@ function Dashboard({ data }: { data: MapData }) {
         </p>
       )}
 
-      <dl className="overview-tiles" aria-label="Totals">
-        <Tile id="records" hero label="Total interventions" value={count(numbers.records)} note={plural(units, 'unit')} />
-        {numbers.types.map((type) =>
-          type.typeId === roadTypeId ? (
-            <Tile key={type.typeId} id="fmr" label="Farm-to-Market Roads" value={formatKm(roads.km)} note={roadNote(roads)} />
-          ) : (
-            <Tile key={type.typeId} id={`type-${type.typeId}`} label={data.types.find((t) => t.id === type.typeId)?.name ?? type.label} value={count(type.units)} note="Units" />
-          ),
-        )}
-        {!hasRoads(data) && (
-          <div className="overview-tile is-placeholder" data-tile="fmr">
-            <dt>Farm-to-Market Roads</dt>
-            <dd className="overview-tile-value">Data to follow</dd>
-            <dd className="overview-tile-note">Roads and km, once the data is in</dd>
-          </div>
-        )}
-      </dl>
-      <dl className="overview-tiles" aria-label="Condition and reach">
-        <Tile id="operational" label="% operational" value={operational.percent === null ? '–' : `${operational.percent}%`} note={operationalNotes(operational).join('. ')} />
-        <Tile id="beneficiaries" label="Beneficiaries (approx.)" value={count(numbers.beneficiaries)} note="Different names, ignoring case, spacing and punctuation" />
-        <Tile id="barangays-without" label="Barangays with no intervention yet" value={count(numbers.barangaysWithout)} note={`of ${plural(numbers.barangaysTotal, 'barangay')}`} />
-        <Tile
-          id="awaiting"
-          label="Awaiting coordinate verification"
-          value={count(waiting)}
-          note={
-            waiting > 0 ? (
-              <>
-                {numbers.records > 0 ? `${Math.round((waiting / numbers.records) * 100)}% of records. ` : ''}
-                <a href="#awaiting">See the list</a>
-              </>
-            ) : (
-              'Every record here is on the map'
-            )
-          }
-        />
-      </dl>
-
       {numbers.records === 0 ? (
-        <p className="overview-card empty-note">No records match these filters, so there's nothing to chart.</p>
+        // Nothing to count shows why, not a page of zeroes.
+        <div className="overview-card">
+          <NoRecords />
+        </div>
       ) : (
         <>
+          <dl className="overview-tiles" aria-label="Totals">
+            <Tile id="records" hero label="Total interventions" value={count(numbers.records)} note={plural(units, 'unit')} />
+            {numbers.types.map((type) =>
+              type.typeId === roadTypeId ? (
+                <Tile key={type.typeId} id="fmr" label="Farm-to-Market Roads" value={formatKm(roads.km)} note={roadNote(roads)} />
+              ) : (
+                <Tile key={type.typeId} id={`type-${type.typeId}`} label={data.types.find((t) => t.id === type.typeId)?.name ?? type.label} value={count(type.units)} note="Units" />
+              ),
+            )}
+            {!hasRoads(data) && (
+              <div className="overview-tile is-placeholder" data-tile="fmr">
+                <dt>Farm-to-Market Roads</dt>
+                <dd className="overview-tile-value">Data to follow</dd>
+                <dd className="overview-tile-note">Roads and km, once the data is in</dd>
+              </div>
+            )}
+          </dl>
+          <dl className="overview-tiles" aria-label="Condition and reach">
+            <Tile id="operational" label="% operational" value={operational.percent === null ? '–' : `${operational.percent}%`} note={operationalNotes(operational).join('. ')} />
+            <Tile id="beneficiaries" label="Beneficiaries (approx.)" value={count(numbers.beneficiaries)} note="Different names, ignoring case, spacing and punctuation" />
+            <Tile id="barangays-without" label="Barangays with no intervention yet" value={count(numbers.barangaysWithout)} note={`of ${plural(numbers.barangaysTotal, 'barangay')}`} />
+            <Tile
+              id="awaiting"
+              label="Awaiting coordinate verification"
+              value={count(waiting)}
+              note={
+                waiting > 0 ? (
+                  <>
+                    {numbers.records > 0 ? `${Math.round((waiting / numbers.records) * 100)}% of records. ` : ''}
+                    <a href="#awaiting">See the list</a>
+                  </>
+                ) : (
+                  'Every record here is on the map'
+                )
+              }
+            />
+          </dl>
+
           <ChartCard
             title="Units by category group"
             note={`Share of all ${plural(units, 'unit')}`}
@@ -199,69 +204,69 @@ function Dashboard({ data }: { data: MapData }) {
               <HorizontalBars rows={numbers.byCategory} labelWidth={150} />
             </ChartCard>
           </div>
+
+          <section id="awaiting" className="overview-card awaiting" aria-labelledby="awaiting-title">
+            <header className="overview-card-header">
+              <div>
+                <h2 id="awaiting-title">Awaiting coordinate verification</h2>
+                <p>
+                  {waiting > 0
+                    ? `${plural(waiting, 'record')}. Counted above, but not on the map until the region confirms where ${waiting === 1 ? 'it is' : 'they are'}.`
+                    : 'Every record in these filters is on the map.'}
+                </p>
+              </div>
+              {waiting > 0 && (
+                <button
+                  type="button"
+                  className="ui-button ui-button-secondary"
+                  onClick={() => void download('For_field_verification', VERIFICATION_COLUMNS, verificationRows(awaiting, data), waiting, 'Awaiting coordinate verification')}
+                >
+                  <Download aria-hidden="true" />
+                  Download verification sheet
+                </button>
+              )}
+            </header>
+            {awaiting.map((group) => (
+              <div key={group.municipalityId} className="awaiting-group">
+                <h3>
+                  {group.municipality} <span className="count">{group.records.length}</span>
+                </h3>
+                <div className="chart-table-scroll">
+                  <table className="awaiting-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">Item</th>
+                        <th scope="col">Beneficiary</th>
+                        <th scope="col">Encoded barangay</th>
+                        <th scope="col">Issue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.records.map(({ record, issue }) => (
+                        <tr key={record.id} data-record={record.id}>
+                          <td className="awaiting-id">{record.source_id ?? '–'}</td>
+                          <td>
+                            <Link to={recordOnMap(record.id)}>{recordName(record, data)}</Link>
+                          </td>
+                          <td>{record.beneficiary ?? '–'}</td>
+                          <td>{data.barangays.find((barangay) => barangay.id === record.barangay_id)?.name ?? record.barangay_raw ?? '–'}</td>
+                          <td>
+                            <span className={`issue-badge${record.qa_flags.includes('out_of_province') ? ' is-warning' : ''}`}>
+                              <MapPinOff aria-hidden="true" />
+                              {issue}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </section>
         </>
       )}
-
-      <section id="awaiting" className="overview-card awaiting" aria-labelledby="awaiting-title">
-        <header className="overview-card-header">
-          <div>
-            <h2 id="awaiting-title">Awaiting coordinate verification</h2>
-            <p>
-              {waiting > 0
-                ? `${plural(waiting, 'record')}. Counted above, but not on the map until the region confirms where ${waiting === 1 ? 'it is' : 'they are'}.`
-                : 'Every record in these filters is on the map.'}
-            </p>
-          </div>
-          {waiting > 0 && (
-            <button
-              type="button"
-              className="ui-button ui-button-secondary"
-              onClick={() => void download('For_field_verification', VERIFICATION_COLUMNS, verificationRows(awaiting, data), waiting, 'Awaiting coordinate verification')}
-            >
-              <Download aria-hidden="true" />
-              Download verification sheet
-            </button>
-          )}
-        </header>
-        {awaiting.map((group) => (
-          <div key={group.municipalityId} className="awaiting-group">
-            <h3>
-              {group.municipality} <span className="count">{group.records.length}</span>
-            </h3>
-            <div className="chart-table-scroll">
-              <table className="awaiting-table">
-                <thead>
-                  <tr>
-                    <th scope="col">ID</th>
-                    <th scope="col">Item</th>
-                    <th scope="col">Beneficiary</th>
-                    <th scope="col">Encoded barangay</th>
-                    <th scope="col">Issue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.records.map(({ record, issue }) => (
-                    <tr key={record.id} data-record={record.id}>
-                      <td className="awaiting-id">{record.source_id ?? '–'}</td>
-                      <td>
-                        <Link to={recordOnMap(record.id)}>{recordName(record, data)}</Link>
-                      </td>
-                      <td>{record.beneficiary ?? '–'}</td>
-                      <td>{data.barangays.find((barangay) => barangay.id === record.barangay_id)?.name ?? record.barangay_raw ?? '–'}</td>
-                      <td>
-                        <span className={`issue-badge${record.qa_flags.includes('out_of_province') ? ' is-warning' : ''}`}>
-                          <MapPinOff aria-hidden="true" />
-                          {issue}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))}
-      </section>
     </main>
   );
 }
@@ -272,15 +277,8 @@ export function DashboardPage({ user, onDataSources }: { user: AppUser; onDataSo
   useEffect(() => {
     if (sources) onDataSources(sources);
   }, [sources, onDataSources]);
-  if (state.status === 'loading') return <p className="page-message is-loading">Loading…</p>;
-  if (state.status === 'error') {
-    return (
-      <div className="page-message" role="alert">
-        <h2>This page could not load</h2>
-        <p>{state.error.message}</p>
-      </div>
-    );
-  }
+  if (state.status === 'loading') return <PageLoading />;
+  if (state.status === 'error') return <PageError error={state.error} onRetry={state.retry} />;
   return (
     <StoreContext.Provider value={{ store: state.store, places: state.places }}>
       <Dashboard data={state.data} />

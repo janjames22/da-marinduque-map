@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createStore } from '../data/create-store';
 import type { DataStore } from '../data/store';
 import type { AppUser, MapData } from '../data/types';
@@ -106,21 +106,52 @@ function openSession(user: AppUser, setConnection: (live: boolean) => void): Ses
   return current;
 }
 
-export function useMapData(user: AppUser): MapDataState {
+// A page that could not load offers to try again, which starts a fresh load.
+export type MapDataView = Exclude<MapDataState, { status: 'error' }> | { status: 'error'; error: Error; retry(): void };
+
+export function useMapData(user: AppUser): MapDataView {
   const setConnection = useConnection((current) => current.setLive);
   // A page opened after the first has the data at once, with no "Loading…".
   const [state, setState] = useState<MapDataState>(() => openSession(user, setConnection).state);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    // A failed load isn't kept, so this starts again after a retry.
     const current = openSession(user, setConnection);
     current.listeners.add(setState);
     setState(current.state);
     return () => {
       current.listeners.delete(setState);
     };
-  }, [user, setConnection]);
+  }, [user, setConnection, attempt]);
 
-  return state;
+  const retry = useCallback(() => setAttempt((count) => count + 1), []);
+  return useMemo(() => (state.status === 'error' ? { ...state, retry } : state), [state, retry]);
+}
+
+// On signing in, start the load straight away, so it runs while a page's code is still arriving
+// rather than after it. The page then picks up the same load.
+export function startMapData(user: AppUser) {
+  openSession(user, useConnection.getState().setLive);
+}
+
+// Calls back once this person's data has loaded, or failed to, so work that can wait, such as fetching
+// other pages' code, doesn't compete with the first page. Returns a function that cancels it.
+export function afterMapData(user: AppUser, callback: () => void): () => void {
+  let done = false;
+  const current = openSession(user, useConnection.getState().setLive);
+  const listener = (state: MapDataState) => {
+    if (done || state.status === 'loading') return;
+    done = true;
+    current.listeners.delete(listener);
+    callback();
+  };
+  current.listeners.add(listener);
+  listener(current.state);
+  return () => {
+    done = true;
+    current.listeners.delete(listener);
+  };
 }
 
 // On signing out: stop the live updates and forget the data, so the next person starts fresh.

@@ -3,6 +3,14 @@
 [build]
   publish = "dist"
 
+# A file under /assets that isn't there is from an older version, asked for by a tab opened before
+# the last deploy. It gets a plain 404 rather than the app's page, which would be kept under the
+# file's name for a year, and the app reloads to get the new version. Only applies when no file matches.
+[[redirects]]
+  from = "/assets/*"
+  to = "/404"
+  status = 404
+
 # The address of a barangay's profile only exists inside the app.
 [[redirects]]
   from = "/*"
@@ -19,3 +27,12 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(self), camera=(self), microphone=()"
     X-Robots-Tag = "noindex"
+
+# Everything under /assets has a hash of its content in its name, so a file never changes once
+# published: a new version gets new names. Browsers can keep these a year without asking again,
+# which makes every visit after the first quicker. index.html and the boundaries keep the default,
+# checked on each visit, so a deploy shows at once.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

@@ -197,7 +197,34 @@ test.describe('signed in', () => {
     await page.goto('/map');
     await signIn(page, USERS.viewer);
     await expect(page.getByRole('heading', { name: 'The map could not load' })).toBeVisible();
+    // The database's own words are kept under Details, and the page offers to try again.
     await expect(page.getByRole('alert')).toContainText('Database unavailable');
+    fake.failReads(false);
+    await page.getByRole('button', { name: 'Try again' }).click();
+    await expect(shapes(page)).toHaveCount(SHAPES);
+  });
+
+  // Phase 17b. On the production build this is what a tab left open over a deploy meets: the page
+  // it asks for has a new file name, and the old one is gone.
+  test('reloads once for a page whose code is gone, then says a newer version is out', async ({ page }) => {
+    // Set before signing in, as the app fetches the other pages' code as soon as it's idle.
+    // DashboardPage-<hash>.js when built, DashboardPage.tsx on the dev server.
+    const gone = /\/DashboardPage(-[^/]*)?\.(js|tsx)(\?.*)?$/;
+    await page.route(gone, (route) => route.fulfill({ status: 404, body: '' }));
+    await signedIn(page, USERS.viewer);
+    let loads = 0;
+    page.on('load', () => loads++);
+    await (await sidebar(page)).getByRole('link', { name: 'Dashboard' }).click();
+
+    const alert = page.getByRole('alert');
+    await expect(alert.getByRole('heading', { name: 'Something went wrong on this page' })).toBeVisible();
+    await expect(alert).toContainText('A newer version of the map is out. Reload the page to get it.');
+    // Still signed in after the reload, and it didn't reload again.
+    expect(loads).toBe(1);
+
+    await page.unroute(gone);
+    await alert.getByRole('button', { name: 'Reload the page' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
   });
 });
 

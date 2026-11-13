@@ -14,6 +14,7 @@ import { activeSignatories } from './report-data';
 import '../overview/overview.css';
 import '../records/records.css';
 import './reports.css';
+import { PageError, PageLoading } from '../overview/PageState';
 
 const SECTIONS = [
   { path: '/reports', label: 'Overview', end: true },
@@ -139,15 +140,8 @@ function Reports({ data, boundaries, user }: { data: MapData; boundaries: Bounda
 
 export function ReportsPage({ user }: { user: AppUser }) {
   const state = useMapData(user);
-  if (state.status === 'loading') return <p className="page-message is-loading">Loading…</p>;
-  if (state.status === 'error') {
-    return (
-      <div className="page-message" role="alert">
-        <h2>This page could not load</h2>
-        <p>{state.error.message}</p>
-      </div>
-    );
-  }
+  if (state.status === 'loading') return <PageLoading />;
+  if (state.status === 'error') return <PageError error={state.error} onRetry={state.retry} />;
   return (
     <StoreContext.Provider value={{ store: state.store, places: state.places }}>
       <Reports data={state.data} boundaries={state.boundaries} user={user} />

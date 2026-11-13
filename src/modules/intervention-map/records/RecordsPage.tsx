@@ -23,6 +23,7 @@ import { StoreContext } from '../state/store-context';
 import { useMapData, type Boundaries } from '../state/use-map-data';
 import '../overview/overview.css';
 import './records.css';
+import { PageError, PageLoading } from '../overview/PageState';
 
 const count = (value: number) => value.toLocaleString('en-US');
 const byId = <T extends { id: number }>(rows: T[], id: number | null) => (id === null ? undefined : rows.find((row) => row.id === id));
@@ -338,15 +339,8 @@ export function RecordsPage({ user, onDataSources }: { user: AppUser; onDataSour
     if (sources) onDataSources(sources);
   }, [sources, onDataSources]);
 
-  if (state.status === 'loading') return <p className="page-message is-loading">Loading…</p>;
-  if (state.status === 'error') {
-    return (
-      <div className="page-message" role="alert">
-        <h2>This page could not load</h2>
-        <p>{state.error.message}</p>
-      </div>
-    );
-  }
+  if (state.status === 'loading') return <PageLoading />;
+  if (state.status === 'error') return <PageError error={state.error} onRetry={state.retry} />;
   return (
     <StoreContext.Provider value={{ store: state.store, places: state.places }}>
       {detail ? <RecordDetail data={state.data} user={user} id={detail.params.id!} /> : <RecordsList data={state.data} boundaries={state.boundaries} user={user} />}

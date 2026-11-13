@@ -624,10 +624,6 @@
   padding: 0 var(--space-3);
 }
 
-.auth-card .page-message {
-  padding: 0;
-}
-
 @media (max-width: 900px) {
   .auth-intro {
     flex-basis: 100%;
