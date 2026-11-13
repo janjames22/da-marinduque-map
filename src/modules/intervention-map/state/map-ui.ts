@@ -7,49 +7,26 @@ export type { BasemapId } from '../lib/saved-views';
 
 export type InsightsTab = 'dashboard' | 'records';
 
-// The map opens on its own, so it isn't crowded. The Dashboard page has the full figures, and the panel
-// beside the map opens from its button and stays open next time for whoever opened it. On a phone the
-// two take turns.
-const WIDE_ENOUGH = '(min-width: 1100px)';
-const INSIGHTS_KEY = 'da-map-insights-open';
+// The map first, every time the Map is opened (the owner's choice at Phase 16c's Gate 1): the layers
+// card and the dashboard start put away, with buttons to bring each, and the menu does too (AppShell).
+// What is brought out stays out until the Map is left. On a phone the panels take turns as before.
+// Replaces Phase 14's dashboard that stayed open next time for whoever opened it.
 
-function insightsAtStart(): InsightsTab | null {
+// How long a panel takes to leave, when the device hasn't asked for less motion.
+const LEAVE_MS = 180;
+
+const lessMotion = () => {
   try {
-    if (globalThis.localStorage?.getItem(INSIGHTS_KEY) !== 'yes') return null;
-    return globalThis.matchMedia?.(WIDE_ENOUGH).matches ? 'dashboard' : null;
-  } catch {
-    return null;
-  }
-}
-
-function rememberInsights(closed: boolean) {
-  try {
-    if (closed) globalThis.localStorage?.removeItem(INSIGHTS_KEY);
-    else globalThis.localStorage?.setItem(INSIGHTS_KEY, 'yes');
-  } catch {
-    // Only a convenience, so a browser that won't store it just opens as usual next time.
-  }
-}
-
-// The layers card on a computer can be put away for the map's sake, and stays away next time for
-// whoever did it. A phone has its own sheet for it.
-const LAYERS_KEY = 'da-map-layers-hidden';
-
-function layersHiddenAtStart(): boolean {
-  try {
-    return globalThis.localStorage?.getItem(LAYERS_KEY) === 'yes';
+    return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   } catch {
     return false;
   }
-}
+};
 
-function rememberLayersHidden(hidden: boolean) {
-  try {
-    if (hidden) globalThis.localStorage?.setItem(LAYERS_KEY, 'yes');
-    else globalThis.localStorage?.removeItem(LAYERS_KEY);
-  } catch {
-    // As for the dashboard panel, only a convenience.
-  }
+// Runs `done` once a panel has had time to leave, or at once with less motion.
+function afterLeaving(done: () => void) {
+  if (lessMotion()) done();
+  else setTimeout(done, LEAVE_MS);
 }
 
 interface MapUiState extends ViewFilters {
@@ -63,9 +40,12 @@ interface MapUiState extends ViewFilters {
   insights: InsightsTab | null;
   insightsWide: boolean;
   // On a computer: the layers card put away, and the panel on the right (a profile, a form or the
-  // dashboard) put away without closing it. The panel comes back when another one opens.
+  // dashboard) put away without closing it. The panel comes back when another one opens. Each is
+  // "leaving" for a moment first, so it can fade out.
   layersHidden: boolean;
+  layersLeaving: boolean;
   sideHidden: boolean;
+  sideLeaving: boolean;
   limitToMapView: boolean;
   focusRecord: { id: string; nonce: number } | null;
   focusBarangay: { id: number; nonce: number } | null;
@@ -94,8 +74,12 @@ interface MapUiState extends ViewFilters {
   showEverything(): void;
   setInsights(tab: InsightsTab | null): void;
   setInsightsWide(wide: boolean): void;
-  setLayersHidden(hidden: boolean): void;
-  setSideHidden(hidden: boolean): void;
+  showLayers(): void;
+  hideLayers(): void;
+  showSide(): void;
+  hideSide(): void;
+  // Opening the Map: the map first, with the layers card and the dashboard put away.
+  enterMap(): void;
   setLimitToMapView(limit: boolean): void;
   applyView(view: ViewConfig): void;
   markDefaultViewHandled(): void;
@@ -122,10 +106,12 @@ export const useMapUi = create<MapUiState>((set) => ({
   showProvince: true,
   panelOpen: false,
   showUnassigned: false,
-  insights: insightsAtStart(),
+  insights: null,
   insightsWide: false,
-  layersHidden: layersHiddenAtStart(),
+  layersHidden: true,
+  layersLeaving: false,
   sideHidden: false,
+  sideLeaving: false,
   limitToMapView: false,
   focusRecord: null,
   focusBarangay: null,
@@ -158,16 +144,19 @@ export const useMapUi = create<MapUiState>((set) => ({
   clearFilters: () => set({ programId: null, yearFrom: null, yearTo: null, municipalityId: null, barangayId: null, fieldFilters: [] }),
   // For a link to one record, which has to be showing whatever was on before.
   showEverything: () => set({ programId: null, yearFrom: null, yearTo: null, municipalityId: null, barangayId: null, fieldFilters: [], hiddenTypeIds: [], mode: 'count' }),
-  setInsights: (insights) => {
-    rememberInsights(insights === null);
-    set({ insights });
-  },
+  setInsights: (insights) => set({ insights }),
   setInsightsWide: (insightsWide) => set({ insightsWide }),
-  setLayersHidden: (layersHidden) => {
-    rememberLayersHidden(layersHidden);
-    set({ layersHidden });
+  showLayers: () => set({ layersHidden: false, layersLeaving: false }),
+  hideLayers: () => {
+    set({ layersLeaving: true });
+    afterLeaving(() => set((state) => (state.layersLeaving ? { layersHidden: true, layersLeaving: false } : {})));
   },
-  setSideHidden: (sideHidden) => set({ sideHidden }),
+  showSide: () => set({ sideHidden: false, sideLeaving: false }),
+  hideSide: () => {
+    set({ sideLeaving: true });
+    afterLeaving(() => set((state) => (state.sideLeaving ? { sideHidden: true, sideLeaving: false } : {})));
+  },
+  enterMap: () => set({ layersHidden: true, layersLeaving: false, insights: null, sideHidden: false, sideLeaving: false, panelOpen: false }),
   setLimitToMapView: (limitToMapView) => set({ limitToMapView }),
   applyView: (view) =>
     set((state) => ({

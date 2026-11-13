@@ -517,7 +517,7 @@ A phase is done when all of these hold:
 
 | Version | Date | Change |
 |---|---|---|
-| 0.7 | 2026-11-13 | At Phase 16c's Gate 1 the owner asked for more room for the map: full screen for the map alone (M-10), and the menu, the layers card and the panel on the right each put away and back on a computer. Built on the 16c branch |
+| 0.7 | 2026-11-13 | At Phase 16c's Gate 1 the owner asked for more room for the map: full screen for the map alone (M-10), and the menu, the layers card and the panel on the right each put away and back on a computer. Then, after trying it, the Map opens map first every time, with the menu, the layers card and the dashboard put away and a button for each (replacing Phase 14's dashboard that stayed open for whoever opened it), the legend folds smoothly and keeps clear of the map's buttons, and panels slide in and out. Built on the 16c branch |
 | 0.6 | 2026-11-13 | Phase 16 split into 16a, 16b and 16c, and built on sample roads until the FMR data arrives. A road's length is the one its form reports, or else its traced line's. The next production deploy waits until Phase 17 |
 | 0.5 | 2026-11-11 | Phase 14 built. The filters stay in the layers card rather than a bar above the map, approved by the owner at Gate 1. The map opens without the dashboard panel, which also gives it room on laptop screens |
 | 0.4 | 2026-11-11 | Phase 11 done: the design was drawn on a claude.ai design canvas instead of in Figma and signed off. Source in `design/canvas/`. Office name written out in full |

@@ -188,15 +188,21 @@ Since Phase 16b, Encoders and Admins draw a road's line on the map, in its Edit 
 
 ## Room for the map
 
-On a computer, each of these can be put away for a wider map, and brought back:
+**The Map opens map first, every time.** On a computer the menu, the layers and filters card and the dashboard start put away, so the map has the page, and each has a button to bring it out. What's brought out stays out while you move about the map, a barangay or a record, until you leave the Map. The next visit starts map first again. On a phone the menu is a drawer, the layers a sheet and the dashboard a tab, as before.
 
-| To put away | Use | To bring it back |
+| To bring out | Use | To put it away |
 |---|---|---|
-| **The menu** on the left | The panel button at the top left of the top bar | The same button. The menu stays away on every page, and next time, until it's brought back |
-| **The layers and filters card** | The panel button under the map's zoom and full screen buttons | The **Layers** button there. It stays away next time too |
-| **The panel on the right**: a barangay's profile, a form, the list of unassigned records or the dashboard | The panel button at the bottom right of the map | The button there, named after the panel. A form or profile put away keeps what's in it. Opening another panel brings it back |
+| **The menu** | **Menu**, at the top left of the top bar | The same button. On the Map this lasts for the visit. On other pages the menu stays as you last left it, next time too |
+| **The layers and filters card** | **Layers**, under the map's zoom and full screen buttons | The **×** at the top of the card |
+| **The dashboard** | **Dashboard**, in the map's toolbar | Its own close button |
+
+**The panel on the right**, a barangay's profile, a form, the list of unassigned records or the dashboard, can also be put away without closing it: the panel button at the bottom right of the map. While it's away the button names it, and brings it back. A form or profile put away keeps what's in it. Opening another panel brings it out.
+
+**The legend** has its own button at its top. It starts open when the map has room for it, and folded into a small **Legend** button when the map is short, such as in a small window. It's never taller than the room below the map's buttons on the left, and scrolls inside when it needs more.
 
 **Full screen**, the button under the map's zoom buttons, gives the map the whole screen alone, with its zoom buttons, toolbar and legend. **Esc**, or the same button, leaves it. Anything that opens beside or over the map, such as a barangay's profile, a form, Export, Print map or a photo, leaves full screen first. On a phone it hides the browser's bars too. An iPhone has no full screen for pages, so there the map fills the browser window instead.
+
+Panels slide in and fade out, and the legend folds, unless your device is set to reduce motion.
 
 ## The dashboard and records table
 

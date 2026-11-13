@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import type { Intervention } from '../data/types';
 import type { ChoroplethMode, Shading } from '../lib/choropleth';
 import { DEFAULT_COLOR_BY, type ColorScale } from '../lib/view-fields';
@@ -66,12 +66,79 @@ function MarkerLegend({ scale, markers }: { scale: ColorScale; markers: Interven
   );
 }
 
+// A phone's legend starts folded, and keeps to its own height (map-phone.css).
+const PHONE = '(max-width: 800px)';
+// Room between the legend and the buttons above it.
+const CLEARANCE = 12;
+// Below this, a computer's legend starts folded: too little room to read it open.
+const ROOMY = 240;
+// How long the fold takes (map.css), before the folded body leaves the layout.
+const FOLD_MS = 240;
+
+const lessMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+// Folding is seen through: the body stays laid out while it shrinks, then leaves the layout, so the folded
+// legend is a small button. Unfolding brings it back first, then grows it on the next frames.
+function useFold(open: boolean) {
+  const [laidOut, setLaidOut] = useState(open);
+  const [expanded, setExpanded] = useState(open);
+  useEffect(() => {
+    if (open) {
+      setLaidOut(true);
+      let frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => setExpanded(true));
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+    setExpanded(false);
+    const timer = setTimeout(() => setLaidOut(false), lessMotion() ? 0 : FOLD_MS);
+    return () => clearTimeout(timer);
+  }, [open]);
+  return { laidOut, expanded };
+}
+
+// How tall the legend may be, so it never runs under the zoom, full screen and layers buttons above it
+// on the map's left. Null on a phone, whose buttons are elsewhere.
+function useRoomForLegend(legend: RefObject<HTMLDivElement | null>): number | null {
+  const [room, setRoom] = useState<number | null>(null);
+  useEffect(() => {
+    const element = legend.current;
+    const area = element?.parentElement;
+    if (!element || !area) return;
+    const measure = () => {
+      if (globalThis.matchMedia?.(PHONE).matches) {
+        setRoom(null);
+        return;
+      }
+      const box = area.getBoundingClientRect();
+      const controls = area.querySelector('.leaflet-top.leaflet-left');
+      const above = controls ? controls.getBoundingClientRect().bottom - box.top : 0;
+      const below = Number.parseFloat(getComputedStyle(element).bottom) || 0;
+      setRoom(Math.max(0, Math.floor(box.height - above - below - CLEARANCE)));
+    };
+    measure();
+    // The map's size, and the buttons above, as one comes or goes.
+    const observer = new ResizeObserver(measure);
+    observer.observe(area);
+    const controls = area.querySelector('.leaflet-top.leaflet-left');
+    if (controls) observer.observe(controls);
+    return () => observer.disconnect();
+  }, [legend]);
+  return room;
+}
+
 export function Legend({ mode, shading, totalBarangays, unassigned, scale, markers, roads, onShowUnassigned }: LegendProps) {
-  // Phones only: the legend starts folded into a small button, so the map has the screen.
-  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const room = useRoomForLegend(ref);
+  // Open when there's room for it, folded into a small button when there isn't, as on a phone, until the
+  // person chooses. The choice then stands.
+  const [chosen, setChosen] = useState<boolean | null>(null);
+  const open = chosen ?? (room !== null && room >= ROOMY);
+  const { laidOut, expanded } = useFold(open);
+  const style = room === null ? undefined : ({ '--legend-room': `${room}px` } as CSSProperties);
   return (
-    <div className={`legend${open ? ' is-open' : ''}`} aria-label="Map legend">
-      <button type="button" className="legend-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+    <div ref={ref} className={`legend${expanded ? ' is-open' : ''}${laidOut ? '' : ' is-folded'}`} aria-label="Map legend" style={style}>
+      <button type="button" className="legend-toggle" aria-expanded={open} onClick={() => setChosen(!open)}>
         <span className="legend-toggle-swatches" aria-hidden="true">
           {(mode === 'off' ? [] : shading.legend.slice(-3)).map((entry) => (
             <span key={entry.label} style={{ background: entry.color }} />
@@ -79,6 +146,8 @@ export function Legend({ mode, shading, totalBarangays, unassigned, scale, marke
         </span>
         {open ? 'Hide legend' : 'Legend'}
       </button>
+      {/* Folds and unfolds smoothly on a computer (map.css). */}
+      <div className="legend-fold">
       <div className="legend-body">
       {mode !== 'off' && (
         <>
@@ -109,6 +178,7 @@ export function Legend({ mode, shading, totalBarangays, unassigned, scale, marke
       )}
       <RoadLegend roads={roads} />
       <MarkerLegend scale={scale} markers={markers} />
+      </div>
       </div>
     </div>
   );

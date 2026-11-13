@@ -81,7 +81,7 @@ test.describe('Encoder', () => {
 test.describe('Admin', () => {
   test('also gets the deleted records', async ({ page, isMobile }) => {
     await openAs(page, 'admin', record.barangay_id!);
-    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await page.getByRole('button', { name: 'Layers and filters' }).click();
     await expect(page.getByRole('button', { name: /Deleted records/ })).toBeVisible();
   });
 });

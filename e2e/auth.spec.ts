@@ -229,7 +229,7 @@ test.describe('what each role is offered', () => {
 
   test('an Admin also gets the deleted records', async ({ page, isMobile }) => {
     await signedIn(page, USERS.admin);
-    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await page.getByRole('button', { name: 'Layers and filters' }).click();
     await expect(page.getByRole('button', { name: /Deleted records/ })).toBeVisible();
   });
 });
@@ -673,7 +673,7 @@ test.describe('saved views', () => {
   const inGasan = seedData.barangays.filter((b) => b.municipality_id === gasan.id).length;
 
   async function openLayers(page: Page, isMobile: boolean) {
-    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await page.getByRole('button', { name: 'Layers and filters' }).click();
     await expect(layers(page)).toBeVisible();
   }
 

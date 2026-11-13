@@ -1,14 +1,17 @@
 // The frame around every page since Phase 12: the sidebar and the account menu in the top bar.
 import { expect, type Locator, type Page } from '@playwright/test';
 
-// The sidebar's links. On a phone the sidebar is a drawer behind the menu button, so this opens it.
+// The sidebar's links. On a phone the sidebar is a drawer behind the menu button, so this opens it. On a
+// computer the Map opens with the menu put away (Phase 16c, Gate 1), so this brings it out.
 export async function sidebar(page: Page): Promise<Locator> {
   await expect(page.getByRole('banner')).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Main' });
-  const menu = page.getByRole('button', { name: 'Open the menu' });
-  if (await menu.isVisible()) {
-    await menu.click();
-    await expect(nav).toBeVisible();
+  for (const name of ['Open the menu', 'Show the menu']) {
+    const menu = page.getByRole('button', { name });
+    if (await menu.isVisible()) {
+      await menu.click();
+      await expect(nav).toBeVisible();
+    }
   }
   return nav;
 }

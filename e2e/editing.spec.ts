@@ -1007,7 +1007,7 @@ test.describe('delete and restore', () => {
     await expect(profile(page)).not.toContainText(cleanRecord.beneficiary);
     await expect(page.locator(`.intervention-marker[title="${cleanRecord.beneficiary}"]`)).toHaveCount(0);
 
-    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await page.getByRole('button', { name: 'Layers and filters' }).click();
     await page.getByRole('button', { name: 'Deleted records (1)' }).click();
     const deleted = page.getByLabel('Deleted records');
     await expect(deleted).toContainText(cleanRecord.beneficiary);
@@ -1138,7 +1138,7 @@ test.describe('local data', () => {
     await form(page, 'Edit baseline').getByRole('button', { name: 'Save baseline' }).click();
     await expect(profile(page).locator('.baseline')).toContainText('9');
 
-    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await page.getByRole('button', { name: 'Layers and filters' }).click();
     await expect(page.getByTestId('local-changes')).toContainText('1 change saved in this browser only.');
     page.once('dialog', (dialog) => void dialog.accept());
     await page.getByRole('button', { name: 'Discard local changes' }).click();
@@ -1161,7 +1161,7 @@ test.describe('when the seed is rebuilt', () => {
     await ready(page);
     await serveRebuiltSeed(page);
     await ready(page);
-    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await page.getByRole('button', { name: 'Layers and filters' }).click();
     await expect(page.getByTestId('local-changes')).toContainText('No changes yet.');
     await expect(page.getByText('The seed data was rebuilt.')).toHaveCount(0);
   });
@@ -1176,7 +1176,7 @@ test.describe('when the seed is rebuilt', () => {
     await serveRebuiltSeed(page);
     await openProfile(page, emptyBarangay.id);
     await expect(profile(page).locator('.baseline')).toContainText('77');
-    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await page.getByRole('button', { name: 'Layers and filters' }).click();
     await expect(page.getByText('The seed data was rebuilt.')).toBeVisible();
 
     page.once('dialog', (dialog) => void dialog.accept());
@@ -1184,7 +1184,7 @@ test.describe('when the seed is rebuilt', () => {
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
     await openProfile(page, emptyBarangay.id);
     await expect(profile(page).locator('.baseline')).not.toContainText('77');
-    if (isMobile) await page.getByRole('button', { name: 'Layers and filters' }).click();
+    await page.getByRole('button', { name: 'Layers and filters' }).click();
     await expect(page.getByText('The seed data was rebuilt.')).toHaveCount(0);
   });
 });

@@ -200,11 +200,16 @@
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  gap: 6px;
   height: 36px;
   justify-content: center;
   margin-left: calc(-1 * var(--space-2));
   margin-right: auto;
-  width: 36px;
+  min-width: 36px;
+  padding: 0 8px;
 }
 
 .topbar-menu-toggle:hover {
@@ -228,6 +233,20 @@
 
   .shell.menu-hidden .sidebar {
     display: none;
+  }
+}
+
+/* The menu comes back gently, as the map's panels do. Off for anyone who has asked for less motion. */
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  .sidebar {
+    animation: menu-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
   }
 }
 

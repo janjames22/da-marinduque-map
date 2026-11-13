@@ -62,7 +62,7 @@ const tabs = (page: Page) => page.getByRole('navigation', { name: 'Views' });
 const layers = (page: Page) => page.getByRole('complementary', { name: 'Layers and filters' });
 const legend = (page: Page) => page.getByLabel('Map legend');
 
-// On a phone the legend starts folded into a button. On a computer it's always open.
+// The legend starts folded into a button on a phone, and on a computer when the map is too short for it.
 async function openLegend(page: Page) {
   await expect(legend(page)).toBeVisible();
   const toggle = legend(page).getByRole('button', { name: 'Legend', exact: true });
@@ -74,13 +74,14 @@ const rows = (page: Page) => page.locator('.records-table tbody tr');
 const count = (page: Page) => page.locator('.records-count');
 const popup = (page: Page) => page.locator('.record-popup');
 
-// The panel starts closed since Phase 14, and stays open for someone who opened it. These tests are
-// about the panel, so they start as that person.
+// The panel starts closed each time the Map opens (since Phase 16c's Gate 1). These tests are about the
+// panel, so on a computer they open it from the map's toolbar first. A phone has it as a tab.
 async function ready(page: Page, path = '/map', { panelOpen = true } = {}) {
-  if (panelOpen) await page.addInitScript(() => localStorage.setItem('da-map-insights-open', 'yes'));
   await page.route(/tile\.openstreetmap\.org|arcgisonline\.com/, (route) => route.fulfill({ status: 204 }));
   await page.goto(path);
   await expect(page.locator('.barangay-shape')).toHaveCount(218);
+  const open = page.locator('.map-toolbar').getByRole('button', { name: 'Dashboard', exact: true });
+  if (panelOpen && (await open.isVisible())) await open.click();
 }
 
 async function showDashboard(page: Page, isMobile: boolean) {
@@ -99,22 +100,24 @@ async function showMap(page: Page, isMobile: boolean) {
   if (isMobile) await tabs(page).getByRole('button', { name: 'Map' }).click();
 }
 
-// On a phone, the filters are in a drawer, reached from the map.
+// On a phone, the filters are in a drawer, reached from the map. On a computer the card starts put away,
+// and comes out from the map's Layers button.
+async function openLayers(page: Page, isMobile: boolean) {
+  if (isMobile) await showMap(page, true);
+  const toggle = page.getByRole('button', { name: 'Layers and filters' });
+  if (await toggle.isVisible()) await toggle.click();
+  await expect(layers(page)).toBeVisible();
+}
+
 async function withLayers(page: Page, isMobile: boolean, change: () => Promise<unknown>) {
-  if (isMobile) {
-    await showMap(page, true);
-    await page.getByRole('button', { name: 'Layers and filters' }).click();
-  }
+  await openLayers(page, isMobile);
   await change();
   if (isMobile) await page.getByRole('button', { name: 'Close layers' }).click();
 }
 
 // Going to a barangay opens its profile, which closes the drawer on a phone.
 async function goToBarangayAndCloseIt(page: Page, isMobile: boolean, name: string) {
-  if (isMobile) {
-    await showMap(page, true);
-    await page.getByRole('button', { name: 'Layers and filters' }).click();
-  }
+  await openLayers(page, isMobile);
   await layers(page).getByLabel('Go to barangay').selectOption({ label: name });
   await page.getByRole('button', { name: 'Close profile' }).click();
 }

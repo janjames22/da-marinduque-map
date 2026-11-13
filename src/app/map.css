@@ -557,3 +557,213 @@
 .map-page .map-area.is-window-fullscreen .insights-open-button {
   display: none !important;
 }
+
+/* The legend on a computer (Phase 16c, Gate 1): a header that folds it smoothly, open when the map
+   has room for it and folded into a small button when it hasn't, and never taller than the room below
+   the map's buttons on the left (--legend-room, from Legend.tsx). A phone keeps its own folding. */
+@media (min-width: 801px) {
+  .map-page .legend {
+    display: flex;
+    flex-direction: column;
+    max-height: var(--legend-room, none);
+    padding: 0;
+    transition: border-radius 0.2s ease;
+  }
+
+  .map-page .legend:not(.is-open) {
+    border-radius: 999px;
+  }
+
+  .map-page .legend-toggle {
+    align-items: center;
+    background: none;
+    border: 0;
+    border-radius: inherit;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    flex: none;
+    font: inherit;
+    font-size: 13px;
+    font-weight: var(--font-weight-semibold);
+    gap: var(--space-2);
+    min-height: 36px;
+    padding: 0 14px;
+  }
+
+  .map-page .legend.is-open .legend-toggle {
+    color: var(--text-secondary);
+    font-size: 12px;
+    min-height: 30px;
+  }
+
+  .map-page .legend-toggle:hover {
+    color: var(--text-primary);
+  }
+
+  .map-page .legend-toggle:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .map-page .legend-toggle-swatches {
+    display: inline-flex;
+  }
+
+  .map-page .legend-toggle-swatches span {
+    border: 1.5px solid var(--bg-surface);
+    border-radius: 50%;
+    height: 12px;
+    width: 12px;
+  }
+
+  .map-page .legend-toggle-swatches span + span {
+    margin-left: -4px;
+  }
+
+  /* Rows that grow from nothing to the body's height, so it opens and folds rather than jumping. */
+  .map-page .legend-fold {
+    display: grid;
+    grid-template-rows: 1fr;
+    min-height: 0;
+    opacity: 1;
+    transition:
+      grid-template-rows 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 0.2s ease,
+      visibility 0s;
+  }
+
+  .map-page .legend:not(.is-open) .legend-fold {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-rows 0.22s ease,
+      opacity 0.15s ease,
+      visibility 0s 0.22s;
+    visibility: hidden;
+  }
+
+  .map-page .legend-fold > .legend-body {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 14px var(--space-3);
+  }
+
+  /* Once folded, the body leaves the layout, so the legend is just its button. */
+  .map-page .legend.is-folded .legend-fold {
+    display: none;
+  }
+
+  /* The layers card's own header, with its close button, as a phone's sheet has. */
+  .map-page .panel-left .sheet-header {
+    align-items: center;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-card);
+    display: flex;
+    gap: var(--space-2);
+    margin: calc(-1 * var(--space-4)) -18px var(--space-3);
+    padding: var(--space-2) var(--space-2) var(--space-2) 18px;
+    position: sticky;
+    top: calc(-1 * var(--space-4));
+    z-index: 2;
+  }
+
+  .map-page .panel-left .sheet-handle {
+    display: none;
+  }
+
+  .map-page .panel-left .sheet-title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+  }
+
+  .map-page .panel-left .sheet-close {
+    align-items: center;
+    background: none;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    height: 32px;
+    justify-content: center;
+    width: 32px;
+  }
+
+  .map-page .panel-left .sheet-close:hover {
+    background: var(--bg-surface-muted);
+    color: var(--text-primary);
+  }
+
+  .map-page .panel-left .sheet-close:focus-visible {
+    outline: 2px solid var(--focus-ring);
+  }
+
+  .map-page .panel-left .sheet-close svg {
+    height: 18px;
+    width: 18px;
+  }
+}
+
+/* Panels come in and go out gently on a computer, so it's clear what moved. Off for anyone who has
+   asked their device for less motion. */
+@media (min-width: 801px) and (prefers-reduced-motion: no-preference) {
+  .map-page .panel-left {
+    animation: panel-in-left 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .map-page .panel-right {
+    animation: panel-in-right 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .map-page .workspace.layers-leaving .panel-left {
+    animation: panel-out-left 0.18s ease-in both;
+  }
+
+  .map-page .workspace.side-leaving .panel-right {
+    animation: panel-out-right 0.18s ease-in both;
+  }
+
+  .map-page .edge-toggle,
+  .map-page .legend-toggle {
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      transform 0.12s ease;
+  }
+
+  .map-page .edge-toggle:active,
+  .map-page .legend-toggle:active {
+    transform: scale(0.96);
+  }
+}
+
+@keyframes panel-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@keyframes panel-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+@keyframes panel-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@keyframes panel-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}

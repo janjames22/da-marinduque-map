@@ -71,11 +71,21 @@ export function LayerPanel({ data, records, onGoToBarangay }: LayerPanelProps) {
 
   return (
     <aside id="map-layers" className={`panel panel-left${ui.panelOpen ? ' is-open' : ''}`} aria-label="Layers and filters">
-      {/* On a phone the panel is a sheet over the map, closed from its own header. */}
+      {/* On a phone the panel is a sheet over the map, closed from its own header. On a computer the
+          header puts the card away (Phase 16c, Gate 1), and the Layers button on the map brings it. */}
       <div className="sheet-header">
         <span className="sheet-handle" aria-hidden="true" />
         <h2 className="sheet-title">Layers and filters</h2>
-        <button type="button" className="sheet-close" aria-label="Close layers" onClick={() => ui.setPanelOpen(false)}>
+        <button
+          type="button"
+          className="sheet-close"
+          aria-label="Close layers"
+          onClick={() => {
+            // A phone's sheet closes, and a computer's card goes away (Phase 16c, Gate 1).
+            ui.setPanelOpen(false);
+            ui.hideLayers();
+          }}
+        >
           <X aria-hidden="true" />
         </button>
       </div>
