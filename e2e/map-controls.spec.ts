@@ -1,5 +1,6 @@
-// The map's room on a computer, asked for at Phase 16c's Gate 1: the Map opens map first, with the menu,
-// the layers card and the dashboard put away and a button for each, the panel on the right can be put
+// The map's room on a computer, asked for at Phase 16c's Gate 1: the Map opens with the layers card and
+// the dashboard put away and a button for each, and with the menu showing as on every page (the owner's
+// choice on 2026-11-14), the panel on the right can be put
 // away and back, the legend keeps clear of the map's buttons, and the map can fill the screen alone.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
@@ -28,12 +29,12 @@ test.describe('on a computer', () => {
     test.skip(isMobile, 'a phone has its own drawer, sheet and tabs, and takes the panels in turns');
   });
 
-  test('the Map opens map first, with a button for the menu, the layers and the dashboard', async ({ page }) => {
+  test('the Map opens with the menu showing, and a button for the layers and the dashboard', async ({ page }) => {
     await open(page);
-    await expect(menu(page)).toBeHidden();
+    await expect(menu(page)).toBeVisible();
     await expect(layers(page)).toBeHidden();
     await expect(dashboard(page)).toBeHidden();
-    await expect(page.getByRole('button', { name: 'Show the menu' })).toHaveText('Menu');
+    await expect(page.getByRole('button', { name: 'Hide the menu' })).toBeVisible();
 
     const before = await mapWidth(page);
     await page.getByRole('button', { name: 'Layers and filters' }).click();
@@ -47,10 +48,9 @@ test.describe('on a computer', () => {
     await expect(dashboard(page)).toBeVisible();
   });
 
-  test('what is brought out stays for the visit, and the next visit starts map first again', async ({ page }) => {
+  test('the layers card brought out stays for the visit, and the next visit starts with it put away', async ({ page }) => {
     await open(page);
     await page.getByRole('button', { name: 'Layers and filters' }).click();
-    await page.getByRole('button', { name: 'Show the menu' }).click();
     await expect(menu(page)).toBeVisible();
     // A barangay is part of the visit.
     await layers(page).getByLabel('Go to barangay').selectOption({ label: bantad.name });
@@ -58,14 +58,25 @@ test.describe('on a computer', () => {
     await expect(layers(page)).toBeVisible();
     await expect(menu(page)).toBeVisible();
 
-    // Another page keeps its menu. Back on the Map, it's map first again.
+    // Another page keeps its menu. Back on the Map, the menu is still there and the layers card put away.
     await menu(page).getByRole('link', { name: 'Home', exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(menu(page)).toBeVisible();
     await (await sidebar(page)).getByRole('link', { name: 'Map', exact: true }).click();
     await expect(page.locator('.barangay-shape')).toHaveCount(218);
-    await expect(menu(page)).toBeHidden();
+    await expect(menu(page)).toBeVisible();
     await expect(layers(page)).toBeHidden();
+  });
+
+  test('the menu put away on the Map stays away there, and next time', async ({ page }) => {
+    await open(page);
+    await page.getByRole('button', { name: 'Hide the menu' }).click();
+    await expect(menu(page)).toBeHidden();
+    await page.reload();
+    await expect(page.locator('.barangay-shape')).toHaveCount(218);
+    await expect(menu(page)).toBeHidden();
+    await page.getByRole('button', { name: 'Show the menu' }).click();
+    await expect(menu(page)).toBeVisible();
   });
 
   test('the menu put away on another page stays away there, and next time', async ({ page }) => {

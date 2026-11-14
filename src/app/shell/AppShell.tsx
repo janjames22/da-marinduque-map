@@ -5,7 +5,6 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { AppUser } from '../../modules/intervention-map/data/types';
 import { ROLE_LABELS } from '../../modules/intervention-map/lib/permissions';
-import { MAP_PATH } from '../../modules/intervention-map/lib/map-paths';
 import { APP_NAME, OFFICE_NAME, OFFICE_SEAL } from '../brand';
 import { isCurrent, navGroups, type NavIcon } from './nav';
 
@@ -165,11 +164,10 @@ function TopBar({ user, account, menuOpen, onMenu, menuHidden, onToggleMenu }: {
   );
 }
 
-// On a computer the sidebar can be put away, and stays away next time for whoever did it. A phone opens
-// it as a drawer instead. The Map is the map first: its menu starts put away each time it's opened, and
-// bringing it out there lasts for that visit (the owner's choice at Phase 16c's Gate 1).
+// On a computer the sidebar shows on every page, the Map included, and can be put away, which stays so
+// next time for whoever did it. A phone opens it as a drawer instead. (The owner's choice on 2026-11-14,
+// in place of Phase 16c's Map that opened with its menu put away.)
 const MENU_KEY = 'da-menu-hidden';
-const onMapPage = (pathname: string) => pathname === MAP_PATH || pathname.startsWith(`${MAP_PATH}/`);
 
 function menuHiddenAtStart(): boolean {
   try {
@@ -182,27 +180,16 @@ function menuHiddenAtStart(): boolean {
 export function AppShell({ user, account, footer, children }: { user: AppUser; account?: Account; footer: ReactNode; children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
-  const onMap = onMapPage(pathname);
-  const [savedHidden, setSavedHidden] = useState(menuHiddenAtStart);
-  const [shownOnMap, setShownOnMap] = useState(false);
-  const menuHidden = onMap ? !shownOnMap : savedHidden;
-  // Reset on leaving, so the Map never opens with the menu out, even for a moment.
-  useEffect(() => {
-    if (!onMap) setShownOnMap(false);
-  }, [onMap]);
+  const [menuHidden, setMenuHidden] = useState(menuHiddenAtStart);
   const toggleMenu = () => {
-    if (onMap) {
-      setShownOnMap(menuHidden);
-      return;
-    }
-    const hidden = !savedHidden;
+    const hidden = !menuHidden;
     try {
       if (hidden) globalThis.localStorage?.setItem(MENU_KEY, 'yes');
       else globalThis.localStorage?.removeItem(MENU_KEY);
     } catch {
       // Only a convenience: the menu just shows again next time.
     }
-    setSavedHidden(hidden);
+    setMenuHidden(hidden);
   };
 
   // Following a link closes the drawer. The links close it themselves too, for a link to the page
