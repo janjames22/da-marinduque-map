@@ -96,6 +96,33 @@
   width: 22px;
 }
 
+/* The office seal: round, on a white disc so it reads on the green sidebar. */
+.sidebar-logo.has-seal {
+  background: #fff;
+  border-radius: 50%;
+  height: 48px;
+  padding: 2px;
+  width: 48px;
+}
+
+.sidebar-logo.has-seal img {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+/* On a phone, a small seal before the name in the green top bar. */
+.topbar-seal {
+  background: #fff;
+  border-radius: 50%;
+  flex: none;
+  height: 30px;
+  object-fit: contain;
+  padding: 1px;
+  width: 30px;
+}
+
 .sidebar-name {
   display: flex;
   flex-direction: column;
@@ -448,7 +475,9 @@
   }
 
   .topbar-title {
-    display: block;
+    align-items: center;
+    display: flex;
+    gap: var(--space-2);
     flex: 1;
     font-size: var(--font-size-body);
     font-weight: var(--font-weight-semibold);

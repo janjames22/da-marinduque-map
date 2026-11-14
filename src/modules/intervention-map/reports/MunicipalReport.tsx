@@ -75,8 +75,9 @@ export function MunicipalReport({ data, boundaries }: { data: MapData; boundarie
               disabled={busy !== null}
               onClick={() =>
                 void run('pdf', async () => {
-                  const { municipalPdf } = await import('./municipal-pdf');
-                  const made = municipalPdf({ data, boundaries, municipalityId: profile.municipality.id, signatories: data.signatories, now: new Date() });
+                  const [{ municipalPdf }, { loadSeal }] = await Promise.all([import('./municipal-pdf'), import('./pdf-common')]);
+                  const seal = await loadSeal();
+                  const made = municipalPdf({ data, boundaries, municipalityId: profile.municipality.id, signatories: data.signatories, now: new Date(), seal });
                   return made && { bytes: made.bytes, fileName: `Profile_${namePart(profile.municipality.name)}_${manilaToday()}.pdf`, format: 'pdf', records: made.records, filters: { report: 'municipal profile', municipality: profile.municipality.name } };
                 })
               }

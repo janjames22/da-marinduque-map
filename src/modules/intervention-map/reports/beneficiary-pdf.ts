@@ -11,9 +11,11 @@ export interface BeneficiaryPdfInput {
   beneficiaryKey: string;
   signatories: ReportSignatory[];
   now: Date;
+  // The office seal for the title block, from loadSeal().
+  seal?: string | null;
 }
 
-export function beneficiaryPdf({ data, boundaries, beneficiaryKey, signatories, now }: BeneficiaryPdfInput): { bytes: Uint8Array; records: number; name: string } | null {
+export function beneficiaryPdf({ data, boundaries, beneficiaryKey, signatories, now, seal = null }: BeneficiaryPdfInput): { bytes: Uint8Array; records: number; name: string } | null {
   const group = beneficiaryGroups(data).find((candidate) => candidate.key === beneficiaryKey);
   if (!group) return null;
   const rows = beneficiaryRecords(group, data);
@@ -21,7 +23,7 @@ export function beneficiaryPdf({ data, boundaries, beneficiaryKey, signatories, 
   const width = pageWidth(doc) - 2 * MARGIN;
   const summary = `${group.records.length} ${group.records.length === 1 ? 'intervention' : 'interventions'}, ${group.units} ${group.units === 1 ? 'unit' : 'units'}, in ${group.municipalities.join(', ')}`;
   const lines = [summary, ...(group.spellings.length > 1 ? [`Also written as: ${group.spellings.slice(1).join('; ')}`] : []), `As of ${manilaLongDate(now)}`];
-  let y = titleBlock(doc, 'BENEFICIARY PROFILE', group.name, lines);
+  let y = titleBlock(doc, 'BENEFICIARY PROFILE', group.name, lines, seal);
 
   // Where they are, among the municipalities they're in.
   const map = beneficiaryMap(rows, group.municipalities, data, boundaries);
