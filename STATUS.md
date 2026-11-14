@@ -15,7 +15,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-14_
 
-- **Branch:** `map-menu-shown`, pushed to GitHub, not yet merged into `main`. On a computer the Map now opens with the menu showing, like every other page, at the owner's request on 2026-11-14. This replaces Phase 16c's map first, where the Map put its menu away each time. Hide the menu still works there and is remembered. The layers card and the dashboard panel still start put away. The office seal is merged into `main`.
+- **Branch:** `main`, in sync with `origin/main`. Merged on 2026-11-14: the office seal (`office-seal`), and the Map opening with the menu showing like every other page (`map-menu-shown`, at the owner's request, replacing Phase 16c's map first). Hiding the menu there still works and is remembered. The layers card and dashboard panel still start put away.
 - **Live:** Phases 15b to 17c and the popup fix are on https://marinduque-intervention-system.netlify.app, deploy `6af754d1810a1c8cad2a74c6` since 2026-11-14. All 18 live tests pass on it.
 - **The UI/UX roadmap is done:** Phases 10 to 17, with the user guide in [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) and the spec's §10 checklist ticked (30 met, 3 open: drawing polygons, and the KML and Shapefile in QGIS).
 - **Live database:** every migration file on `main` is applied, `0014_line_import.sql` the last, on 2026-11-14 after a backup. An applied file must not be edited, so a later change to the database goes in a new file.
@@ -23,7 +23,7 @@ _Last updated: 2026-11-14_
 - **The live tests** (`npm run test:e2e:live`, in `e2e-live/`) are up to date since 2026-11-14, and all 18 pass on the popup fix's draft. They make temporary accounts and records on the live database and remove them at the end.
 - **The demo's Netlify site exists:** `marinduque-intervention-demo`, project id `ebb96c5f-9495-4234-bea9-3b66ebca9e29`, in the DA-Intervention-Map team, created 2026-11-14. It's empty until the first deploy. Its id is in `.env.local` as `NETLIFY_DEMO_SITE_ID`, and this folder's Netlify link stays on the live site.
 - **Demo draft:** https://6af7f10aed3971aac5a326b5--marinduque-intervention-demo.netlify.app. Open to anyone since the owner switched off Netlify's draft protection, and checked signed out.
-- **Next:** the live site still lacks the office seal, so `npm run deploy` when the owner says so. Then the open items below, such as the FMR data (Q-5) when it comes.
+- **Next:** the live site still lacks the office seal and the Map's menu change, so `npm run deploy` when the owner says so. Then the open items below, such as the FMR data (Q-5) when it comes.
 - **Phase 18 round 1 was dropped:** on 2026-11-14 the owner rejected the redesigned Dashboard, as the demo site is what they want. Its branch, `claude/figma-demo-site-ui-ux-y5fiqz`, is deleted locally and on GitHub.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
@@ -68,7 +68,7 @@ The phases were built in a different order from the spec's §9. Export came befo
 | Docs: invite emails | `docs-email` | 2026-11-09 | Invite emails set up through Gmail SMTP |
 | 10. Design brief | `docs-design-brief` | 2026-11-11 | PDF report confirmed against the data, routes and sidebar, 36-screen inventory, Home and Dashboard content, Figma handoff. Owner decisions: name "Intervention Map", Home for everyone, separate from agri-dms |
 | 11. Design | `design-figma-kit`, `design-canvas-signoff` | 2026-11-11 | Tokens, kit preview and Figma guide, then 12 screens on a claude.ai design canvas, signed off by the owner. Source in `design/canvas/` |
-| Map opens with the menu | `map-menu-shown` | (not yet) | The Map no longer puts the menu away by itself (`app/shell/AppShell.tsx`). The layers card and dashboard still start put away. `e2e/map-controls.spec.ts` updated |
+| Map opens with the menu | `map-menu-shown` | 2026-11-14 | The Map no longer puts the menu away by itself (`app/shell/AppShell.tsx`). The layers card and dashboard still start put away. `e2e/map-controls.spec.ts` updated |
 | Office seal | `office-seal` | 2026-11-14 | The office logo on the sidebar, sign-in, phone top bar, browser tab, and the Municipal, Beneficiary and Print map PDFs (`loadSeal` and `titleBlock` in `reports/pdf-common.ts`). The Inventory report is unchanged |
 | Fix: popup beside another, live tests | `fix-live-tests` | 2026-11-14 | A record opened from a link opens its popup even beside another's marker (`map/InterventionLayer.tsx`), and `e2e-live/` brought up to date for the map-first layout. All 18 live tests pass on its draft |
 | 17c. User guide and checklist | `phase-17c-release` | 2026-11-14 | The user guide (`docs/USER-GUIDE.md`) with 14 screenshots from local mode, made-up names in place of the real ones (`npm run guide:screenshots`), and the spec's §10 checklist ticked with the tests that show each item: 30 met, 3 open |
