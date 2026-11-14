@@ -24,9 +24,14 @@ backups/
 # Exported files and npm run export:samples. These hold beneficiary names too.
 exports/
 
+# The demo site: its made-up data (npm run build:demo-seed) and its build (npm run build:demo)
+data/demo/
+dist-demo/
+
 # Production build used by the browser tests
 .e2e-dist/
 .e2e-dist-live/
+.e2e-dist-demo/
 
 # Which Netlify site this folder deploys to
 .netlify/

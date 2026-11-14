@@ -22,11 +22,14 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'desktop', testIgnore: /auth\.spec/, use: DESKTOP },
-    { name: 'mobile', testIgnore: /auth\.spec/, use: { ...devices['Pixel 7'] } },
+    { name: 'desktop', testIgnore: /auth\.spec|demo\.spec/, use: DESKTOP },
+    { name: 'mobile', testIgnore: /auth\.spec|demo\.spec/, use: { ...devices['Pixel 7'] } },
     { name: 'auth-desktop', testMatch: /auth\.spec/, use: { ...DESKTOP, baseURL: 'http://localhost:5175' } },
     { name: 'auth-mobile', testMatch: /auth\.spec/, use: { ...devices['Pixel 7'], baseURL: 'http://localhost:5175' } },
     { name: 'production', testMatch: /auth\.spec/, use: { ...DESKTOP, baseURL: 'http://localhost:5176' } },
+    // The demo site, built as it's deployed: made-up data, demo accounts, no database.
+    { name: 'demo', testMatch: /demo\.spec/, use: { ...DESKTOP, baseURL: 'http://localhost:5179' } },
+    { name: 'demo-mobile', testMatch: /demo\.spec/, use: { ...devices['Pixel 7'], baseURL: 'http://localhost:5179' } },
   ],
   webServer: [
     {
@@ -46,6 +49,12 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 180_000,
       env: FAKE_SUPABASE,
+    },
+    {
+      command: 'npm run build:demo-seed && npx vite build --mode demo --outDir .e2e-dist-demo && npx vite preview --outDir .e2e-dist-demo --port 5179 --strictPort',
+      url: 'http://localhost:5179',
+      reuseExistingServer: true,
+      timeout: 180_000,
     },
   ],
 });

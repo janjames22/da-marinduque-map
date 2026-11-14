@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anonymize } from '../scripts/guide-screenshots';
+import { anonymize } from '../scripts/lib/anonymize';
 
 const seed = {
   municipalities: [{ id: 1, name: 'Gasan' }],

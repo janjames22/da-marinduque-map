@@ -1,6 +1,7 @@
 // Who can use the map. Everything here goes through the admin-users Edge Function, which holds the
 // project's secret key, and the database's rules still apply to what it does.
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { isDemo } from '../data/app-config';
 import type { InviteDelivery, PeopleApi, Person, PersonStatus } from '../data/store';
 import type { UserRole } from '../data/types';
 import { SelectField, TextField } from '../edit/FormParts';
@@ -238,9 +239,15 @@ export function UsersSection() {
   if (!people) {
     return (
       <SectionFrame asPage title="Users" description={DESCRIPTION}>
-        <EmptyState icon={UsersRound} title="No accounts in local mode">
-          Local mode has no accounts, so there's nobody to manage here. This page works on the real site.
-        </EmptyState>
+        {isDemo ? (
+          <EmptyState icon={UsersRound} title="No accounts to manage in the demo">
+            The demo's accounts are the same for everyone, so there's nobody to invite or change here. On the real site, this is where an Admin invites people and sets their roles.
+          </EmptyState>
+        ) : (
+          <EmptyState icon={UsersRound} title="No accounts in local mode">
+            Local mode has no accounts, so there's nobody to manage here. This page works on the real site.
+          </EmptyState>
+        )}
       </SectionFrame>
     );
   }

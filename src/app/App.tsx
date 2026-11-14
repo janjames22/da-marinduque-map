@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { dataMode } from '../modules/intervention-map/data/app-config';
+import { dataMode, isDemo } from '../modules/intervention-map/data/app-config';
 import { localUser } from '../modules/intervention-map/data/create-store';
 import type { AppUser } from '../modules/intervention-map/data/types';
 import { permissionsFor } from '../modules/intervention-map/lib/permissions';
@@ -17,7 +17,10 @@ import { movedAddress, pageFor } from './routes';
 import { AppShell, type Account } from './shell/AppShell';
 
 // Only loaded when there are logins, so local mode never starts a Supabase client.
-const AuthGate = lazy(() => import('./auth/AuthGate').then((module) => ({ default: module.AuthGate })));
+// Not in the demo site's build, which has no logins and no Supabase.
+const AuthGate = import.meta.env.MODE === 'demo' ? null : lazy(() => import('./auth/AuthGate').then((module) => ({ default: module.AuthGate })));
+// Only in the demo site's build: Vite fills in the mode, so any other build leaves this out entirely.
+const DemoGate = import.meta.env.MODE === 'demo' ? lazy(() => import('./auth/DemoSignIn').then((module) => ({ default: module.DemoGate }))) : null;
 // Only loaded when opened, so the map doesn't carry the admin screens.
 const loadAdmin = () => import('../modules/intervention-map/admin/AdminPage');
 const AdminPage = lazy(() => loadAdmin().then((module) => ({ default: module.AdminPage })));
@@ -86,6 +89,7 @@ function Sources({ dataSources }: { dataSources: string[] }) {
         (CC BY-IGO)
       </span>
       {dataMode === 'local' && <span>Local mode: data stays in this browser</span>}
+      {isDemo && <span>Demo: made-up data. Changes stay in this browser.</span>}
     </>
   );
 }
@@ -143,6 +147,15 @@ export function App() {
 
   if (local) return <SignedIn user={local} />;
 
+  if (DemoGate) {
+    return (
+      <Suspense fallback={<PageLoading />}>
+        <DemoGate>{({ user, signOut }) => <SignedIn key={user.id} user={user} account={{ signOut }} />}</DemoGate>
+      </Suspense>
+    );
+  }
+
+  if (!AuthGate) return null;
   return (
     <Suspense fallback={<PageLoading />}>
       <AuthGate>{({ user, changePassword, signOut }) => <SignedIn user={user} account={{ changePassword, signOut }} />}</AuthGate>
