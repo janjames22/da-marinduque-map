@@ -7,9 +7,10 @@ export interface StoreOptions {
   user: AppUser;
 }
 
-// The one place that chooses where data lives. The dev check keeps local mode out of deployed builds.
+// The one place that chooses where data lives. The dev check keeps local mode out of deployed builds,
+// and only a build made with `--mode demo` runs the demo.
 export async function createStore({ boundaries, user }: StoreOptions): Promise<DataStore> {
-  if (import.meta.env.DEV && dataMode === 'local') {
+  if ((import.meta.env.DEV && dataMode === 'local') || import.meta.env.MODE === 'demo') {
     const { createLocalStore } = await import('./local-store');
     return createLocalStore({ boundaries, user });
   }

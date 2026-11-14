@@ -624,6 +624,95 @@
   padding: 0 var(--space-3);
 }
 
+/* The demo site's sign-in: the form, then its accounts, one per role, each with a Use button. */
+.demo-sign-in {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-width: 576px;
+  width: 100%;
+}
+
+.demo-accounts {
+  border-top: 1px solid var(--border-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-6);
+  width: 100%;
+}
+
+.demo-accounts-header {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.demo-accounts-header h2 {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+}
+
+.demo-accounts-header p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  margin: var(--space-1) 0 0;
+}
+
+.demo-accounts-header .ui-button {
+  flex: none;
+  white-space: nowrap;
+}
+
+.demo-accounts-header .ui-button svg {
+  height: 16px;
+  width: 16px;
+}
+
+.demo-account-list {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.demo-account {
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+}
+
+.demo-account > div {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-body-sm);
+  min-width: 0;
+}
+
+.demo-account strong {
+  font-weight: var(--font-weight-semibold);
+}
+
+.demo-account-note,
+.demo-account code {
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.demo-account code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 @media (max-width: 900px) {
   .auth-intro {
     flex-basis: 100%;

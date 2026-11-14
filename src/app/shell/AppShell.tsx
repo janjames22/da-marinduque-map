@@ -26,7 +26,8 @@ const ICONS: Record<NavIcon, LucideIcon> = {
 };
 
 export interface Account {
-  changePassword(): void;
+  // Not on the demo site, whose accounts are the same for everyone.
+  changePassword?(): void;
   signOut(): void;
 }
 
@@ -123,10 +124,12 @@ function AccountMenu({ user, account }: { user: AppUser; account: Account }) {
         <ChevronDown aria-hidden="true" className="account-chevron" />
       </button>
       <div id={menuId} className="account-menu" hidden={!open}>
-        <button type="button" onClick={choose(account.changePassword)}>
-          <KeyRound aria-hidden="true" />
-          Change password
-        </button>
+        {account.changePassword && (
+          <button type="button" onClick={choose(account.changePassword)}>
+            <KeyRound aria-hidden="true" />
+            Change password
+          </button>
+        )}
         <button type="button" onClick={choose(account.signOut)}>
           <LogOut aria-hidden="true" />
           Sign out

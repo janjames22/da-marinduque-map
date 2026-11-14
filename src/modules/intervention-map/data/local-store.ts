@@ -30,11 +30,15 @@ import type {
 import { readPhotoMeta } from '../lib/photo-meta';
 import { newUuid } from '../lib/uuid';
 
-// Served only by the Vite dev server (see vite.config.ts), so it can't end up in a deployed build.
-const LOCAL_SEED_URL = '/__local/seed.json';
-const DB_NAME = 'da-intervention-map-local';
+// Local mode's data is served only by the Vite dev server (see vite.config.ts), so it can't end up in a
+// deployed build. The demo's is its made-up copy, built into the demo site (scripts/build-demo-seed.ts).
+// Vite fills in the mode as it builds, so each build keeps only its own address. Their browser stores
+// are apart, so the demo never mixes with a developer's local data.
+const DEMO = import.meta.env.MODE === 'demo';
+const LOCAL_SEED_URL = DEMO ? '/demo/seed.json' : '/__local/seed.json';
+const DB_NAME = DEMO ? 'da-intervention-map-demo' : 'da-intervention-map-local';
 const STATE_KEY = 'current';
-const CHANNEL_NAME = 'da-intervention-map-local';
+const CHANNEL_NAME = DB_NAME;
 
 export interface LocalSeed {
   lookups: {

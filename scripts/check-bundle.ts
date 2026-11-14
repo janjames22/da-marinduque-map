@@ -8,7 +8,10 @@ import { gzipSync } from 'node:zlib';
 import { loadSeedFiles } from './seed-interventions';
 
 const ROOT = resolve(import.meta.dirname, '..');
-const DIST = join(ROOT, 'dist');
+// The folder to check: dist for the live site, or another, such as dist-demo for the demo site.
+const DIST = resolve(ROOT, process.argv[2] ?? 'dist');
+// The demo site must hold nothing about the real project, not even what's safe for the live site.
+const DEMO = process.argv.includes('--demo');
 const ENV_PATH = join(ROOT, '.env.local');
 const MIN_NAME_LENGTH = 6; // shorter ones can match ordinary code by chance
 
@@ -47,7 +50,7 @@ export function findLeaks(files: { name: string; text: string }[], secrets: { la
   return problems;
 }
 
-function secretsToFind() {
+function secretsToFind(demo = false) {
   const secrets: { label: string; value: string }[] = [
     { label: 'the local dataset address', value: '/__local/seed.json' },
   ];
@@ -63,6 +66,14 @@ function secretsToFind() {
       secrets.push({ label: 'SUPABASE_DB_URL', value: dbUrl });
       const password = URL.canParse(dbUrl) ? decodeURIComponent(new URL(dbUrl).password) : '';
       if (password) secrets.push({ label: 'the database password', value: password });
+    }
+    if (demo) {
+      const url = process.env.VITE_SUPABASE_URL?.trim();
+      if (url && URL.canParse(url)) secrets.push({ label: "the real project's address", value: new URL(url).host });
+      for (const name of ['VITE_SUPABASE_PUBLISHABLE_KEY', 'VITE_SUPABASE_ANON_KEY']) {
+        const value = process.env[name]?.trim();
+        if (value) secrets.push({ label: name, value });
+      }
     }
   }
 
@@ -99,7 +110,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const files = filesUnder(DIST)
     .filter((path) => /\.(js|css|html|json|map|txt)$/.test(path))
     .map((path) => ({ name: relative(ROOT, path), text: readFileSync(path, 'utf8') }));
-  const problems = findLeaks(files, secretsToFind());
+  const problems = findLeaks(files, secretsToFind(DEMO));
 
   if (problems.length > 0) {
     // Names which file and what kind of thing, and never the value.
@@ -107,7 +118,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.error('\nThe build must not be deployed.');
     process.exit(1);
   }
-  console.log(`Checked ${files.length} files in dist: nothing private found.`);
+  console.log(`Checked ${files.length} files in ${relative(ROOT, DIST)}: nothing private found.`);
 
   const sizes = firstLoadSizes(firstLoadFiles(readFileSync(join(DIST, 'index.html'), 'utf8')).map((name) => ({ name, bytes: readFileSync(join(DIST, name)) })));
   const heavy = overBudget(sizes);

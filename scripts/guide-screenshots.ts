@@ -7,49 +7,12 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { chromium, devices, type Browser, type BrowserContextOptions, type Page } from '@playwright/test';
+import { anonymize, findRealNames } from './lib/anonymize';
+
 
 const ROOT = resolve(import.meta.dirname, '..');
 const OUT = join(ROOT, 'docs', 'guide');
 const BASE = process.env.GUIDE_URL ?? 'http://localhost:5173';
-const MIN_NAME_LENGTH = 6; // as in scripts/check-bundle.ts: shorter ones can match ordinary words
-
-type Json = Record<string, unknown>;
-
-export function anonymize(seedText: string): { text: string; names: string[] } {
-  const seed = JSON.parse(seedText) as { interventions: Json[]; status_history?: Json[]; municipalities: Json[]; barangays: Json[] };
-  // A beneficiary such as an LGU can share a place's name, which must stay as it is.
-  const places = new Set([...seed.municipalities, ...seed.barangays].map((place) => String(place.name)));
-  const names = new Set<string>();
-  for (const record of seed.interventions) {
-    const raw = (record.source_raw ?? {}) as Json;
-    for (const value of [record.beneficiary, record.beneficiary_raw, raw.beneficiary, raw.beneficiary_raw]) {
-      if (typeof value === 'string' && value.trim().length >= 3 && !places.has(value.trim())) names.add(value.trim());
-    }
-    record.remarks = null;
-  }
-  for (const entry of seed.status_history ?? []) entry.remarks = null;
-  // The people who sign the reports, as on the Reports page.
-  const lookups = (seed as { lookups?: { report_signatories?: Json[] } }).lookups;
-  for (const signatory of lookups?.report_signatories ?? []) signatory.name = 'Full name, as signed';
-
-  // Whole values only, wherever they are: the records, what was imported, the history and the log.
-  // A name inside a longer text, such as a note in the log, is caught by the check before each picture.
-  const ordered = [...names];
-  const fake = new Map(
-    ordered.map((name, index) => {
-      const kind = /cooperative/i.test(name) ? 'Farmers Cooperative' : /irrigator/i.test(name) ? 'Irrigators Association' : 'Farmers Association';
-      return [name, `Sample ${kind} ${index + 1}`];
-    }),
-  );
-  const swap = (value: unknown): unknown => {
-    if (typeof value === 'string') return fake.get(value.trim()) ?? value;
-    if (Array.isArray(value)) return value.map(swap);
-    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, swap(inner)]));
-    return value;
-  };
-  return { text: JSON.stringify(swap(seed)), names: ordered.filter((name) => name.length >= MIN_NAME_LENGTH) };
-}
-
 const DESKTOP: BrowserContextOptions = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 };
 const PHONE: BrowserContextOptions = { ...devices['Pixel 7'], deviceScaleFactor: 2 };
 
@@ -153,7 +116,7 @@ async function take(browser: Browser, shot: Shot, seed: string, names: string[])
 
   // Everything the page holds, hidden parts and marker titles included.
   const text = await page.evaluate(() => document.body.innerText + ' ' + [...document.querySelectorAll('[title],[aria-label]')].map((el) => `${el.getAttribute('title')} ${el.getAttribute('aria-label')}`).join(' '));
-  const shown = names.filter((name) => text.includes(name));
+  const shown = findRealNames(text, names);
   if (shown.length > 0) throw new Error(`${shot.file} would show ${shown.length} real beneficiary name(s). Not saved.`);
 
   await page.screenshot({ path: join(OUT, shot.file) });

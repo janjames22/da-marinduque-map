@@ -8,6 +8,8 @@ The pictures come from the map's sample data. The beneficiary and signatory name
 
 For setting up, deploying and backups, see [`OPERATIONS.md`](OPERATIONS.md).
 
+**To try the map without an account,** or to show it to someone, use the demo site: https://marinduque-intervention-demo.netlify.app. Its sign-in screen has an account for each role, and its names are all made up. What you change there stays in your browser and never reaches the real map.
+
 ---
 
 ## Signing in

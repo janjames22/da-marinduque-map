@@ -430,6 +430,23 @@ The colors, type and spacing come from `design/tokens.json`, the signed-off desi
 
 `npm test` and `npm run test:e2e` never touch the real project. The browser tests answer every Supabase call themselves.
 
+### The demo site
+
+A second site, for showing the map to anyone, such as partners or new staff, with nothing real in it: https://marinduque-intervention-demo.netlify.app. It's the same app, built with `--mode demo`:
+
+- **Made-up data, no database.** It starts from the local dataset with every beneficiary and signatory name swapped for a made-up one, remarks blanked and the change history left out, as that quotes names inside its notes (`scripts/build-demo-seed.ts`, through `scripts/lib/anonymize.ts`). Whatever a visitor changes stays in their browser, and **Discard my changes**, in the layers card's **Demo data**, starts them again. The live database is never touched, and the demo build reads no settings from `.env.local`, so it holds nothing about the real project.
+- **Demo accounts.** Its sign-in screen lists one account per role, Admin, Encoder and Viewer, each with a **Use** button that fills the form in (`src/app/auth/demo-accounts.ts`). They aren't secrets, as there's nothing behind them to protect. Signing in lasts for the browser tab. **Change password** isn't offered, and the Users page says there's nobody to manage.
+- **Checked like the live site.** `npm run build:demo` builds it into `dist-demo/` and runs `scripts/check-bundle.ts` on it with `--demo`: no secret, no real beneficiary name in any file (the demo's data included), not even the real project's address or publishable key, and the same first-load budget. `e2e/demo.spec.ts` checks the sign-in screen, each role, a change kept through a reload and discarded, and that no real name shows, on a build made as it's deployed.
+
+| Command | What it does |
+|---|---|
+| `npm run dev:demo` | The demo on the dev server, for trying a change |
+| `npm run build:demo` | The demo's data, then the demo site into `dist-demo/`, with its checks |
+| `npm run deploy:demo:preview` | A draft of the demo, free |
+| `npm run deploy:demo` | The demo site's own address. Costs Netlify credits, like the live site |
+
+`deploy:demo` needs `NETLIFY_DEMO_SITE_ID` in `.env.local`: the demo site's id, from Netlify's Site configuration > Site details. This folder's own Netlify link stays on the live site. The demo's data is made from the local dataset, so run `npm run build:local-seed` first on a new computer. After a deploy with new data, a visitor with changes of their own is told the demo was updated, and gets the new data once they discard them.
+
 ### The user guide
 
 [`USER-GUIDE.md`](USER-GUIDE.md) is the short guide for PAO and MAO staff, with screenshots in `docs/guide/`. After a change to a screen it shows, start `npm run dev:local` and run `npm run guide:screenshots` to retake them all, or name the ones to retake, such as `npm run guide:screenshots -- map.png`.
