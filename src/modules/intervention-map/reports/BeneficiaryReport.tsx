@@ -96,8 +96,9 @@ function BeneficiaryDetail({ group, data, boundaries }: { group: BeneficiaryGrou
             disabled={busy !== null}
             onClick={() =>
               void run('pdf', async () => {
-                const { beneficiaryPdf } = await import('./beneficiary-pdf');
-                const made = beneficiaryPdf({ data, boundaries, beneficiaryKey: group.key, signatories: data.signatories, now: new Date() });
+                const [{ beneficiaryPdf }, { loadSeal }] = await Promise.all([import('./beneficiary-pdf'), import('./pdf-common')]);
+                const seal = await loadSeal();
+                const made = beneficiaryPdf({ data, boundaries, beneficiaryKey: group.key, signatories: data.signatories, now: new Date(), seal });
                 // The name stays out of the file name, as it can be a person's.
                 return made && { bytes: made.bytes, fileName: `Beneficiary_profile_${manilaToday()}.pdf`, format: 'pdf', records: made.records, filters: { report: 'beneficiary profile', beneficiary: group.name } };
               })

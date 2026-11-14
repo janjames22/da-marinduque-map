@@ -43,6 +43,8 @@ export interface PrintMapInput {
   basemap: string;
   signatories: ReportSignatory[];
   now: Date;
+  // The office seal for the title block, from loadSeal().
+  seal?: string | null;
 }
 
 const LEGEND_WIDTH = 160;
@@ -99,7 +101,7 @@ export function printMapPdf(input: PrintMapInput): Uint8Array {
   const { capture, legend, signatories, now } = input;
   const doc = newDocument(input.paper, input.orientation);
   const width = pageWidth(doc) - 2 * MARGIN;
-  const top = titleBlock(doc, input.title, null, input.lines);
+  const top = titleBlock(doc, input.title, null, input.lines, input.seal ?? null);
   const landscape = input.orientation === 'landscape';
 
   const signing = activeSignatories(signatories).length > 0;

@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import { autoTable, type UserOptions } from 'jspdf-autotable';
 import type { ReportSignatory } from '../data/types';
 import { boundsOf, fitProjection, niceScale, type Box, type Polygon, type Projection } from './geo';
+import { OFFICE_SEAL } from '../../../app/brand';
 import { activeSignatories, OFFICE } from './report-data';
 
 export { manilaDateTime, manilaLongDate } from './report-data';
@@ -57,14 +58,39 @@ export function paragraph(doc: jsPDF, value: string, x: number, y: number, width
   return lines.length * size * 1.2;
 }
 
-// The office line and a report's title, at the top of its first page. Returns where the content starts.
-export function titleBlock(doc: jsPDF, title: string, subtitle: string | null, lines: string[] = []): number {
-  const width = pageWidth(doc) - 2 * MARGIN;
+// The office's seal as a data URL for jsPDF, or null if it can't be had, as a report never fails over it.
+export async function loadSeal(): Promise<string | null> {
+  try {
+    const response = await fetch(OFFICE_SEAL);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+const SEAL_SIZE = 50;
+
+// The office line and a report's title, at the top of its first page, with the office's seal at the left
+// as on a letterhead. The text keeps clear of the seal on both sides, so it stays centered on the page.
+// Returns where the content starts.
+export function titleBlock(doc: jsPDF, title: string, subtitle: string | null, lines: string[] = [], seal: string | null = null): number {
+  const inset = seal ? SEAL_SIZE + 10 : 0;
+  const left = MARGIN + inset;
+  const width = pageWidth(doc) - 2 * MARGIN - 2 * inset;
   let y = MARGIN;
-  y += paragraph(doc, OFFICE, MARGIN, y, width, { size: 9, color: MUTED, align: 'center' }) + 6;
-  y += paragraph(doc, title, MARGIN, y, width, { size: 15, bold: true, align: 'center' }) + 2;
-  if (subtitle) y += paragraph(doc, subtitle, MARGIN, y, width, { size: 11, align: 'center' }) + 2;
-  for (const line of lines) y += paragraph(doc, line, MARGIN, y, width, { size: 9, color: MUTED, align: 'center' });
+  if (seal) doc.addImage(seal, 'PNG', MARGIN, MARGIN, SEAL_SIZE, SEAL_SIZE, undefined, 'FAST');
+  y += paragraph(doc, OFFICE, left, y, width, { size: 9, color: MUTED, align: 'center' }) + 6;
+  y += paragraph(doc, title, left, y, width, { size: 15, bold: true, align: 'center' }) + 2;
+  if (subtitle) y += paragraph(doc, subtitle, left, y, width, { size: 11, align: 'center' }) + 2;
+  for (const line of lines) y += paragraph(doc, line, left, y, width, { size: 9, color: MUTED, align: 'center' });
+  if (seal) y = Math.max(y, MARGIN + SEAL_SIZE);
   doc.setDrawColor(RULE);
   doc.setLineWidth(0.75);
   doc.line(MARGIN, y + 6, pageWidth(doc) - MARGIN, y + 6);

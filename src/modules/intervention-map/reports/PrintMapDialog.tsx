@@ -93,7 +93,8 @@ export function PrintMapDialog({ open, onClose, data, mode, shading, scale, mark
     setBusy(true);
     setFailure(null);
     try {
-      const [{ captureMap }, { printMapPdf }] = await Promise.all([import('./map-capture'), import('./print-map-pdf')]);
+      const [{ captureMap }, { printMapPdf }, { loadSeal }] = await Promise.all([import('./map-capture'), import('./print-map-pdf'), import('./pdf-common')]);
+      const seal = await loadSeal();
       const capture = await captureMap(container);
       const middle = ((mapBounds.north + mapBounds.south) / 2) * (Math.PI / 180);
       const metersPerPixel = ((mapBounds.east - mapBounds.west) * Math.cos(middle) * METERS_PER_DEGREE) / capture.width;
@@ -110,6 +111,7 @@ export function PrintMapDialog({ open, onClose, data, mode, shading, scale, mark
         basemap: BASEMAP_CREDITS[ui.basemap],
         signatories: data.signatories,
         now,
+        seal,
       });
       const fileName = `Map_${exportFileStem(filters, manilaToday(now))}.pdf`;
       // As with any export, the file leaves only once the log has it.

@@ -12,6 +12,8 @@ export interface MunicipalPdfInput {
   municipalityId: number;
   signatories: ReportSignatory[];
   now: Date;
+  // The office seal for the title block, from loadSeal().
+  seal?: string | null;
 }
 
 // A long list of categories keeps to the page, with the rest added up.
@@ -26,13 +28,13 @@ function shortened(rows: TallyRow[]): string[][] {
   return shown;
 }
 
-export function municipalPdf({ data, boundaries, municipalityId, signatories, now }: MunicipalPdfInput): { bytes: Uint8Array; records: number } | null {
+export function municipalPdf({ data, boundaries, municipalityId, signatories, now, seal = null }: MunicipalPdfInput): { bytes: Uint8Array; records: number } | null {
   const profile = municipalProfile(data, municipalityId);
   if (!profile) return null;
   const { municipality, numbers } = profile;
   const doc = newDocument('a4', 'portrait');
   const width = pageWidth(doc) - 2 * MARGIN;
-  let y = titleBlock(doc, `MUNICIPAL PROFILE: ${municipality.name.toUpperCase()}`, `Interventions in ${municipality.name}, Marinduque`, [`As of ${manilaLongDate(now)}`]);
+  let y = titleBlock(doc, `MUNICIPAL PROFILE: ${municipality.name.toUpperCase()}`, `Interventions in ${municipality.name}, Marinduque`, [`As of ${manilaLongDate(now)}`], seal);
 
   // The map, with every barangay of the municipality shaded by whether it has an intervention.
   const map = municipalMap(profile, data, boundaries);

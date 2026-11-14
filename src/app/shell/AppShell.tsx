@@ -1,12 +1,12 @@
 // The frame around every signed-in page: the sidebar, the top bar and the sources line. On a phone
 // the sidebar is a drawer, opened from the top bar.
-import { ChartColumn, ChevronDown, ClipboardList, FileText, FileUp, Gauge, History, House, KeyRound, List, ListChecks, LogOut, Map as MapIcon, MapPin, Menu, PanelLeftClose, PanelLeftOpen, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
+import { ChartColumn, ChevronDown, ClipboardList, FileText, FileUp, Gauge, History, House, KeyRound, List, ListChecks, LogOut, Map as MapIcon, Menu, PanelLeftClose, PanelLeftOpen, PenLine, Shapes, Users, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { AppUser } from '../../modules/intervention-map/data/types';
 import { ROLE_LABELS } from '../../modules/intervention-map/lib/permissions';
 import { MAP_PATH } from '../../modules/intervention-map/lib/map-paths';
-import { APP_NAME, OFFICE_NAME } from '../brand';
+import { APP_NAME, OFFICE_NAME, OFFICE_SEAL } from '../brand';
 import { isCurrent, navGroups, type NavIcon } from './nav';
 
 const ICONS: Record<NavIcon, LucideIcon> = {
@@ -44,8 +44,8 @@ function Sidebar({ user, open, onClose }: { user: AppUser; open: boolean; onClos
     <nav id="main-menu" className={`sidebar${open ? ' is-open' : ''}`} aria-label="Main">
       <div className="sidebar-top">
         <Link to="/" className="sidebar-brand" onClick={onClose}>
-          <span className="sidebar-logo">
-            <MapPin aria-hidden="true" strokeWidth={2.25} />
+          <span className="sidebar-logo has-seal">
+            <img src={OFFICE_SEAL} alt="" />
           </span>
           <span className="sidebar-name">
             <strong>{APP_NAME}</strong>
@@ -150,7 +150,10 @@ function TopBar({ user, account, menuOpen, onMenu, menuHidden, onToggleMenu }: {
         {menuHidden ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />}
         {menuHidden && <span aria-hidden="true">Menu</span>}
       </button>
-      <span className="topbar-title">{APP_NAME}</span>
+      <span className="topbar-title">
+        <img className="topbar-seal" src={OFFICE_SEAL} alt="" />
+        {APP_NAME}
+      </span>
       {account ? (
         <AccountMenu user={user} account={account} />
       ) : (
