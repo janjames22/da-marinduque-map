@@ -15,7 +15,8 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-14_
 
-- **Branch:** `main`. The demo site passed Gate 1 and Gate 2 and is merged (`9c6d928`). It waits only for its production deploy.
+- **Branch:** `main`, in sync with `origin/main`.
+- **Demo site live:** https://marinduque-intervention-demo.netlify.app, deploy `6af7f445bc7ee62aa60c2746` since 2026-11-14, from `main`. Made-up data in each visitor's browser, with an Admin, an Encoder and a Viewer account on its sign-in screen. The live site is unchanged, still on deploy `6af754d1810a1c8cad2a74c6`.
 - **Live:** Phases 15b to 17c and the popup fix are on https://marinduque-intervention-system.netlify.app, deploy `6af754d1810a1c8cad2a74c6` since 2026-11-14. All 18 live tests pass on it.
 - **The UI/UX roadmap is done:** Phases 10 to 17, with the user guide in [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) and the spec's §10 checklist ticked (30 met, 3 open: drawing polygons, and the KML and Shapefile in QGIS).
 - **Live database:** every migration file on `main` is applied, `0014_line_import.sql` the last, on 2026-11-14 after a backup. An applied file must not be edited, so a later change to the database goes in a new file.
@@ -23,7 +24,7 @@ _Last updated: 2026-11-14_
 - **The live tests** (`npm run test:e2e:live`, in `e2e-live/`) are up to date since 2026-11-14, and all 18 pass on the popup fix's draft. They make temporary accounts and records on the live database and remove them at the end.
 - **The demo's Netlify site exists:** `marinduque-intervention-demo`, project id `ebb96c5f-9495-4234-bea9-3b66ebca9e29`, in the DA-Intervention-Map team, created 2026-11-14. It's empty until the first deploy. Its id is in `.env.local` as `NETLIFY_DEMO_SITE_ID`, and this folder's Netlify link stays on the live site.
 - **Demo draft:** https://6af7f10aed3971aac5a326b5--marinduque-intervention-demo.netlify.app. Open to anyone since the owner switched off Netlify's draft protection, and checked signed out.
-- **Next:** the demo's production deploy, `npm run deploy:demo` from `main` (15 credits), at the owner's go-ahead. The live site needs no deploy for it. Then the open items below, such as the FMR data (Q-5) when it comes.
+- **Next:** the open items below, such as the FMR data (Q-5) when it comes. Then the open items below, such as the FMR data (Q-5) when it comes.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The import test "a workbook is read under the site's security rules" fails if a run crosses midnight, as it takes the date once at its start.
@@ -88,6 +89,8 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-14
 
+- **The demo site is live**, at the owner's go-ahead: `npm run deploy:demo` from `main` (`17050a9`), deploy `6af7f445bc7ee62aa60c2746` on https://marinduque-intervention-demo.netlify.app, 15 credits. The build's checks passed: nothing private in 50 files, and 199.2 kB of script and 20.2 kB of styles in the first load. **Checked signed out:** the page, an app address such as `/map/barangays/12` and the demo data answer 200, a missing file under `/assets` gets a 404, the security headers are on, and `/assets` is cached for a year. The deployed files were downloaded: all 56 assets and the demo data match `dist-demo/` file for file, `check-bundle.ts --demo` on them finds nothing private, and neither the real project's address nor its key is in them. The live site is untouched, still on deploy `6af754d1810a1c8cad2a74c6`.
+  - **Noticed:** Netlify's `deploy` runs a build of its own first, and with no build command in `netlify.toml` it ran `npm run build`, the live site's build, into `dist/`. It's only local and nothing from `dist/` was uploaded, but it adds time to each demo deploy. `--no-build` in `scripts/deploy-demo.ts` would skip it.
 - The demo site passed Gate 1 and Gate 2, approved by the owner on the draft `6af7f10aed3971aac5a326b5`, and is merged into `main` (`9c6d928`). After the merge `main` matches the tested branch file for file. `npm run build` on `main`: nothing private in 52 files, 199.5 kB of script and 20.2 kB of styles in the first load as before, and none of the demo's accounts, sign-in, data or wording in `dist/`. Going live waits for the owner's go-ahead on `npm run deploy:demo`.
 - Demo site built on branch `demo-site`, waiting for Gate 1, at the owner's request, like agri-dms's demo accounts. The live site uses the real database, so demo logins there would have shown the real beneficiary names to anyone. The owner chose a separate site instead.
   - **What it is:** the same app built with `--mode demo` (`dataMode` `demo` in `data/app-config.ts`). It runs on the local store, in each visitor's browser, with no database, at its own address and with its own browser storage. Its sign-in screen (`src/app/auth/DemoSignIn.tsx`) lists an Admin, an Encoder and a Viewer account (`demo-accounts.ts`), each with **Use**, and **Hide all**. Signing in lasts for the tab. The footer, the layers card's **Demo data** with **Discard my changes**, and the Users page say it's a demo. **Change password** is left out of the account menu.
