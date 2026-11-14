@@ -15,7 +15,7 @@ The DA Marinduque Intervention Map is a web GIS for DA interventions across Mari
 
 _Last updated: 2026-11-14_
 
-- **Branch:** `demo-site`, waiting for Gate 1: a separate demo site with demo accounts, one per role, and made-up data. `main` is in sync with `origin/main`.
+- **Branch:** `main`. The demo site passed Gate 1 and Gate 2 and is merged (`9c6d928`). It waits only for its production deploy.
 - **Live:** Phases 15b to 17c and the popup fix are on https://marinduque-intervention-system.netlify.app, deploy `6af754d1810a1c8cad2a74c6` since 2026-11-14. All 18 live tests pass on it.
 - **The UI/UX roadmap is done:** Phases 10 to 17, with the user guide in [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) and the spec's §10 checklist ticked (30 met, 3 open: drawing polygons, and the KML and Shapefile in QGIS).
 - **Live database:** every migration file on `main` is applied, `0014_line_import.sql` the last, on 2026-11-14 after a backup. An applied file must not be edited, so a later change to the database goes in a new file.
@@ -23,7 +23,7 @@ _Last updated: 2026-11-14_
 - **The live tests** (`npm run test:e2e:live`, in `e2e-live/`) are up to date since 2026-11-14, and all 18 pass on the popup fix's draft. They make temporary accounts and records on the live database and remove them at the end.
 - **The demo's Netlify site exists:** `marinduque-intervention-demo`, project id `ebb96c5f-9495-4234-bea9-3b66ebca9e29`, in the DA-Intervention-Map team, created 2026-11-14. It's empty until the first deploy. Its id is in `.env.local` as `NETLIFY_DEMO_SITE_ID`, and this folder's Netlify link stays on the live site.
 - **Demo draft:** https://6af7f10aed3971aac5a326b5--marinduque-intervention-demo.netlify.app. Open to anyone since the owner switched off Netlify's draft protection, and checked signed out.
-- **Next:** Gate 1 and Gate 2 for the demo site, on that draft or `npm run dev:demo`, then its production deploy at the owner's go-ahead. Then the open items below, such as the FMR data (Q-5) when it comes.
+- **Next:** the demo's production deploy, `npm run deploy:demo` from `main` (15 credits), at the owner's go-ahead. The live site needs no deploy for it. Then the open items below, such as the FMR data (Q-5) when it comes.
 - **Built:** Phases 1 to 9. Phase 9 includes the invite emails, which are sent through Gmail SMTP.
 - **Open items:**
   - The import test "a workbook is read under the site's security rules" fails if a run crosses midnight, as it takes the date once at its start.
@@ -88,6 +88,7 @@ New entries go at the top. Each entry gets the date, what was done, and the comm
 
 ### 2026-11-14
 
+- The demo site passed Gate 1 and Gate 2, approved by the owner on the draft `6af7f10aed3971aac5a326b5`, and is merged into `main` (`9c6d928`). After the merge `main` matches the tested branch file for file. `npm run build` on `main`: nothing private in 52 files, 199.5 kB of script and 20.2 kB of styles in the first load as before, and none of the demo's accounts, sign-in, data or wording in `dist/`. Going live waits for the owner's go-ahead on `npm run deploy:demo`.
 - Demo site built on branch `demo-site`, waiting for Gate 1, at the owner's request, like agri-dms's demo accounts. The live site uses the real database, so demo logins there would have shown the real beneficiary names to anyone. The owner chose a separate site instead.
   - **What it is:** the same app built with `--mode demo` (`dataMode` `demo` in `data/app-config.ts`). It runs on the local store, in each visitor's browser, with no database, at its own address and with its own browser storage. Its sign-in screen (`src/app/auth/DemoSignIn.tsx`) lists an Admin, an Encoder and a Viewer account (`demo-accounts.ts`), each with **Use**, and **Hide all**. Signing in lasts for the tab. The footer, the layers card's **Demo data** with **Discard my changes**, and the Users page say it's a demo. **Change password** is left out of the account menu.
   - **Its data** (`npm run build:demo-seed`, `scripts/build-demo-seed.ts`): the local dataset with made-up names, through `scripts/lib/anonymize.ts`, shared now with the guide's screenshots. The change history is left out, as it quotes names inside its notes, and the file isn't written if a real name is left. Checked against the 177 real names of the source data: none in it.
